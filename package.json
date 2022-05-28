@@ -30,7 +30,7 @@
           "config": {
             "name": "streamdeck_deej",
             "setupIcon": "public/favicon.ico",
-            "iconUrl": "https://raw.githubusercontent.com/lachaux-remi/-WIP-StreamDeckDeejApp/master/app/assets/images/logo.ico"
+            "iconUrl": "https://raw.githubusercontent.com/lachaux-remi/StreamDeckDeeJ-App/master/public/favicon.ico"
           }
         }
       ]
