@@ -1,0 +1,62 @@
+{
+  "name": "streamdeck-deej",
+  "productName": "StreamDeck DeeJ",
+  "version": "1.1.1",
+  "description": "StreamDeck DeeJ build with js",
+  "main": "build/index.js",
+  "scripts": {
+    "compile": "tsc && copyfiles -a public/**/* build/",
+    "start": "npm run compile && electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish",
+    "lint": "eslint --ext .ts ."
+  },
+  "author": {
+    "name": "Lachaux Remi",
+    "email": "contact@remi-lachaux.fr",
+    "url": "https://www.remi-lachaux.fr"
+  },
+  "license": "MIT",
+  "config": {
+    "forge": {
+      "packagerConfig": {
+        "icon": "public/favicon.ico",
+        "name": "StreamDeck DeeJ"
+      },
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "streamdeck_deej",
+            "setupIcon": "public/favicon.ico",
+            "iconUrl": "https://raw.githubusercontent.com/lachaux-remi/-WIP-StreamDeckDeejApp/master/app/assets/images/logo.ico"
+          }
+        }
+      ]
+    }
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^6.0.0-beta.63",
+    "@electron-forge/maker-squirrel": "^6.0.0-beta.63",
+    "@typescript-eslint/eslint-plugin": "^5.26.0",
+    "@typescript-eslint/parser": "^5.26.0",
+    "electron": "19.0.1",
+    "eslint": "^8.16.0",
+    "eslint-plugin-import": "^2.26.0",
+    "typescript": "^4.7.2",
+    "copyfiles": "^2.4.1"
+  },
+  "dependencies": {
+    "electron-log": "^4.4.7",
+    "electron-squirrel-startup": "^1.0.0",
+    "tslib": "^2.4.0",
+    "EventEmitter": "^1.0.0",
+    "node-audio-volume-mixer": "^1.0.3",
+    "serialport": "^10.4.0",
+    "yaml": "^2.1.0"
+  }
+}

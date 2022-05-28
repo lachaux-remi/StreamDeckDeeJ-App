@@ -1,0 +1,33 @@
+slider_mapping:
+  "0":
+    - master
+  "1":
+    - brave.exe
+    - chrome.exe
+    - firefox.exe
+  "2":
+    - wwahost.exe
+    - spotify.exe
+    - disneyplus.exe
+  "3":
+    - risk.exe
+    - raft.exe
+    - uno.exe
+    - deadbydaylight-win64-shipping.exe
+    - farmingsimulator2022game.exe
+    - scrapmechanic.exe
+    - dundefgame.exe
+    - dauntless-win64-shipping.exe
+    - wreckfest_x64.exe
+    - rdr2.exe
+    - javaw.exe
+    - steam.exe
+    - newworld.exe
+    - shoptitan.exe
+    - starcitizen.exe
+    - phasmophobia.exe
+  "4":
+    - discord.exe
+invert_sliders: false
+com_port: COM3
+baud_rate: 115200
