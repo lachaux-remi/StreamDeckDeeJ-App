@@ -1,62 +1,46 @@
 {
   "name": "streamdeck-deej",
   "productName": "StreamDeck DeeJ",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "description": "StreamDeck DeeJ build with js",
-  "main": "build/index.js",
+  "main": "dist/main/index.cjs",
   "scripts": {
-    "compile": "tsc && copyfiles -a public/**/* build/",
-    "start": "npm run compile && electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
-    "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts ."
+    "dev": "node scripts/watch.mjs",
+    "build": "node scripts/build.mjs && electron-builder"
   },
   "author": {
-    "name": "Lachaux Remi",
+    "name": "Rémi LACHAUX",
     "email": "contact@remi-lachaux.fr",
     "url": "https://www.remi-lachaux.fr"
   },
   "license": "MIT",
-  "config": {
-    "forge": {
-      "packagerConfig": {
-        "icon": "public/favicon.ico",
-        "name": "StreamDeck DeeJ"
-      },
-      "makers": [
-        {
-          "name": "@electron-forge/maker-squirrel",
-          "config": {
-            "name": "streamdeck_deej",
-            "setupIcon": "public/favicon.ico",
-            "iconUrl": "https://raw.githubusercontent.com/lachaux-remi/StreamDeckDeeJ-App/master/public/favicon.ico"
-          }
-        }
-      ]
-    }
-  },
   "engines": {
     "node": ">=16.0.0"
   },
-  "devDependencies": {
-    "@electron-forge/cli": "^6.0.0-beta.63",
-    "@electron-forge/maker-squirrel": "^6.0.0-beta.63",
-    "@typescript-eslint/eslint-plugin": "^5.26.0",
-    "@typescript-eslint/parser": "^5.26.0",
-    "electron": "19.0.1",
-    "eslint": "^8.16.0",
-    "eslint-plugin-import": "^2.26.0",
-    "typescript": "^4.7.2",
-    "copyfiles": "^2.4.1"
-  },
   "dependencies": {
-    "electron-log": "^4.4.7",
-    "electron-squirrel-startup": "^1.0.0",
-    "tslib": "^2.4.0",
-    "EventEmitter": "^1.0.0",
+    "classnames": "^2.3.1",
+    "electron-fetch": "^1.7.4",
     "node-audio-volume-mixer": "^1.0.3",
     "serialport": "^10.4.0",
-    "yaml": "^2.1.0"
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/react": "^18.0.14",
+    "@types/react-dom": "^18.0.5",
+    "@types/sound-play": "^1.1.0",
+    "@types/uuid": "^8.3.4",
+    "@vitejs/plugin-react": "^1.3.2",
+    "electron": "^19.0.4",
+    "electron-builder": "^23.0.3",
+    "axios": "^0.27.2",
+    "react": "^18.1.0",
+    "react-dom": "^18.1.0",
+    "typescript": "^4.7.2",
+    "vite": "^2.9.12"
+  },
+  "env": {
+    "VITE_DEV_SERVER_HOST": "127.0.0.1",
+    "VITE_DEV_SERVER_PORT": 3000
   }
 }
