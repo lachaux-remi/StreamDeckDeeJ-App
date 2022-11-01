@@ -4,17 +4,34 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cf93b31e-9bbd-49b8-a191-1bfe7e0f5f86" name="Changes" comment="" />
+    <list default="true" id="cf93b31e-9bbd-49b8-a191-1bfe7e0f5f86" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/main/app/modules/OctopiLedModule.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/main/app/modules/OctopiLedModule.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/main/app/modules/TapoModule.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/main/app/modules/TapoModule.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/main/app/services/DeckService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/main/app/services/DeckService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/main/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/main/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/preload/bridge.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/preload/bridge.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/renderer/src/components/ContextMenu.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/renderer/src/components/ContextMenu.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/renderer/src/components/deck/Deck.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/packages/renderer/src/components/deck/Deck.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/renderer/src/styles/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/packages/renderer/src/styles/style.css" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FormatOnSaveOptions">
+    <option name="myRunOnSave" value="true" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
+  </component>
+  <component name="OptimizeOnSaveOptions">
+    <option name="myRunOnSave" value="true" />
   </component>
   <component name="ProjectId" id="2AhMRYTiSYrPd6gJaJRIqDcFhNp" />
   <component name="ProjectViewState">
@@ -32,6 +49,8 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
+    "rearrange.code.on.save": "true",
+    "settings.editor.selected.configurable": "actions.on.save",
     "ts.external.directory.path": "C:\\Users\\Remi\\Desktop\\StreamDeckDeeJ\\StreamDeckDeeJ-App\\node_modules\\typescript\\lib",
     "vue.rearranger.settings.migration": "true"
   }
@@ -44,7 +63,11 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1655457357724</updated>
-      <workItem from="1655457359098" duration="869000" />
+      <workItem from="1655457359098" duration="1226000" />
+      <workItem from="1655507285079" duration="16000" />
+      <workItem from="1655507308735" duration="2407000" />
+      <workItem from="1655978579703" duration="428000" />
+      <workItem from="1667320444411" duration="9255000" />
     </task>
     <servers />
   </component>

@@ -1,7 +1,7 @@
 {
   "name": "streamdeck-deej",
   "productName": "StreamDeck DeeJ",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "StreamDeck DeeJ build with js",
   "main": "dist/main/index.cjs",
   "scripts": {
