@@ -12,14 +12,18 @@ interface DeckState extends ComponentState {
     contextMenu?: ContextMenuType
     moveButton?: string
     config: ConfigType
+    data: {}
 }
 
 export default class Deck extends Component<{}, DeckState> {
     constructor(props: {}) {
         super( props )
 
-        this.state = { config: window.api.get<ConfigType>( "config" ) }
+        this.state = { config: window.api.get<ConfigType>( "config" ), data: {} }
         window.api.on( "config", (config: ConfigType) => this.setState( { config } ) )
+        window.api.on( "deck-key-pressed", (key: string, data: any) => {
+            this.setState( { data: { ...this.state.data, [key]: data } } )
+        } )
     }
 
     render(): ReactNode {
@@ -34,6 +38,7 @@ export default class Deck extends Component<{}, DeckState> {
                                  onClick={ () => this.onClick( configKey ) }
                                  onContextMenu={ event => this.openContextMenu( event, configKey ) }
                                  key={ `button-${ configKey }` }>
+                                { this.infosRender( configKey ) }
                                 { this.imageRender( configKey ) }
                             </div>
                         )
@@ -43,6 +48,60 @@ export default class Deck extends Component<{}, DeckState> {
                 { this.optionRender() }
             </>
         )
+    }
+
+    private infosRender = (configKey: string): ReactNode[] => {
+        let render: ReactNode[] = []
+        const config = this.getConfigForKey( configKey )
+        if ( config ) {
+            const data = ( this.state.data as { [key: string]: any } )[configKey] as { [key: string]: any } | undefined
+            if ( config.pressed.module === "tapo" ) {
+                if ( [ "toggle", "turnOn", "turnOff" ].includes( config.pressed.params[0] ) ) {
+                    render.push( <div key={ `${ configKey }-tapo-${ config.pressed.params[0] }-pressed` }
+                                      className="deck-button-infos deck-button-info-pressed"
+                                      title={ data ? data?.device_on ? "Allumé" : "Éteint" : "N/D" }/> )
+                } else if ( config.pressed.params[0] === "brightness" ) {
+                    render.push( <div key={ `${ configKey }-tapo-${ config.pressed.params[0] }-pressed` }
+                                      className="deck-button-infos deck-button-info-pressed"
+                                      title={ data?.brightness ?? "N/D" }/> )
+                }
+            } else if ( config.pressed.module === "octopi-led" ) {
+                if ( [ "toggleLight", "turnLightOn", "turnLightOff" ].includes( config.pressed.params[0] ) ) {
+                    render.push( <div key={ `${ configKey }-octopi-led-${ config.pressed.params[0] }-pressed` }
+                                      className="deck-button-infos deck-button-info-pressed"
+                                      title={ data ? data?.lights_on ? "Allumé" : "Éteint" : "N/D" }/> )
+                } else if ( [ "toggleTorche", "turnTorcheOn", "turnTorcheOff" ].includes( config.pressed.params[0] ) ) {
+                    render.push( <div key={ `${ configKey }-octopi-led-${ config.pressed.params[0] }-pressed` }
+                                      className="deck-button-infos deck-button-info-pressed"
+                                      title={ data ? data?.torch_on ? "Allumé" : "Éteint" : "N/D" }/> )
+                }
+            }
+
+            if ( config.hold ) {
+                if ( config.hold.module === "tapo" ) {
+                    if ( [ "toggle", "turnOn", "turnOff" ].includes( config.hold.params[0] ) ) {
+                        render.push( <div key={ `${ configKey }-tapo-${ config.hold.params[0] }-hold` }
+                                          className="deck-button-infos deck-button-info-hold"
+                                          title={ data ? data?.device_on ? "Allumé" : "Éteint" : "N/D" }/> )
+                    } else if ( config.hold.params[0] === "brightness" ) {
+                        render.push( <div key={ `${ configKey }-tapo-${ config.hold.params[0] }-hold` }
+                                          className="deck-button-infos deck-button-info-hold"
+                                          title={ data?.brightness ?? "N/D" }/> )
+                    }
+                } else if ( config.hold.module === "octopi-led" ) {
+                    if ( [ "toggleLight", "turnLightOn", "turnLightOff" ].includes( config.hold.params[0] ) ) {
+                        render.push( <div key={ `${ configKey }-octopi-led-${ config.hold.params[0] }-hold` }
+                                          className="deck-button-infos deck-button-info-hold"
+                                          title={ data ? data?.lights_on ? "Allumé" : "Éteint" : "N/D" }/> )
+                    } else if ( [ "toggleTorche", "turnTorcheOn", "turnTorcheOff" ].includes( config.hold.params[0] ) ) {
+                        render.push( <div key={ `${ configKey }-octopi-led-${ config.hold.params[0] }-hold` }
+                                          className="deck-button-infos deck-button-info-hold"
+                                          title={ data ? data?.torch_on ? "Allumé" : "Éteint" : "N/D" }/> )
+                    }
+                }
+            }
+        }
+        return render
     }
 
     private imageRender = (configKey: string): ReactNode => {

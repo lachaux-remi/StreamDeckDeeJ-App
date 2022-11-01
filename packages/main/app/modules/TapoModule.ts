@@ -90,7 +90,7 @@ export default class TapoModule {
 
     public brightness = async (): Promise<DeviceInfo> => {
         const info = await this.getDeviceInfo()
-        return await this.sendPayloadToDevice( {
+        await this.sendPayloadToDevice( {
             "method": "set_device_info",
             "params": {
                 "brightness": info.brightness === 100 ? 10 : info.brightness + 10
@@ -98,11 +98,12 @@ export default class TapoModule {
             "requestTimeMils": Date.now(),
             "terminalUUID": this.terminalUUID
         } )
+        return this.getDeviceInfo()
     }
 
     public toggle = async (): Promise<DeviceInfo> => {
         const info = await this.getDeviceInfo()
-        return this.sendPayloadToDevice( {
+        await this.sendPayloadToDevice( {
             "method": "set_device_info",
             "params": {
                 "device_on": !info.device_on
@@ -110,10 +111,11 @@ export default class TapoModule {
             "requestTimeMils": Date.now(),
             "terminalUUID": this.terminalUUID
         } )
+        return this.getDeviceInfo()
     }
 
-    public turnOn = (): Promise<DeviceInfo> => {
-        return this.sendPayloadToDevice( {
+    public turnOn = async (): Promise<DeviceInfo> => {
+        await this.sendPayloadToDevice( {
             "method": "set_device_info",
             "params": {
                 "device_on": true,
@@ -122,10 +124,11 @@ export default class TapoModule {
             "requestTimeMils": Date.now(),
             "terminalUUID": this.terminalUUID
         } )
+        return this.getDeviceInfo()
     }
 
-    public turnOff = (): Promise<DeviceInfo> => {
-        return this.sendPayloadToDevice( {
+    public turnOff = async (): Promise<DeviceInfo> => {
+        this.sendPayloadToDevice( {
             "method": "set_device_info",
             "params": {
                 "device_on": false
@@ -133,6 +136,7 @@ export default class TapoModule {
             "requestTimeMils": Date.now(),
             "terminalUUID": this.terminalUUID
         } )
+        return this.getDeviceInfo()
     }
 
     private getDeviceInfo = (): Promise<DeviceInfo> => {

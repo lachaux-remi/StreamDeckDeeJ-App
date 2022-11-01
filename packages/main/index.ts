@@ -13,7 +13,7 @@ app.whenReady().then( () => {
     const configService = new ConfigService( app.getPath( "userData" ) )
     const serialService = new SerialService( configService )
     const sliderService = new SliderService( configService, serialService )
-    new DeckService( configService, serialService )
+    const deckService = new DeckService( configService, serialService )
     const sessionsService = new SessionsService( configService, sliderService )
 
     const appIcon = new Tray( join( assetsPath, "favicon.ico" ) )
@@ -85,6 +85,7 @@ app.whenReady().then( () => {
     } )
     ipcMain.on( "config", (_, config: ConfigType) => configService.setConfig( config ) )
     configService.on( "config-updated", () => webContents.send( "config", configService.getConfig() ) )
+    deckService.on( "deck-pressed", (key: string, data: any) => webContents.send( "deck-key-pressed", key, data ) )
     ipcMain.on( "sessions-reload", () => sessionsService.refreshSessions( "user interface request" ) )
     sessionsService.on( "sessions-updated", () => webContents.send( "sessions-not-assigned", sessionsService.getNotAssignedSessions() ) )
     sliderService.on( "slider-volume-updated", () => webContents.send( "sliders-volume", sliderService.getSlidersVolume() ) )

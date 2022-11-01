@@ -31,14 +31,17 @@ export default class OctopiLedModule {
         } )
     }
 
-    public toggleTorche = async (): Promise<DeviceInfo> => {
-        const info = await this.getDeviceInfo()
-        switch ( info.torch_on ) {
-            case true:
-                return this.turnTorcheOff()
-            case false:
-                return this.turnTorcheOn()
-        }
+    public toggleTorche = (): Promise<DeviceInfo> => {
+        return new Promise( resolve => {
+            this.getDeviceInfo().then( info => {
+                switch ( info.torch_on ) {
+                    case true:
+                        return resolve( this.turnTorcheOff() )
+                    case false:
+                        return resolve( this.turnTorcheOn() )
+                }
+            } )
+        } )
     }
 
     public turnTorcheOn = (): Promise<DeviceInfo> => {
