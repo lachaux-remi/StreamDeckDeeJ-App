@@ -34,9 +34,7 @@ export default class ContextMenu extends Component<ContextMenuProps> {
         if ( this.contextMenu ) {
             document.addEventListener( "click", () => this.props.onClose() )
             document.addEventListener( "contextmenu", () => this.props.onClose() )
-
-            console.log( window.innerHeight, this.props.positions.y, this.contextMenu.scrollHeight, this.props.positions.y + this.contextMenu.scrollHeight )
-
+            
             const { x, y } = this.props.positions
             const positionY = y + this.contextMenu.scrollHeight + 5 >= window.innerHeight
                 ? window.innerHeight - this.contextMenu.scrollHeight - 20
