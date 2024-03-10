@@ -6,7 +6,7 @@ import ping from "ping";
 
 import TapoCipher from "./TapoCipher";
 
-type TapoAPIResponse = {
+export type TapoAPIResponse = {
   error_code: number;
   result: {
     device_on: boolean;

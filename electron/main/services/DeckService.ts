@@ -1,8 +1,8 @@
 import { ipcMain } from "electron";
 import { EventEmitter } from "node:events";
 
-import OctopiLedAPI from "../libs/octoprint-led-api/OctopiLedAPI";
-import TapoAPI from "../libs/tapo-api/TapoAPI";
+import OctopiLedAPI, { DeviceInfo } from "../libs/octoprint-led-api/OctopiLedAPI";
+import TapoAPI, { TapoAPIResponse } from "../libs/tapo-api/TapoAPI";
 import KeyUsageEnum from "../types/KeyUsageEnum";
 import ModuleEnum from "../types/ModuleEnum";
 import { StreamdeckInputConfig, StreamdeckInputKey, StreamdeckKey } from "../types/SettingsType";
@@ -29,7 +29,7 @@ class DeckService extends EventEmitter {
   };
 
   private async getKeyInfo(deckKey: StreamdeckInputKey) {
-    const info: { [key: string]: object } = {};
+    const info: { [key: string]: TapoAPIResponse | DeviceInfo | undefined } = {};
 
     const deckConfig: StreamdeckInputConfig | undefined = this.configService.getConfig().streamdeck?.[deckKey];
     if (!deckConfig) {
