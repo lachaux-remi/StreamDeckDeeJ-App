@@ -162,7 +162,7 @@ const SettingsPage = () => {
 
             <div className="infos__detail">
               Développé par{" "}
-              <a href="//github.com/lachaux-remi/StreamDeckDeeJ" target="_blank">
+              <a href="https://github.com/lachaux-remi/StreamDeckDeeJ" target="_blank">
                 Rémi LACHAUX
               </a>
             </div>
