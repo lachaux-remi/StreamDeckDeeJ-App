@@ -8,8 +8,8 @@
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
     "preview": "vite preview",
-    "pretty": "prettier ./src ./electron/main ./electron/preload --write",
-    "lint": " && eslint ./src ./electron/main ./electron/preload"
+    "prettier": "prettier ./src ./electron/main ./electron/preload --write",
+    "lint": "eslint ./src ./electron/main ./electron/preload"
   },
   "author": {
     "name": "LACHAUX Rémi",
