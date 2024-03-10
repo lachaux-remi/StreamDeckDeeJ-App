@@ -1,7 +1,7 @@
 import { SaveRounded } from "@mui/icons-material";
 import { Divider, Paper } from "@mui/material";
 import { ipcRenderer } from "electron";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
@@ -13,7 +13,9 @@ import SwitchInput from "@/components/inputs/switch/SwitchInput";
 import Action from "@/components/page-actions/Action";
 import { PageAction } from "@/components/page-actions/PageActions";
 import Page from "@/components/page/Page";
+import useSerial from "@/hooks/useSerial";
 import useSettings from "@/hooks/useSettings";
+import { setSerialPortList } from "@/stores/slices/serialReducer";
 import { updateConfig } from "@/stores/slices/settingsReducer";
 import { InputOptionType } from "@/types/InputType";
 import { type Settings } from "@/types/SettingsType";
@@ -21,50 +23,31 @@ import { objectToInputOptions as options } from "@/utils/ObjectUtil";
 
 import "./Settings.scss";
 
-type ApplicationVersions = {
-  version: string;
-  electron: string;
-  node: string;
-  platform: string;
-  arch: string;
-  chrome: string;
-};
-
 const SettingsPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const configStore = useSettings().getConfig();
+  const versions = useSerial().getVersions();
+  const serialsList = useSerial().getSerialsList();
   const [config, setConfig] = useState<Settings>(configStore || []);
-  const defaultSerialList: InputOptionType = { value: config.comPort, display: `⚠️ ${config.comPort} - déconnecté` };
-  const [serialList, setSerialList] = useState<InputOptionType[]>([defaultSerialList]);
-  const [versions, setVersions] = useState<ApplicationVersions | null>(null);
   const baudRateOptions: InputOptionType[] = [9600, 115200].map(baudRate => ({
     value: baudRate.toString(),
     display: baudRate.toString()
   }));
 
-  useEffect(() => {
-    (async () => {
-      await handleRefreshSerialList();
-      await getApplicationVersion();
-    })();
-  }, []);
-
   const handleRefreshSerialList = async () => {
-    const list: string[] = await ipcRenderer.invoke("serial:list");
+    await ipcRenderer.invoke("serial:list").then(serialPorts => dispatch(setSerialPortList(serialPorts)));
+  };
 
-    const newSerialList = list.map(port => ({ value: port, display: port }));
+  const getPortList = useCallback(() => {
+    const newSerialList = serialsList.map(port => ({ value: port, display: port }));
+
     if (!newSerialList.some(port => port.value === config.comPort)) {
-      newSerialList.push(defaultSerialList);
+      newSerialList.push({ value: config.comPort, display: `⚠️ ${config.comPort} - déconnecté` });
     }
 
-    setSerialList(newSerialList);
-  };
-
-  const getApplicationVersion = async () => {
-    const versions = await ipcRenderer.invoke("getVersions");
-    setVersions(versions);
-  };
+    return newSerialList;
+  }, [serialsList]);
 
   const handleSaveButtonConfig = () => {
     dispatch(updateConfig(config));
@@ -86,7 +69,7 @@ const SettingsPage = () => {
             <ReloadSelectInput
               label="Port de communication"
               value={config.comPort}
-              options={options(serialList)}
+              options={options(getPortList())}
               onChange={value => setConfig({ ...config, comPort: value })}
               onReload={handleRefreshSerialList}
             />

@@ -8,11 +8,21 @@ const userSerial = () => {
   const serial: Serial = useSelector((state: RootState) => state.serial);
 
   const getSliderVolume = (sliderKey: DeeJSliderKey): number => {
-    return serial.sliders[sliderKey] || 0;
+    return Math.round((serial.sliders[sliderKey] || 0) * 100);
+  };
+
+  const getSerialsList = () => {
+    return serial.serialPortList;
+  };
+
+  const getVersions = () => {
+    return serial.versions;
   };
 
   return {
-    getSliderVolume
+    getSliderVolume,
+    getSerialsList,
+    getVersions
   };
 };
 

@@ -7,7 +7,7 @@ import ConfigService from "./ConfigService";
 import SerialService from "./SerialService";
 
 class SliderService extends EventEmitter {
-  private readonly sliders: Map<DeeJSliderKey, number> = new Map();
+  private readonly sliders: { [sliderKey: DeeJSliderKey]: number } = {};
   private readonly pow: number = Math.pow(10, 3);
   private invertSliders: boolean = false;
 
@@ -21,7 +21,7 @@ class SliderService extends EventEmitter {
     configService.onUpdated(this.setConfig);
     this.setConfig(configService.getConfig());
 
-    ipcMain.handle("deej:slider", (_, sliderKey: DeeJSliderKey) => this.getSlider(sliderKey));
+    ipcMain.handle("deej:sliders", () => this.sliders);
 
     serialService.on("serial:deej", throttle(this.deejEventHandler, 50, this));
   }
@@ -31,7 +31,7 @@ class SliderService extends EventEmitter {
   };
 
   public getSlider(sliderKey: DeeJSliderKey): number {
-    return this.sliders.get(sliderKey) || 0;
+    return this.sliders[sliderKey] || 0;
   }
 
   private setConfig = (config: Partial<Settings>): void => {
@@ -47,10 +47,10 @@ class SliderService extends EventEmitter {
       value = this.invertSliders ? 1 - value : value;
       value = Math.round(value * this.pow * (1 + Number.EPSILON)) / this.pow;
 
-      const previousValue = this.sliders.get(sliderKey);
+      const previousValue = this.sliders[sliderKey];
       if (!previousValue || Math.abs(previousValue - value) >= 0.009) {
         console.debug(`SliderService   | Sending ${value} to ${sliderKey}`);
-        this.sliders.set(sliderKey, value);
+        this.sliders[sliderKey] = value;
 
         this.emit("slider:updated", sliderKey, value);
       }

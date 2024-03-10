@@ -101,9 +101,9 @@ configService.whenReady().then(config => {
     }
 
     deckService.onUpdated((deckKey, value) => webContents.send(`streamdeck:${deckKey}`, value));
-    sliderService.onUpdated((sliderKey, value) => webContents.send(`deej:${sliderKey}`, value));
+    sliderService.onUpdated((sliderKey, value) => webContents.send(`deej:slider`, sliderKey, value));
 
-    ipcMain.handle("getVersions", () => {
+    ipcMain.handle("electron:versions", () => {
       return {
         version: app.getVersion(),
         electron: process.versions.electron,
