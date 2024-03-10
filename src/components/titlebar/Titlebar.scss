@@ -1,0 +1,15 @@
+.titlebar {
+  --icon-size: 20px;
+
+  app-region: drag;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 154px 0 8px;
+  font-size: 14px;
+
+  img {
+    width: var(--icon-size);
+    height: var(--icon-size);
+  }
+}

@@ -1,0 +1,33 @@
+$titlebar-height: 50px;
+$sidebar-width: 50px;
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  user-select: none !important;
+}
+
+body #app {
+  --titlebar-height: #{$titlebar-height};
+  --sidebar-width: #{$sidebar-width};
+
+  display: grid;
+  grid-template:
+    "sidebar titlebar" var(--titlebar-height)
+    "sidebar content" 600px
+    / var(--sidebar-width) 600px;
+  overflow: hidden;
+
+  .titlebar {
+    grid-area: titlebar;
+  }
+
+  .sidebar {
+    grid-area: sidebar;
+  }
+
+  .main {
+    grid-area: content;
+  }
+}

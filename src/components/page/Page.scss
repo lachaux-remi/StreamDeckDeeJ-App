@@ -1,0 +1,26 @@
+.main {
+  display: flex;
+  flex-grow: 1;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+
+  .main__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 16px 0 16px;
+
+    .main__title {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+  }
+
+  .main__content {
+    display: flex;
+    flex-grow: 1;
+    flex-direction: column;
+    overflow: hidden auto;
+  }
+}

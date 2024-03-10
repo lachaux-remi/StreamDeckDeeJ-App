@@ -1,0 +1,46 @@
+.page__input-config {
+  .main__content {
+    &.scrollable .input-config {
+      padding-right: 2px;
+    }
+
+    .input-config {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      padding: 0 16px 16px 16px;
+
+      h2 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+
+      .input-config__icons {
+        --block-icon-size: 130px;
+
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+
+        .icons__block {
+          display: grid;
+          grid-template-columns: repeat(3, 150px);
+          justify-content: space-between;
+        }
+      }
+
+      .input-config__press,
+      .input-config__hold {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+
+        .input-config__form {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+      }
+    }
+  }
+}

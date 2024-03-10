@@ -1,0 +1,16 @@
+.context__frame {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+
+  .context__menu {
+    position: absolute;
+    min-width: 150px;
+
+    .context__menu-sub {
+      padding-right: 4px;
+    }
+  }
+}

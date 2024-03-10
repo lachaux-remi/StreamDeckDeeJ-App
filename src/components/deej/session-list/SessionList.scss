@@ -1,0 +1,38 @@
+.deej__session-list {
+  display: flex;
+  flex-grow: 1;
+  flex-direction: column;
+  overflow: hidden;
+
+  .session__title {
+    display: flex;
+    justify-content: space-between;
+
+    .session__refresh {
+      cursor: pointer;
+    }
+  }
+
+  .session__list {
+    display: flex;
+    flex-grow: 1;
+    flex-direction: column;
+    overflow: hidden auto;
+
+    &::-webkit-scrollbar {
+      border-radius: 4px;
+      background-color: #1e1e1e;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      border-color: #1e1e1e;
+    }
+
+    .MuiListItemButton-root {
+      .MuiListItemText-root {
+        overflow: hidden;
+        text-wrap: nowrap;
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+.switch-input {
+  .MuiFormControlLabel-root {
+    justify-content: space-between;
+    margin: 0;
+
+    .MuiTypography-root {
+      font-size: 0.96rem;
+
+      .MuiFormHelperText-root {
+        margin-top: 0;
+      }
+    }
+  }
+}

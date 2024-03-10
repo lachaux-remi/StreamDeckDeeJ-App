@@ -1,0 +1,15 @@
+.streamdeck__image,
+.streamdeck__no-image {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  svg {
+    width: 55%;
+    height: 55%;
+  }
+}
+
+.streamdeck__no-image {
+  color: var(--grey-600);
+}

@@ -1,0 +1,56 @@
+.input-image__content {
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.23);
+  border-radius: 4px;
+  padding: 9px;
+  text-align: left;
+
+  &:hover {
+    border-color: var(--common-white);
+  }
+
+  .content__title {
+    display: block;
+    padding: 0;
+    height: 15px;
+    font-size: 0.75em;
+
+    & > span {
+      padding-right: 5px;
+      padding-left: 5px;
+      color: rgba(255, 255, 255, 0.7);
+      font-weight: 400;
+      font-size: 0.75rem;
+      line-height: 1.4375em;
+      font-family: "Roboto", "Helvetica", "Arial", sans-serif;
+      letter-spacing: 0.00938em;
+    }
+  }
+
+  .content__image {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    width: 130px;
+    height: 130px;
+  }
+}
+
+.input-image__dialog {
+  .dialog__image {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+    width: 180px;
+    height: 180px;
+  }
+
+  .dialog__button {
+    border-top-right-radius: 0;
+    border-top-left-radius: 0;
+  }
+}

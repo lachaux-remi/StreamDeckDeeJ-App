@@ -1,0 +1,25 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+
+  .sidebar__list {
+    &:first-child {
+      padding-top: 0;
+    }
+
+    &:last-child {
+      padding-bottom: 0;
+    }
+
+    .sidebar__list__item {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0;
+      width: var(--sidebar-width);
+      height: var(--sidebar-width);
+    }
+  }
+}

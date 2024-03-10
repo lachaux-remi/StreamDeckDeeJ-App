@@ -1,0 +1,17 @@
+.page__slider-config {
+  .main__content {
+    display: grid;
+    grid-template-rows: 532px;
+    grid-template-columns: 236px 64px 236px;
+    gap: 16px;
+    padding: 0 16px 16px 16px;
+
+    .deej__buttons {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+}

@@ -1,46 +1,65 @@
 {
   "name": "streamdeck-deej",
   "productName": "StreamDeck DeeJ",
-  "version": "2.1.0",
-  "description": "StreamDeck DeeJ build with js",
-  "main": "dist/main/index.cjs",
+  "description": "StreamDeckDeeJ-App est le logiciel qui permet la configuration de votre StreamDeckDeeJ-Arduino",
+  "version": "3.1.4",
+  "main": "dist-electron/main/index.js",
   "scripts": {
-    "dev": "node scripts/watch.mjs",
-    "build": "node scripts/build.mjs && electron-builder"
+    "dev": "vite",
+    "build": "tsc && vite build && electron-builder",
+    "preview": "vite preview",
+    "pretty": "prettier ./src ./electron/main ./electron/preload --write",
+    "lint": " && eslint ./src ./electron/main ./electron/preload"
   },
   "author": {
-    "name": "Rémi LACHAUX",
+    "name": "LACHAUX Rémi",
     "email": "contact@remi-lachaux.fr",
     "url": "https://www.remi-lachaux.fr"
   },
   "license": "MIT",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=20.11.1"
   },
+  "packageManager": "^pnpm@8.15.4",
   "dependencies": {
-    "classnames": "^2.3.1",
-    "electron-fetch": "^1.7.4",
+    "@emotion/react": "^11.11.4",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.15.11",
+    "@mui/material": "^5.15.11",
+    "@reduxjs/toolkit": "^2.2.1",
     "node-audio-volume-mixer": "^1.0.3",
-    "serialport": "^10.4.0",
-    "uuid": "^8.3.2"
+    "ping": "^0.4.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-redux": "^9.1.0",
+    "react-router-dom": "^6.22.2",
+    "redux": "^5.0.1",
+    "redux-persist": "^6.0.0",
+    "serialport": "^12.0.0"
   },
   "devDependencies": {
-    "@types/node": "^18.0.0",
-    "@types/react": "^18.0.14",
-    "@types/react-dom": "^18.0.5",
-    "@types/sound-play": "^1.1.0",
-    "@types/uuid": "^8.3.4",
-    "@vitejs/plugin-react": "^1.3.2",
-    "electron": "^19.0.4",
-    "electron-builder": "^23.0.3",
-    "axios": "^0.27.2",
-    "react": "^18.1.0",
-    "react-dom": "^18.1.0",
-    "typescript": "^4.7.2",
-    "vite": "^2.9.12"
-  },
-  "env": {
-    "VITE_DEV_SERVER_HOST": "127.0.0.1",
-    "VITE_DEV_SERVER_PORT": 3000
+    "@trivago/prettier-plugin-sort-imports": "^4.3.0",
+    "@types/ping": "^0.4.4",
+    "@types/react": "^18.2.61",
+    "@types/react-dom": "^18.2.19",
+    "@typescript-eslint/eslint-plugin": "^7.1.0",
+    "@typescript-eslint/parser": "^7.1.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "electron": "^29.1.0",
+    "electron-builder": "^24.13.3",
+    "electron-fetch": "^1.9.1",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "postcss": "^8.4.35",
+    "prettier": "^3.2.5",
+    "prettier-plugin-css-order": "^2.0.1",
+    "sass": "^1.71.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.4",
+    "vite-plugin-electron": "^0.28.2",
+    "vite-plugin-electron-renderer": "^0.14.5"
   }
 }

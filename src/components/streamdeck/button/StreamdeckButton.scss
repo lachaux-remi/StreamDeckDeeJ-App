@@ -1,0 +1,20 @@
+.streamdeck__button {
+  display: flex;
+  position: relative;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius);
+  color: var(--common-white);
+
+  &:hover {
+    border-color: var(--common-white);
+  }
+}
+
+[data-moving="true"] {
+  .streamdeck__button:hover {
+    border-color: var(--primary-main);
+  }
+}

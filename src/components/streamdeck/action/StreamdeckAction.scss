@@ -1,0 +1,19 @@
+.streamdeck__action {
+  position: absolute;
+  right: 5px;
+  justify-content: flex-end;
+
+  &[datatype="hold"] {
+    top: 5px;
+  }
+
+  &[datatype="pressed"] {
+    bottom: 5px;
+  }
+
+  &.streamdeck__image svg,
+  &.streamdeck__no-image svg {
+    width: 20%;
+    height: 20%;
+  }
+}
