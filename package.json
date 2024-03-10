@@ -2,7 +2,7 @@
   "name": "streamdeck-deej",
   "productName": "StreamDeck DeeJ",
   "description": "StreamDeckDeeJ-App est le logiciel qui permet la configuration de votre StreamDeckDeeJ-Arduino",
-  "version": "3.1.5",
+  "version": "3.1.6",
   "main": "dist-electron/main/index.js",
   "scripts": {
     "dev": "vite",
