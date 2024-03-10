@@ -34,10 +34,10 @@
         font-size: 0.9rem;
 
         a {
-          color: var(--secondary-main);
-          text-decoration: none;
           transition: color 0.2s;
+          color: var(--secondary-main);
           font-weight: 600;
+          text-decoration: none;
 
           &:hover {
             color: var(--secondary-light);
