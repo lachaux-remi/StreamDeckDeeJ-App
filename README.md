@@ -6,7 +6,7 @@ entre [StreamDeckDeeJ-Arduino](https://github.com/lachaux-remi/StreamDeckDeeJ-Ar
 
 ## Stack
 
-React, Redux, Redux Toolkit, MUI, ElectronJS, ViteJS, Typescript, Eslint, Prettier, Storybook
+React, Redux, Redux Toolkit, MUI, ElectronJS, ViteJS, Typescript, Eslint, Prettier
 
 ## Licence
 
