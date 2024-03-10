@@ -4,60 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2e284b84-6085-45de-9962-a3a3a6a30f19" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.editorconfig" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/StreamDeckDeeJ-App.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/StreamDeckDeeJ-App.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LICENSE" beforeDir="false" afterPath="$PROJECT_DIR$/LICENSE" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/StreamDeckDeeJ-config-slider.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/StreamDeckDeeJ.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/electron-builder.json5" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/main/app/helpers.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/main/app/modules/ModuleType.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/main/app/modules/OctopiLedModule.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/main/app/modules/TapoModule.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/main/app/services/DeckService.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/main/app/services/SerialService.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/main/app/services/SessionsService.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/main/app/services/SliderService.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/main/app/services/config/ConfigDefault.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/main/app/services/config/ConfigService.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/main/app/services/config/ConfigType.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/main/index.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/main/vite.config.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/preload/bridge.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/preload/vite.config.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/index.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/public/favicon.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/public/systray/edit-config.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/public/systray/refresh-sessions.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/src/@types/bridge.d.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/src/components/App.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/src/components/ContextMenu.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/src/components/deck/Deck.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/src/components/deck/DeckOption.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/src/components/deej/Deej.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/src/components/deej/DeejOption.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/src/components/deej/Slider.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/src/components/inputs/Image.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/src/components/inputs/Input.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/src/components/inputs/Select.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/src/components/inputs/Textarea.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/src/main.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/src/styles/style.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/src/vite-env.d.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/tsconfig.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/renderer/vite.config.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/paths.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/build.mjs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/watch.mjs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/tsconfig.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/types.d.ts" beforeDir="false" />
-    </list>
+    <list default="true" id="2e284b84-6085-45de-9962-a3a3a6a30f19" name="Changes" comment="refactor: complete software overhaul" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -80,8 +27,12 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "history": [
+    {
+      "assignee": "lachaux-remi"
+    }
+  ],
   "lastFilter": {
-    "state": "OPEN",
     "assignee": "lachaux-remi"
   }
 }]]></component>
@@ -113,29 +64,29 @@
     <option name="showLibraryContents" value="true" />
     <option name="showVisibilityIcons" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "code.cleanup.on.save": "true",
-    "git-widget-placeholder": "master",
-    "last_opened_file_path": "C:/Users/Remi/Desktop/StreamDeckDeeJ/StreamDeckDeeJ-App",
-    "list.type.of.created.stylesheet": "SCSS",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.standard": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.standard": "",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "prettierjs.PrettierConfiguration.Package": "C:\\Users\\Remi\\Desktop\\StreamDeckDeeJ-App\\node_modules\\prettier",
-    "rearrange.code.on.save": "true",
-    "settings.editor.selected.configurable": "settings.typescriptcompiler",
-    "ts.external.directory.path": "C:\\Users\\Remi\\AppData\\Local\\Programs\\WebStorm\\plugins\\javascript-impl\\jsLanguageServicesImpl\\external",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;code.cleanup.on.save&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/Remi/Desktop/StreamDeckDeeJ/StreamDeckDeeJ-App&quot;,
+    &quot;list.type.of.created.stylesheet&quot;: &quot;SCSS&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.standard&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.standard&quot;: &quot;&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;prettierjs.PrettierConfiguration.Package&quot;: &quot;C:\\Users\\Remi\\Desktop\\StreamDeckDeeJ-App\\node_modules\\prettier&quot;,
+    &quot;rearrange.code.on.save&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;settings.typescriptcompiler&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Users\\Remi\\AppData\\Local\\Programs\\WebStorm\\plugins\\javascript-impl\\jsLanguageServicesImpl\\external&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\Remi\Desktop\StreamDeckDeeJ-App\src\types" />
@@ -219,7 +170,17 @@
       <workItem from="1709982223058" duration="30920000" />
       <workItem from="1710065049418" duration="18358000" />
       <workItem from="1710095130620" duration="58000" />
+      <workItem from="1710095196565" duration="316000" />
     </task>
+    <task id="LOCAL-00001" summary="refactor: complete software overhaul">
+      <option name="closed" value="true" />
+      <created>1710095471805</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1710095471805</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -239,5 +200,9 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="refactor: complete software overhaul" />
+    <option name="LAST_COMMIT_MESSAGE" value="refactor: complete software overhaul" />
   </component>
 </project>
