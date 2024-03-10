@@ -6,6 +6,14 @@ import ping from "ping";
 
 import TapoCipher from "./TapoCipher";
 
+type TapoAPIResponse = {
+  error_code: number;
+  result: {
+    device_on: boolean;
+    brightness: number;
+  };
+};
+
 /* eslint-disable camelcase */
 class TapoAPI {
   private cipher?: TapoCipher;
@@ -56,7 +64,12 @@ class TapoAPI {
     return { brightness: info.result.brightness, device_on };
   }
 
-  private async sendSecureRequest(method: string, params: { [key: string]: any } = {}): Promise<any> {
+  private async sendSecureRequest(
+    method: string,
+    params: {
+      [key: string]: boolean | number;
+    } = {}
+  ): Promise<TapoAPIResponse> {
     await this.handshake();
 
     const rawRequest = JSON.stringify({ method, params: (Object.keys(params).length > 0 && params) || null });
