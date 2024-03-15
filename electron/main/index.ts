@@ -66,6 +66,7 @@ configService.whenReady().then(config => {
       mainWindow.hide();
     }
 
+    tray.setToolTip(app.getName());
     tray.setContextMenu(
       Menu.buildFromTemplate([
         {
@@ -102,7 +103,6 @@ configService.whenReady().then(config => {
 
     deckService.onUpdated((deckKey, value) => webContents.send(`streamdeck:${deckKey}`, value));
     sliderService.onUpdated((sliderKey, value) => webContents.send(`deej:slider`, sliderKey, value));
-
     ipcMain.handle("electron:versions", () => {
       return {
         version: app.getVersion(),
