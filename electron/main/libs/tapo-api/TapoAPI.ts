@@ -2,7 +2,6 @@ import { Buffer } from "buffer";
 import crypto from "crypto";
 import { session } from "electron";
 import fetch from "electron-fetch";
-import ping from "ping";
 
 import TapoCipher from "./TapoCipher";
 
@@ -84,11 +83,6 @@ class TapoAPI {
   }
 
   private async handshake() {
-    const resultPing = await ping.promise.probe(this.ipAddress, { timeout: 60 });
-    if (!resultPing.alive) {
-      throw new Error("Device is not reachable");
-    }
-
     await session.defaultSession.clearStorageData();
 
     const { localSeed, remoteSeed, authHash } = await this.firstHandshake();

@@ -23,9 +23,6 @@ dependencies:
   node-audio-volume-mixer:
     specifier: ^1.0.3
     version: 1.0.3
-  ping:
-    specifier: ^0.4.4
-    version: 0.4.4
   pino:
     specifier: ^8.19.0
     version: 8.19.0
@@ -3747,11 +3744,6 @@ packages:
     resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
     engines: {node: '>=8.6'}
     dev: true
-
-  /ping@0.4.4:
-    resolution: {integrity: sha512-56ZMC0j7SCsMMLdOoUg12VZCfj/+ZO+yfOSjaNCRrmZZr6GLbN2X/Ui56T15dI8NhiHckaw5X2pvyfAomanwqQ==}
-    engines: {node: '>=4.0.0'}
-    dev: false
 
   /pino-abstract-transport@1.1.0:
     resolution: {integrity: sha512-lsleG3/2a/JIWUtf9Q5gUNErBqwIu1tUKTT3dUzaf5DySw9ra1wcqKjJjLX1VTY64Wk1eEOYsVGSaGfCK85ekA==}
