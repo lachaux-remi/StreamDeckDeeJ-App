@@ -23,16 +23,14 @@ export const rootVariables = (theme: Theme) => {
 
 export const scrollbar = (theme: Theme) => {
   return {
+    "*::-webkit-scrollbar-track": {
+      backgroundColor: "transparent"
+    },
     "*::-webkit-scrollbar": {
-      backgroundColor: theme.palette.background.default
+      width: "5px",
+      backgroundColor: "transparent"
     },
     "*::-webkit-scrollbar-thumb": {
-      backgroundColor: theme.palette.grey[500],
-      borderLeftWidth: "12px",
-      borderStyle: "solid",
-      borderColor: theme.palette.background.default
-    },
-    "*::-webkit-scrollbar-thumb:hover": {
       backgroundColor: theme.palette.grey[400]
     }
   };
