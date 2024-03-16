@@ -1,22 +1,27 @@
 import { ipcMain } from "electron";
 import { EventEmitter } from "node:events";
+import { Logger } from "pino";
 
 import { DeeJSliderKey, Settings } from "../types/SettingsType";
 import { throttle } from "../utils/DebounceUtil";
 import ConfigService from "./ConfigService";
+import LoggerService from "./LoggerService";
 import SerialService from "./SerialService";
 
 class SliderService extends EventEmitter {
+  private readonly logger: Logger;
   private readonly sliders: { [sliderKey: DeeJSliderKey]: number } = {};
   private readonly pow: number = Math.pow(10, 3);
   private invertSliders: boolean = false;
 
   constructor(
+    loggerService: LoggerService,
     readonly configService: ConfigService,
     readonly serialService: SerialService
   ) {
     super();
-    console.debug("SliderService   | INIT");
+    this.logger = loggerService.getLogger().child({ service: "SliderService" });
+    this.logger.info("INIT");
 
     configService.onUpdated(this.setConfig);
     this.setConfig(configService.getConfig());
@@ -49,7 +54,7 @@ class SliderService extends EventEmitter {
 
       const previousValue = this.sliders[sliderKey];
       if (!previousValue || Math.abs(previousValue - value) >= 0.009) {
-        console.debug(`SliderService   | Sending ${value} to ${sliderKey}`);
+        this.logger.info(`Sending ${value} to ${sliderKey}`);
         this.sliders[sliderKey] = value;
 
         this.emit("slider:updated", sliderKey, value);

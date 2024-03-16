@@ -1,5 +1,6 @@
 import { ipcMain } from "electron";
 import { EventEmitter } from "node:events";
+import { Logger } from "pino";
 
 import OctopiLedAPI, { DeviceInfo } from "../libs/octoprint-led-api/OctopiLedAPI";
 import TapoAPI, { TapoAPIResponse } from "../libs/tapo-api/TapoAPI";
@@ -7,17 +8,21 @@ import KeyUsageEnum from "../types/KeyUsageEnum";
 import ModuleEnum from "../types/ModuleEnum";
 import { StreamdeckInputConfig, StreamdeckInputKey, StreamdeckKey } from "../types/SettingsType";
 import ConfigService from "./ConfigService";
+import LoggerService from "./LoggerService";
 import SerialService from "./SerialService";
 
 class DeckService extends EventEmitter {
+  private readonly logger: Logger;
   private keyState: { [key: StreamdeckInputKey]: KeyUsageEnum.Hold | KeyUsageEnum.Pressed } = {};
 
   constructor(
+    loggerService: LoggerService,
     readonly configService: ConfigService,
     readonly serialService: SerialService
   ) {
     super();
-    console.debug("DeckService     | INIT");
+    this.logger = loggerService.getLogger().child({ service: "DeckService" });
+    this.logger.info("INIT");
 
     ipcMain.handle("streamdeck:keys", (_, deckKey: StreamdeckInputKey) => this.getKeyInfo(deckKey));
 
@@ -78,8 +83,8 @@ class DeckService extends EventEmitter {
         return;
       }
 
-      console.debug(
-        `DeckService     | Key ${deckKey} ${this.keyState[deckKey]} run action ${stateConfig.module}: ${stateConfig.params.join(", ")}`
+      this.logger.debug(
+        `Key ${deckKey} ${this.keyState[deckKey]} run action ${stateConfig.module}: ${stateConfig.params.join(", ")}`
       );
 
       if (stateConfig.module === ModuleEnum.Macro || stateConfig.module === ModuleEnum.Ir) {
@@ -94,13 +99,13 @@ class DeckService extends EventEmitter {
 
         api[stateConfig.params[1] as keyof TapoAPI]()
           .then(info => this.emit("deck:updated", deckKey, info))
-          .catch(err => console.debug("DeckService     | Error while calling Tapo API", err));
+          .catch(err => this.logger.error("Error while calling Tapo API", err));
       } else if (stateConfig.module === ModuleEnum.OctopiLed) {
         const api = new OctopiLedAPI(stateConfig.params[0]);
 
         api[stateConfig.params[1] as keyof OctopiLedAPI]()
           .then(info => this.emit("deck:updated", deckKey, info))
-          .catch(err => console.debug("DeckService     | Error while calling OctoPi LED API", err));
+          .catch(err => this.logger.error("Error while calling OctoPi LED API", err));
       }
     } else {
       this.keyState[deckKey] = data.state;

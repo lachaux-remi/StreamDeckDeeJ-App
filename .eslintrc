@@ -29,14 +29,7 @@
         "properties": "always"
       }
     ],
-    "no-console": [
-      "error",
-      {
-        "allow": [
-          "debug"
-        ]
-      }
-    ],
+    "no-console": "error",
     "no-debugger": "error",
     "react-hooks/exhaustive-deps": "off",
     "react-hooks/rules-of-hooks": "off",

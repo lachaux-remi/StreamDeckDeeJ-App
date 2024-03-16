@@ -2,19 +2,23 @@ import { app, ipcMain } from "electron";
 import { EventEmitter } from "node:events";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { Logger } from "pino";
 
 import { Settings } from "../types/SettingsType";
+import LoggerService from "./LoggerService";
 
 class ConfigService extends EventEmitter {
+  private readonly logger: Logger;
   private readonly configPath: string = join(app.getPath("userData"), "config.json");
   private config: Partial<Settings> = {};
 
-  constructor() {
+  constructor(loggerService: LoggerService) {
     super();
-    console.debug("ConfigService   | INIT");
+    this.logger = loggerService.getLogger().child({ module: "ConfigService" });
+    this.logger.info("INIT");
 
     if (!existsSync(this.configPath)) {
-      console.debug(`ConfigService   | Config file not found, creating default config file`);
+      this.logger.debug(`Config file not found, creating default config file`);
       this.setConfig({ comPort: "COM1", baudRate: 9600, deej: {}, streamdeck: {} });
     }
 
@@ -37,7 +41,7 @@ class ConfigService extends EventEmitter {
       writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
     } catch (error) {
       if (error instanceof Error) {
-        console.debug(`ConfigService   | Error while saving config: ${error.message}`, error);
+        this.logger.error(`Error while saving config: ${error.message}`, error);
       }
     }
 
@@ -56,13 +60,13 @@ class ConfigService extends EventEmitter {
   };
 
   private loadConfig = (): void => {
-    console.debug(`ConfigService   | Loading config`, this.configPath);
+    this.logger.info(`Loading config`, this.configPath);
 
     try {
       this.config = JSON.parse(readFileSync(this.configPath, "utf8"));
     } catch (error) {
       if (error instanceof Error) {
-        console.debug(`ConfigService   | Error while loading config ${error.message}`, error);
+        this.logger.error(`Error while loading config ${error.message}`, error);
       }
     }
 

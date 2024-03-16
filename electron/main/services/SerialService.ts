@@ -1,19 +1,26 @@
 import { ipcMain } from "electron";
 import { ok } from "node:assert";
 import { EventEmitter } from "node:events";
+import { Logger } from "pino";
 import { ReadlineParser, SerialPort } from "serialport";
 
 import { Settings } from "../types/SettingsType";
 import ConfigService from "./ConfigService";
+import LoggerService from "./LoggerService";
 
 class SerialService extends EventEmitter {
+  private readonly logger: Logger;
   private serialPort: SerialPort | null = null;
   private comPort: string | undefined;
   private baudRate: number | undefined;
 
-  constructor(readonly configService: ConfigService) {
+  constructor(
+    loggerService: LoggerService,
+    readonly configService: ConfigService
+  ) {
     super();
-    console.debug("SerialService   | INIT");
+    this.logger = loggerService.getLogger().child({ service: "SerialService" });
+    this.logger.info("INIT");
 
     configService.onUpdated(this.setConfig);
     this.setConfig(configService.getConfig());
@@ -23,10 +30,10 @@ class SerialService extends EventEmitter {
 
   public send = (data: string): void => {
     if (this.serialPort) {
-      console.debug(`SerialService   | Sending data: ${data}`);
+      this.logger.debug(`Sending data: ${data}`);
       this.serialPort.write(data);
     } else {
-      console.debug(`SerialService   | Serial port not open, cannot send data: ${data}`);
+      this.logger.warn(`Serial port not open, cannot send data: ${data}`);
     }
   };
 
@@ -35,20 +42,20 @@ class SerialService extends EventEmitter {
       this.comPort = config.comPort;
       this.baudRate = config.baudRate;
 
-      this.reloadConnection().catch(error => console.debug(`SerialService   | Error reloading connection: ${error}`));
+      this.reloadConnection().catch(error => this.logger.error(`Error reloading connection`, error));
     }
   };
 
   private reloadConnection = async () => {
     if (this.serialPort) {
-      console.debug("SerialService   | Reloading connection");
+      this.logger.info("Reloading connection");
       await new Promise(resolve => this.serialPort?.close(resolve));
       this.serialPort = null;
       return;
     }
 
     if (!this.comPort || !this.baudRate) {
-      console.debug("SerialService   | No comPort or baudRate defined");
+      this.logger.warn("No comPort or baudRate defined");
       return;
     }
 
@@ -63,7 +70,7 @@ class SerialService extends EventEmitter {
 
     this.serialPort
       .on("close", () => {
-        console.debug("SerialService   | Connection closed");
+        this.logger.info("Connection closed");
         this.reconnect();
       })
       .open(err => {
@@ -71,12 +78,12 @@ class SerialService extends EventEmitter {
 
         if (err) {
           const msg = (err as unknown as Error | null)?.message;
-          console.debug(`SerialService   | Connection failed with msg: ${msg}`);
+          this.logger.error(`Connection failed with msg: ${msg}`);
           this.reconnect();
           return;
         }
 
-        console.debug(`SerialService   | Connection Successful on ${this.comPort} at ${this.baudRate} baud`);
+        this.logger.info(`Connection Successful on ${this.comPort} at ${this.baudRate} baud`);
 
         this.serialPort.pipe(new ReadlineParser({ delimiter: "\r\n" })).on("data", data => {
           try {
@@ -84,15 +91,13 @@ class SerialService extends EventEmitter {
             if (json.type) {
               const type = json.type;
 
-              if (type !== "deej") {
-                console.debug(`SerialService   | Received data: ${data}`);
-              }
+              this.logger.debug(`Received data: ${data}`);
 
               delete json.type;
               this.emit(`serial:${type}`, json);
             }
           } catch (error) {
-            console.debug(`SerialService   | Error parsing data: ${error}`, data);
+            this.logger.error(`Error parsing data: ${error}`, data);
           }
         });
       });

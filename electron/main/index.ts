@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import ConfigService from "./services/ConfigService";
 import DeckService from "./services/DeckService";
+import LoggerService from "./services/LoggerService";
 import SerialService from "./services/SerialService";
 import SessionsService from "./services/SessionsService";
 import SliderService from "./services/SliderService";
@@ -20,12 +21,13 @@ if (!app.requestSingleInstanceLock()) {
   process.exit(0);
 }
 
-const configService = new ConfigService();
+const loggerService = new LoggerService();
+const configService = new ConfigService(loggerService);
 configService.whenReady().then(config => {
-  const serialService = new SerialService(configService);
-  const deckService = new DeckService(configService, serialService);
-  const sliderService = new SliderService(configService, serialService);
-  new SessionsService(configService, sliderService);
+  const serialService = new SerialService(loggerService, configService);
+  const deckService = new DeckService(loggerService, configService, serialService);
+  const sliderService = new SliderService(loggerService, configService, serialService);
+  new SessionsService(loggerService, configService, sliderService);
 
   app.whenReady().then(async () => {
     const backgroundColor = (): string => (nativeTheme.shouldUseDarkColors ? "#121212" : "#ffffff");
@@ -103,6 +105,7 @@ configService.whenReady().then(config => {
 
     deckService.onUpdated((deckKey, value) => webContents.send(`streamdeck:${deckKey}`, value));
     sliderService.onUpdated((sliderKey, value) => webContents.send(`deej:slider`, sliderKey, value));
+    loggerService.on("log", log => webContents.send("electron:log", log));
     ipcMain.handle("electron:versions", () => {
       return {
         version: app.getVersion(),

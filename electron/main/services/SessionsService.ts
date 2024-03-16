@@ -1,8 +1,10 @@
 import { ipcMain } from "electron";
 import { NodeAudioVolumeMixer } from "node-audio-volume-mixer";
 import { EventEmitter } from "node:events";
+import { Logger } from "pino";
 
 import ConfigService from "./ConfigService";
+import LoggerService from "./LoggerService";
 import SliderService from "./SliderService";
 
 const MIN_REFRESH_TIME = 5 * 1000;
@@ -15,6 +17,7 @@ interface ProcessStruct {
 }
 
 class SessionsService extends EventEmitter {
+  private readonly logger: Logger;
   private isStale: boolean = false;
   private isStaleTask: NodeJS.Timeout | null = null;
   private isFresh: boolean = false;
@@ -22,11 +25,13 @@ class SessionsService extends EventEmitter {
   private sessions = NodeAudioVolumeMixer.getAudioSessionProcesses() || [];
 
   constructor(
+    loggerService: LoggerService,
     readonly configService: ConfigService,
     readonly sliderService: SliderService
   ) {
     super();
-    console.debug("SessionsService | INIT");
+    this.logger = loggerService.getLogger().child({ service: "SessionsService" });
+    this.logger.info("INIT");
 
     this.runIsStaleTask();
     this.runIsFreshTask();
@@ -50,7 +55,7 @@ class SessionsService extends EventEmitter {
   };
 
   private refreshSessions = (reason: string): void => {
-    console.debug(`SessionsService | refreshed: ${reason ? reason : ""}`);
+    this.logger.info(`refreshing: ${reason ? reason : ""}`);
     const sessions = NodeAudioVolumeMixer.getAudioSessionProcesses();
     this.isFresh = true;
     this.isStale = false;
