@@ -28,64 +28,88 @@ const safeDOM = {
 function useLoading() {
   const className = `loader`;
   const styleContent = `
-    .${className},
-    .${className}:before,
-    .${className}:after {
-      background: #ffffff;
-      -webkit-animation: load1 1s infinite ease-in-out;
-      animation: load1 1s infinite ease-in-out;
-      width: 1em;
-      height: 4em;
-    }
     .${className} {
-      color: #ffffff;
-      text-indent: -9999em;
-      margin: 88px auto;
-      position: relative;
-      font-size: 32px;
-      -webkit-transform: translateZ(0);
-      -ms-transform: translateZ(0);
-      transform: translateZ(0);
-      -webkit-animation-delay: -0.16s;
-      animation-delay: -0.16s;
+      display: grid;
+      grid-template-columns: repeat(4, 64px);
+      grid-template-rows: repeat(4, 64px);
+      gap: 10px;
     }
-    .${className}:before,
-    .${className}:after {
-      position: absolute;
-      top: 0;
-      content: '';
+    
+    .${className} .cube {
+      background-color: #fff;
+      -webkit-animation: cubeGridScaleDelay 1.3s infinite ease-in-out;
+              animation: cubeGridScaleDelay 1.3s infinite ease-in-out; 
     }
-    .${className}:before {
-      left: -1.5em;
-      -webkit-animation-delay: -0.32s;
-      animation-delay: -0.32s;
-    }
-    .${className}:after {
-      left: 1.5em;
-    }
-    @-webkit-keyframes load1 {
-      0%,
-      80%,
-      100% {
-        box-shadow: 0 0;
-        height: 4em;
+    .${className} .cube1 {
+      -webkit-animation-delay: 0.3s;
+              animation-delay: 0.3s; }
+    .${className} .cube2 {
+      -webkit-animation-delay: 0.4s;
+              animation-delay: 0.4s; }
+    .${className} .cube3 {
+      -webkit-animation-delay: 0.5s;
+              animation-delay: 0.5s; }
+    .${className} .cube4 {
+      -webkit-animation-delay: 0.6s;
+              animation-delay: 0.6s; }
+              
+    .${className} .cube5 {
+      -webkit-animation-delay: 0.2s;
+              animation-delay: 0.2s; }
+    .${className} .cube6 {
+      -webkit-animation-delay: 0.3s;
+              animation-delay: 0.3s; }
+    .${className} .cube7 {
+      -webkit-animation-delay: 0.4s;
+              animation-delay: 0.4s; }
+    .${className} .cube8 {
+      -webkit-animation-delay: 0.5s;
+              animation-delay: 0.5s; }
+              
+    .${className} .cube9 {
+      -webkit-animation-delay: 0.1s;
+              animation-delay: 0.1s; }
+    .${className} .cube10 {
+      -webkit-animation-delay: 0.2s;
+              animation-delay: 0.2s; }
+    .${className} .cube11 {
+      -webkit-animation-delay: 0.3s;
+              animation-delay: 0.3s; }
+    .${className} .cube12 {
+      -webkit-animation-delay: 0.4s;
+              animation-delay: 0.4s; }
+              
+    .${className} .cube13 {
+      -webkit-animation-delay: 0.0s;
+              animation-delay: 0.0s; }
+    .${className} .cube14 {
+      -webkit-animation-delay: 0.1s;
+              animation-delay: 0.1s; }
+    .${className} .cube15 {
+      -webkit-animation-delay: 0.2s;
+              animation-delay: 0.2s; }
+    .${className} .cube16 {
+      -webkit-animation-delay: 0.3s;
+              animation-delay: 0.3s; }
+    
+    @-webkit-keyframes cubeGridScaleDelay {
+      0%, 70%, 100% {
+        -webkit-transform: scale3D(1, 1, 1);
+                transform: scale3D(1, 1, 1);
+      } 35% {
+        -webkit-transform: scale3D(0, 0, 1);
+                transform: scale3D(0, 0, 1); 
       }
-      40% {
-        box-shadow: 0 -2em;
-        height: 5em;
-      }
     }
-    @keyframes load1 {
-      0%,
-      80%,
-      100% {
-        box-shadow: 0 0;
-        height: 4em;
-      }
-      40% {
-        box-shadow: 0 -2em;
-        height: 5em;
-      }
+    
+    @keyframes cubeGridScaleDelay {
+      0%, 70%, 100% {
+        -webkit-transform: scale3D(1, 1, 1);
+                transform: scale3D(1, 1, 1);
+      } 35% {
+        -webkit-transform: scale3D(0, 0, 1);
+                transform: scale3D(0, 0, 1);
+      } 
     }
     
     .app-loading-wrap {
@@ -107,7 +131,24 @@ function useLoading() {
   oStyle.id = "app-loading-style";
   oStyle.innerHTML = styleContent;
   oDiv.className = "app-loading-wrap";
-  oDiv.innerHTML = `<div class="${className}"><div></div></div>`;
+  oDiv.innerHTML = `<div class="${className}">
+    <div class="cube cube1"></div>
+    <div class="cube cube2"></div>
+    <div class="cube cube3"></div>
+    <div class="cube cube4"></div>
+    <div class="cube cube5"></div>
+    <div class="cube cube6"></div>
+    <div class="cube cube7"></div>
+    <div class="cube cube8"></div>
+    <div class="cube cube9"></div>
+    <div class="cube cube10"></div>
+    <div class="cube cube11"></div>
+    <div class="cube cube12"></div>
+    <div class="cube cube13"></div>
+    <div class="cube cube14"></div>
+    <div class="cube cube15"></div>
+    <div class="cube cube16"></div>
+  </div>`;
 
   return {
     appendLoading() {
