@@ -16,4 +16,4 @@ export type ApplicationVersions = {
   chrome: string;
 };
 
-export type Log = { service: string; level: string; args: any[] };
+export type Log = { service: string; level: string; args: string[] | { message: string; stack: string }[] };

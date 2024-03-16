@@ -35,7 +35,7 @@ const ConsolePage = () => {
                 <div className="info__level">[{log.level.toUpperCase()}]</div>
                 <div className="info__messages">
                   {log.args.map((arg, argIndex) => {
-                    if (typeof arg === "object" && arg.stack) {
+                    if (typeof arg === "object" && "stack" in arg) {
                       return (
                         <div key={index + "-" + argIndex} className="messages__message-stack">
                           {arg.stack}
@@ -48,7 +48,11 @@ const ConsolePage = () => {
                         </div>
                       );
                     } else {
-                      console.log(arg);
+                      return (
+                        <div key={index + "-" + argIndex} className="messages__message">
+                          {JSON.stringify(arg)}
+                        </div>
+                      );
                     }
                   })}
                 </div>
