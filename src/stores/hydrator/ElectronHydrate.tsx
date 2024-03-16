@@ -18,11 +18,6 @@ type ElectronHydrateType = {
   children: ReactNode;
 };
 
-type SliderHandlerType = {
-  sliderKey: DeeJSliderKey;
-  volume: number;
-};
-
 const ElectronHydrate = (props: ElectronHydrateType) => {
   const { children } = props;
   const dispatch = useDispatch();
@@ -36,7 +31,13 @@ const ElectronHydrate = (props: ElectronHydrateType) => {
 
   useEffect(() => {
     const serialLogHandler = (_: unknown, log: Log) => dispatch(setLog(log));
-    const sliderHandler = (_: unknown, data: SliderHandlerType) => dispatch(setSliderVolume(data));
+    const sliderHandler = (_: unknown, sliderKey: DeeJSliderKey, volume: number) =>
+      dispatch(
+        setSliderVolume({
+          sliderKey,
+          volume
+        })
+      );
 
     ipcRenderer.on("electron:log", serialLogHandler);
     ipcRenderer.on("deej:slider", sliderHandler);
