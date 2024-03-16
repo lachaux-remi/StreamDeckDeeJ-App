@@ -1,6 +1,6 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
 
-import { ApplicationVersions, Serial } from "@/types/SerialType";
+import { Log, Serial } from "@/types/SerialType";
 import { DeeJSliderKey } from "@/types/SettingsType";
 
 export const serialSlice = createSlice({
@@ -8,7 +8,8 @@ export const serialSlice = createSlice({
   initialState: {
     sliders: {} as Serial["sliders"],
     versions: {} as Serial["versions"],
-    serialPortList: [] as Serial["serialPortList"]
+    serialPortList: [] as Serial["serialPortList"],
+    logs: [] as Serial["logs"]
   },
   reducers: {
     setSlidersVolume: (state, action: PayloadAction<Serial["sliders"]>) => {
@@ -20,12 +21,19 @@ export const serialSlice = createSlice({
     setSerialPortList: (state, action: PayloadAction<Serial["serialPortList"]>) => {
       state.serialPortList = action.payload;
     },
-    setVersions: (state, action: PayloadAction<ApplicationVersions>) => {
+    setVersions: (state, action: PayloadAction<Serial["versions"]>) => {
       state.versions = action.payload;
+    },
+    setLogs: (state, action: PayloadAction<Serial["logs"]>) => {
+      state.logs = action.payload;
+    },
+    setLog: (state, action: PayloadAction<Log>) => {
+      state.logs.push(action.payload);
     }
   }
 });
 
-export const { setSlidersVolume, setSliderVolume, setSerialPortList, setVersions } = serialSlice.actions;
+export const { setSlidersVolume, setSliderVolume, setSerialPortList, setVersions, setLogs, setLog } =
+  serialSlice.actions;
 
 export default serialSlice.reducer;

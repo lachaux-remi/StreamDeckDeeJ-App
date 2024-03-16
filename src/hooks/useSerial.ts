@@ -1,6 +1,6 @@
 import { useSelector } from "react-redux";
 
-import { Serial } from "@/types/SerialType";
+import { Log, Serial } from "@/types/SerialType";
 import { DeeJSliderKey } from "@/types/SettingsType";
 import { type RootState } from "@/types/StateType";
 
@@ -19,10 +19,15 @@ const userSerial = () => {
     return serial.versions;
   };
 
+  const getLogs = (): Log[] => {
+    return serial.logs;
+  };
+
   return {
     getSliderVolume,
     getSerialsList,
-    getVersions
+    getVersions,
+    getLogs
   };
 };
 

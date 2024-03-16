@@ -14,11 +14,11 @@ class ConfigService extends EventEmitter {
 
   constructor(loggerService: LoggerService) {
     super();
-    this.logger = loggerService.getLogger().child({ module: "ConfigService" });
-    this.logger.info("INIT");
+    this.logger = loggerService.getLogger().child({ service: "ConfigService" });
+    this.logger.debug("INIT");
 
     if (!existsSync(this.configPath)) {
-      this.logger.debug(`Config file not found, creating default config file`);
+      this.logger.warn(`Config file not found, creating default config file`);
       this.setConfig({ comPort: "COM1", baudRate: 9600, deej: {}, streamdeck: {} });
     }
 

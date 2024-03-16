@@ -31,7 +31,7 @@ class SessionsService extends EventEmitter {
   ) {
     super();
     this.logger = loggerService.getLogger().child({ service: "SessionsService" });
-    this.logger.info("INIT");
+    this.logger.debug("INIT");
 
     this.runIsStaleTask();
     this.runIsFreshTask();
@@ -55,7 +55,7 @@ class SessionsService extends EventEmitter {
   };
 
   private refreshSessions = (reason: string): void => {
-    this.logger.info(`refreshing: ${reason ? reason : ""}`);
+    this.logger.warn(`refreshing: ${reason ? reason : ""}`);
     const sessions = NodeAudioVolumeMixer.getAudioSessionProcesses();
     this.isFresh = true;
     this.isStale = false;

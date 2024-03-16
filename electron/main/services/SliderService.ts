@@ -21,7 +21,7 @@ class SliderService extends EventEmitter {
   ) {
     super();
     this.logger = loggerService.getLogger().child({ service: "SliderService" });
-    this.logger.info("INIT");
+    this.logger.debug("INIT");
 
     configService.onUpdated(this.setConfig);
     this.setConfig(configService.getConfig());
@@ -54,7 +54,7 @@ class SliderService extends EventEmitter {
 
       const previousValue = this.sliders[sliderKey];
       if (!previousValue || Math.abs(previousValue - value) >= 0.009) {
-        this.logger.info(`Sending ${value} to ${sliderKey}`);
+        this.logger.debug(`Sending ${value} to ${sliderKey}`);
         this.sliders[sliderKey] = value;
 
         this.emit("slider:updated", sliderKey, value);

@@ -1,6 +1,7 @@
 import { HashRouter, Route, Routes } from "react-router-dom";
 
 import DefaultLayout from "@/layouts/DefaultLayout";
+import ConsolePage from "@/pages/console/ConsolePage";
 import DeejSliderPage from "@/pages/deej-slider/DeejSliderPage";
 import DeeJPage from "@/pages/deej/DeeJPage";
 import SettingsPage from "@/pages/settings/SettingsPage";
@@ -21,6 +22,7 @@ const DefaultRouter = () => {
             <Route index element={<DeeJPage />} />
             <Route path="config" element={<DeejSliderPage />} />
           </Route>
+          <Route path="console" element={<ConsolePage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>

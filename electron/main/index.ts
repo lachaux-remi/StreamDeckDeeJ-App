@@ -99,6 +99,9 @@ configService.whenReady().then(config => {
         webContents.toggleDevTools();
       }
     });
+    ipcMain.on("open-devtools", () => {
+      webContents.toggleDevTools();
+    });
     if (config.devTools) {
       webContents.openDevTools();
     }

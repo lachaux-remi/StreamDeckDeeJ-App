@@ -13,11 +13,12 @@ class LoggerService extends EventEmitter {
     const self = this;
 
     this.logger = pino({
-      level: "info",
+      level: "trace",
       hooks: {
         logMethod(args, method, level) {
-          self.logs.push({ args, level });
-          self.emit("log", { args, level });
+          const log = { args, level: this.levels.labels[level], ...this.bindings() };
+          self.logs.push(log);
+          self.emit("log", log);
           return method.apply(this, args);
         }
       }

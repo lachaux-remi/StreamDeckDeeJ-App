@@ -1,0 +1,84 @@
+.page__console {
+  .main__content {
+    overflow: hidden;
+
+    .console__content {
+      display: flex;
+      flex-grow: 1;
+      flex-direction: column;
+      margin: 0 16px 16px 16px;
+      overflow: hidden;
+      font-family: Consolas, monospace;
+      font-size: 0.8rem;
+
+      .content__lines {
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+
+        .lines__line {
+          display: flex;
+          padding: 0 16px;
+
+          &:hover {
+            background-color: var(--grey-800);
+          }
+
+          .line__service {
+            min-width: 115px;
+            width: 115px;
+            max-width: 115px;
+          }
+
+          .line__infos {
+            display: flex;
+            border-left: 4px solid var(--common-white);
+
+            &.info {
+              border-color: var(--info-main);
+            }
+
+            &.warn {
+              border-color: var(--warning-main);
+              color: var(--warning-main);
+            }
+
+            &.error {
+              border-color: var(--error-main);
+              color: var(--error-main);
+            }
+
+            &.debug {
+              border-color: var(--grey-500);
+              color: var(--grey-500);
+            }
+
+            .info__level {
+              margin-left: 6px;
+              min-width: 56px;
+              width: 56px;
+              max-width: 56px;
+            }
+
+            .info__messages {
+              display: flex;
+              flex-direction: column;
+              user-select: text !important;
+
+              .messages__message, .messages__message-stack {
+                white-space: pre-wrap;
+                word-break: break-word;
+                user-select: text !important;
+              }
+
+              .messages__message-stack {
+                margin-left: 24px;
+              }
+            }
+          }
+        }
+      }
+
+    }
+  }
+}

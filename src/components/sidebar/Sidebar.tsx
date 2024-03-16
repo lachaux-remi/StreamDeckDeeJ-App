@@ -1,4 +1,10 @@
-import { ArrowBackRounded, SettingsRounded, TuneRounded, ViewCompactRounded } from "@mui/icons-material";
+import {
+  ArrowBackRounded,
+  SettingsRounded,
+  TerminalRounded,
+  TuneRounded,
+  ViewCompactRounded
+} from "@mui/icons-material";
 import { MenuList, Paper } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -24,6 +30,9 @@ const Sidebar = () => {
         </SidebarItem>
       </MenuList>
       <MenuList className="sidebar__list">
+        <SidebarItem to="/console" title={"Console"}>
+          <TerminalRounded />
+        </SidebarItem>
         <SidebarItem to="/settings" title={"Paramètres"}>
           <SettingsRounded />
         </SidebarItem>

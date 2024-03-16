@@ -22,7 +22,7 @@ class DeckService extends EventEmitter {
   ) {
     super();
     this.logger = loggerService.getLogger().child({ service: "DeckService" });
-    this.logger.info("INIT");
+    this.logger.debug("INIT");
 
     ipcMain.handle("streamdeck:keys", (_, deckKey: StreamdeckInputKey) => this.getKeyInfo(deckKey));
 

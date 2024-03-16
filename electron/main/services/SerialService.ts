@@ -20,7 +20,7 @@ class SerialService extends EventEmitter {
   ) {
     super();
     this.logger = loggerService.getLogger().child({ service: "SerialService" });
-    this.logger.info("INIT");
+    this.logger.debug("INIT");
 
     configService.onUpdated(this.setConfig);
     this.setConfig(configService.getConfig());
@@ -91,7 +91,9 @@ class SerialService extends EventEmitter {
             if (json.type) {
               const type = json.type;
 
-              this.logger.debug(`Received data: ${data}`);
+              if (type !== "deej") {
+                this.logger.debug(`Received data: ${data}`);
+              }
 
               delete json.type;
               this.emit(`serial:${type}`, json);
