@@ -1,6 +1,6 @@
 import { HashRouter, Route, Routes } from "react-router-dom";
 
-import DefaultLayout from "@/layouts/DefaultLayout";
+import DefaultLayout from "@/layouts/default/DefaultLayout";
 import ConsolePage from "@/pages/console/ConsolePage";
 import DeejSliderPage from "@/pages/deej-slider/DeejSliderPage";
 import DeeJPage from "@/pages/deej/DeeJPage";
