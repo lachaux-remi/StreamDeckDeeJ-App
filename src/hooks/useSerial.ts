@@ -11,6 +11,10 @@ const userSerial = () => {
     return Math.round((serial.sliders[sliderKey] || 0) * 100);
   };
 
+  const getSessionsList = () => {
+    return serial.sessions;
+  };
+
   const getSerialsList = () => {
     return serial.serialPortList;
   };
@@ -25,6 +29,7 @@ const userSerial = () => {
 
   return {
     getSliderVolume,
+    getSessionsList,
     getSerialsList,
     getVersions,
     getLogs

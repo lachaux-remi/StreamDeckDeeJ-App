@@ -6,6 +6,7 @@ import {
   setLog,
   setLogs,
   setSerialPortList,
+  setSessions,
   setSliderVolume,
   setSlidersVolume,
   setVersions
@@ -25,7 +26,7 @@ const ElectronHydrate = (props: ElectronHydrateType) => {
   ipcRenderer.invoke("setting:hydrate").then(config => dispatch(hydrate(config)));
   ipcRenderer.invoke("electron:versions").then(versions => dispatch(setVersions(versions)));
   ipcRenderer.invoke("deej:sliders").then(sliders => dispatch(setSlidersVolume(sliders)));
-
+  ipcRenderer.invoke("deej:session").then(session => dispatch(setSessions(session)));
   ipcRenderer.invoke("serial:list").then(serialPorts => dispatch(setSerialPortList(serialPorts)));
   ipcRenderer.invoke("electron:logs").then((logs: Log[]) => dispatch(setLogs(logs)));
 

@@ -6,12 +6,16 @@ import { DeeJSliderKey } from "@/types/SettingsType";
 export const serialSlice = createSlice({
   name: "serial",
   initialState: {
+    sessions: [] as Serial["sessions"],
     sliders: {} as Serial["sliders"],
     versions: {} as Serial["versions"],
     serialPortList: [] as Serial["serialPortList"],
     logs: [] as Serial["logs"]
   },
   reducers: {
+    setSessions: (state, action: PayloadAction<Serial["sessions"]>) => {
+      state.sessions = action.payload;
+    },
     setSlidersVolume: (state, action: PayloadAction<Serial["sliders"]>) => {
       state.sliders = action.payload;
     },
@@ -33,7 +37,7 @@ export const serialSlice = createSlice({
   }
 });
 
-export const { setSlidersVolume, setSliderVolume, setSerialPortList, setVersions, setLogs, setLog } =
+export const { setSessions, setSlidersVolume, setSliderVolume, setSerialPortList, setVersions, setLogs, setLog } =
   serialSlice.actions;
 
 export default serialSlice.reducer;

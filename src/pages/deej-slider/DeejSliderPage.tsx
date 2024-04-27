@@ -7,7 +7,7 @@ import {
 } from "@mui/icons-material";
 import { Stack } from "@mui/material";
 import { ipcRenderer } from "electron";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -16,7 +16,9 @@ import SessionList from "@/components/deej/session-list/SessionList";
 import Action from "@/components/page-actions/Action";
 import { PageAction } from "@/components/page-actions/PageActions";
 import Page from "@/components/page/Page";
+import useSerial from "@/hooks/useSerial";
 import useSettings from "@/hooks/useSettings";
+import { setSessions } from "@/stores/slices/serialReducer";
 import { updateSlider } from "@/stores/slices/settingsReducer";
 import { DeeJSliderConfig, DeeJSliderKey } from "@/types/SettingsType";
 
@@ -26,27 +28,27 @@ const DeejSliderPage = () => {
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const sessionsList = useSerial().getSessionsList();
   const sliderIndex = location.state.sliderIndex as DeeJSliderKey;
   const configStore = useSettings().getDeeJSliderConfig(sliderIndex);
-  const [session, setSession] = useState<string[]>([]);
   const [config, setConfig] = useState<DeeJSliderConfig>(configStore || []);
+  const [session, setSession] = useState<string[]>(sessionsList);
   const notAssignedSelectedState = useState<string[]>([]);
   const assignedSelectedState = useState<string[]>([]);
-
   const [notAssignedSelected, setNotAssignedSelected] = notAssignedSelectedState;
   const [assignedSelected, setAssignedSelected] = assignedSelectedState;
 
-  useEffect(() => {
-    (async () => setSession(await ipcRenderer.invoke("deej:session")))();
-  }, []);
-
-  const handleSaveButtonConfig = () => {
+  const handleSaveButtonConfig = async () => {
     dispatch(updateSlider({ sliderIndex, config }));
+    await handleRefresh();
     return navigate("/deej");
   };
 
   const handleRefresh = async () => {
-    setSession(await ipcRenderer.invoke("deej:session"));
+    await ipcRenderer.invoke("deej:session").then(sessions => {
+      dispatch(setSessions(sessions));
+      setSession(sessions);
+    });
   };
 
   const handleAssignAll = () => {

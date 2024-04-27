@@ -1,6 +1,7 @@
 import { DeeJSliderKey } from "@/types/SettingsType";
 
 export type Serial = {
+  sessions: string[];
   sliders: { [key: DeeJSliderKey]: number };
   versions: ApplicationVersions;
   serialPortList: string[];

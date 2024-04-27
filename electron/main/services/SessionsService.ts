@@ -49,17 +49,28 @@ class SessionsService extends EventEmitter {
       );
     }
 
+    this.refreshSessions("client request");
+
     return this.sessions
-      .flatMap(session => (session.name != "" ? session.name.toLowerCase() : "master"))
+      .flatMap(session => {
+        if (session.pid === 0) {
+          return "master";
+        }
+
+        if (session.name === "") {
+          return `PID: ${session.pid}`;
+        }
+
+        return session.name.toLowerCase();
+      })
       .filter(session => !attributedSessions.includes(session));
   };
 
   private refreshSessions = (reason: string): void => {
     this.logger.warn(`refreshing: ${reason ? reason : ""}`);
-    const sessions = NodeAudioVolumeMixer.getAudioSessionProcesses();
+    this.sessions = NodeAudioVolumeMixer.getAudioSessionProcesses();
     this.isFresh = true;
     this.isStale = false;
-    this.sessions = sessions;
 
     this.runIsStaleTask();
     this.runIsFreshTask();
