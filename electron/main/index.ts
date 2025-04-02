@@ -84,9 +84,11 @@ configService.whenReady().then(config => {
 
     configService.onUpdated(newConfig => app.setLoginItemSettings({ openAtLogin: newConfig.runOnStartup }));
     app.setLoginItemSettings({ openAtLogin: config.runOnStartup || false });
-    app.isPackaged
-      ? await mainWindow.loadFile(join(process.env.DIST, "index.html"))
-      : await mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL!);
+    if (app.isPackaged) {
+      await mainWindow.loadFile(join(process.env.DIST, "index.html"));
+    } else {
+      await mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL!);
+    }
     nativeTheme.on("updated", () => mainWindow.setTitleBarOverlay(titleBarOverlay()));
 
     const webContents = mainWindow.webContents;

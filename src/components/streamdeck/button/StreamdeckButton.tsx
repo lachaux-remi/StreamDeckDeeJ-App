@@ -41,7 +41,9 @@ const StreamdeckButton = (props: StreamdeckButtonProps) => {
       },
       {
         caption: "Supprimer",
-        onClick: () => dispatch(removeStreamdeckButton(inputIndex))
+        onClick: () => {
+          dispatch(removeStreamdeckButton(inputIndex));
+        }
       }
     );
   }

@@ -36,7 +36,7 @@ type StateObject = {
 export const useContextMenu = (contextMenuItems: ContextMenuItem[]): ContextMenuHook => {
   const [state, setState] = useState<StateObject | null>(null);
 
-  const menuRef = useRef<HTMLDivElement>();
+  const menuRef = useRef<HTMLDivElement>(null);
   const menuItemsRef = useRef<HTMLDivElement[]>([]);
 
   const registerMenu = useCallback((menu: HTMLDivElement) => {
