@@ -1,7 +1,8 @@
 enum InputFormType {
   Text = "text",
   Textarea = "textarea",
-  Select = "select"
+  Select = "select",
+  Password = "password"
 }
 
 export default InputFormType;

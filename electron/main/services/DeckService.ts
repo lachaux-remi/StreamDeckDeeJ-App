@@ -2,6 +2,7 @@ import { ipcMain } from "electron";
 import { EventEmitter } from "node:events";
 import { Logger } from "pino";
 
+import HomeAssistantAPI from "../libs/home-assistant/HomeAssistantAPI";
 import OctopiLedAPI, { DeviceInfo } from "../libs/octoprint-led-api/OctopiLedAPI";
 import TapoAPI, { TapoAPIResponse } from "../libs/tapo-api/TapoAPI";
 import KeyUsageEnum from "../types/KeyUsageEnum";
@@ -89,6 +90,16 @@ class DeckService extends EventEmitter {
 
       if (stateConfig.module === ModuleEnum.Macro || stateConfig.module === ModuleEnum.Ir) {
         this.serialService.send(`${stateConfig.module}:${stateConfig.params[0]}`);
+      } else if (stateConfig.module === ModuleEnum.HomeAssistant) {
+        const homeAssistant = this.configService.getConfig().homeAssistant;
+        if (!homeAssistant) {
+          return;
+        }
+
+        new HomeAssistantAPI(homeAssistant.url)
+          .send(stateConfig.params[0], this.keyState[deckKey], stateConfig.params[1])
+          .then(info => this.emit("deck:updated", deckKey, info))
+          .catch(err => this.logger.error("Error while calling Home Assistant API", err));
       } else if (stateConfig.module === ModuleEnum.Tapo) {
         const tapoAccount = this.configService.getConfig().tapo;
         if (!tapoAccount) {

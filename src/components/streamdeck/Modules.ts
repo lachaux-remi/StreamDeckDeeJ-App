@@ -48,5 +48,13 @@ export const modules: Modules[] = [
         ]
       }
     ]
+  },
+  {
+    display: "Home Assistant",
+    value: ModuleEnum.HomeAssistant,
+    inputs: [
+      { name: "Webhook ID", type: InputFormType.Password },
+      { name: "ID d'Entité", type: InputFormType.Text }
+    ]
   }
 ];

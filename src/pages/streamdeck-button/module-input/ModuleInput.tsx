@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import PasswordInput from "@/components/inputs/PasswordInput";
 import SelectInput from "@/components/inputs/SelectInput";
 import TextInput from "@/components/inputs/TextInput";
 import TextareaInput from "@/components/inputs/TextareaInput";
@@ -54,6 +55,15 @@ const ModuleInput = (props: ModuleInputProps) => {
           case "textarea":
             return (
               <TextareaInput
+                key={`${type}-${module}-${index}`}
+                label={input.name}
+                value={params[index]}
+                onChange={value => handleChangeParams(index, value)}
+              />
+            );
+          case "password":
+            return (
+              <PasswordInput
                 key={`${type}-${module}-${index}`}
                 label={input.name}
                 value={params[index]}

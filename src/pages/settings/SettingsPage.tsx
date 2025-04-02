@@ -18,7 +18,7 @@ import useSettings from "@/hooks/useSettings";
 import { setSerialPortList } from "@/stores/slices/serialReducer";
 import { updateConfig } from "@/stores/slices/settingsReducer";
 import { InputOptionType } from "@/types/InputType";
-import { type Settings } from "@/types/SettingsType";
+import { HomeAssistantConfig, type Settings } from "@/types/SettingsType";
 import { objectToInputOptions as options } from "@/utils/ObjectUtil";
 
 import "./Settings.scss";
@@ -89,7 +89,18 @@ const SettingsPage = () => {
         </Paper>
 
         <Paper className="config__form" sx={{ padding: 2 }} elevation={3}>
-          <h2>Compte Tapo</h2>
+          <h2>Serveur Home Assistant</h2>
+          <div className="config__inputs">
+            <TextInput
+              label="URL"
+              value={config.homeAssistant?.url || ""}
+              onChange={value => setConfig({ ...config, homeAssistant: { ...config.homeAssistant, url: value } })}
+            />
+          </div>
+        </Paper>
+
+        <Paper className="config__form" sx={{ padding: 2 }} elevation={3}>
+          <h2>Compte Tapo (obsolète)</h2>
           <div className="config__inputs">
             <TextInput
               label="Utilisateur"

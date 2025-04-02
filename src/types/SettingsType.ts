@@ -11,7 +11,9 @@ export type Settings = {
   runInBackground: boolean;
   closeToTray: boolean;
   devTools: boolean;
+  /** @deprecated */
   tapo: TapoConfig;
+  homeAssistant: HomeAssistantConfig;
 };
 
 export type StreamdeckConfig = {
@@ -40,7 +42,12 @@ export type DeeJSliderKey = string;
 
 export type DeeJSliderConfig = string[];
 
+/** @deprecated */
 export type TapoConfig = {
   username: string;
   password: string;
+};
+
+export type HomeAssistantConfig = {
+  url: string;
 };

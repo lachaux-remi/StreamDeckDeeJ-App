@@ -1,0 +1,6 @@
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - '@serialport/bindings-cpp'
+  - electron
+  - electron-winstaller
+  - esbuild

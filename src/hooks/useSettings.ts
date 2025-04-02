@@ -4,6 +4,7 @@ import {
   type DeeJConfig,
   type DeeJSliderConfig,
   type DeeJSliderKey,
+  type HomeAssistantConfig,
   type Settings,
   type StreamdeckConfig,
   type StreamdeckInputConfig,
@@ -35,6 +36,11 @@ const useSettings = () => {
     return settings.deej[sliderIndex] || null;
   };
 
+  const getHomeAssistantConfig = (): HomeAssistantConfig | null => {
+    return settings.homeAssistant;
+  };
+
+  /** @deprecated */
   const getTapoConfig = (): TapoConfig => {
     return settings.tapo;
   };
@@ -45,6 +51,8 @@ const useSettings = () => {
     getStreamdeckInputConfig,
     getDeeJConfig,
     getDeeJSliderConfig,
+    getHomeAssistantConfig,
+    /** @deprecated */
     getTapoConfig
   };
 };
