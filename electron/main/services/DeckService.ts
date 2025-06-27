@@ -71,7 +71,7 @@ class DeckService extends EventEmitter {
   }
 
   private deckEventHandler = (data: { state: KeyUsageEnum; value: string }) => {
-    const deckKey: StreamdeckInputKey = parseInt(data.value, 16).toString().toLowerCase();
+    const deckKey: StreamdeckInputKey = data.value.toString().toLowerCase();
 
     if (data.state === KeyUsageEnum.Released) {
       const deckConfig: StreamdeckInputConfig | undefined = this.configService.getConfig().streamdeck?.[deckKey];
