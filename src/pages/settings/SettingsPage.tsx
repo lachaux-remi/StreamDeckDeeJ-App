@@ -18,7 +18,7 @@ import useSettings from "@/hooks/useSettings";
 import { setSerialPortList } from "@/stores/slices/serialReducer";
 import { updateConfig } from "@/stores/slices/settingsReducer";
 import { InputOptionType } from "@/types/InputType";
-import { HomeAssistantConfig, type Settings } from "@/types/SettingsType";
+import { type Settings } from "@/types/SettingsType";
 import { objectToInputOptions as options } from "@/utils/ObjectUtil";
 
 import "./Settings.scss";
