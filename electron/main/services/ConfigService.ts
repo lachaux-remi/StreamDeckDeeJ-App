@@ -41,7 +41,7 @@ class ConfigService extends EventEmitter {
       writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
     } catch (error) {
       if (error instanceof Error) {
-        this.logger.error(`Error while saving config: ${error.message}`, error);
+        this.logger.error(error, `Error while saving config: ${error.message}`);
       }
     }
 
@@ -60,13 +60,13 @@ class ConfigService extends EventEmitter {
   };
 
   private loadConfig = (): void => {
-    this.logger.info(`Loading config`, this.configPath);
+    this.logger.info(`Loading config ${this.configPath}`);
 
     try {
       this.config = JSON.parse(readFileSync(this.configPath, "utf8"));
     } catch (error) {
       if (error instanceof Error) {
-        this.logger.error(`Error while loading config ${error.message}`, error);
+        this.logger.error(error, `Error while loading config ${error.message}`);
       }
     }
 
