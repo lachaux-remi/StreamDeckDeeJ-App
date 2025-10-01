@@ -64,7 +64,7 @@ const SettingsPage = () => {
     <Page className="page__settings" title="Paramètres" actions={actions}>
       <div className="settings__config">
         <Paper className="config__form" sx={{ padding: 2 }} elevation={3}>
-          <h2>Arduino</h2>
+          <h2>Micro controller</h2>
           <div className="config__inputs">
             <ReloadSelectInput
               label="Port de communication"
@@ -89,28 +89,12 @@ const SettingsPage = () => {
         </Paper>
 
         <Paper className="config__form" sx={{ padding: 2 }} elevation={3}>
-          <h2>Serveur Home Assistant</h2>
+          <h2>Home Assistant</h2>
           <div className="config__inputs">
             <TextInput
               label="URL"
               value={config.homeAssistant?.url || ""}
               onChange={value => setConfig({ ...config, homeAssistant: { ...config.homeAssistant, url: value } })}
-            />
-          </div>
-        </Paper>
-
-        <Paper className="config__form" sx={{ padding: 2 }} elevation={3}>
-          <h2>Compte Tapo (obsolète)</h2>
-          <div className="config__inputs">
-            <TextInput
-              label="Utilisateur"
-              value={config.tapo?.username || ""}
-              onChange={value => setConfig({ ...config, tapo: { ...config.tapo, username: value } })}
-            />
-            <PasswordInput
-              label="Mot de passe"
-              value={config.tapo?.password || ""}
-              onChange={value => setConfig({ ...config, tapo: { ...config.tapo, password: value } })}
             />
           </div>
         </Paper>
@@ -151,7 +135,7 @@ const SettingsPage = () => {
             <div className="infos__detail">
               <strong>StreamDeck DeeJ</strong> est un mélangeur de volume mais aussi un Stream Deck pour les PC. Il se
               compose d'un client de bureau léger écrit en JavaScript avec Electron et d'une configuration matérielle
-              basée sur Arduino simple et peu coûteuse à construire.
+              basée sur Raspberry Pi Pico simple et peu coûteuse à construire.
             </div>
 
             <div className="infos__detail">

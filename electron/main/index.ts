@@ -121,5 +121,6 @@ configService.whenReady().then(config => {
         chrome: process.versions.chrome
       };
     });
+    serialService.send(`app:ready`);
   });
 });

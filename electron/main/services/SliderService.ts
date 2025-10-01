@@ -3,7 +3,6 @@ import { EventEmitter } from "node:events";
 import { Logger } from "pino";
 
 import { DeeJSliderKey, Settings } from "../types/SettingsType";
-import { throttle } from "../utils/DebounceUtil";
 import ConfigService from "./ConfigService";
 import LoggerService from "./LoggerService";
 import SerialService from "./SerialService";
@@ -28,7 +27,7 @@ class SliderService extends EventEmitter {
 
     ipcMain.handle("deej:sliders", () => this.sliders);
 
-    serialService.on("serial:deej", throttle(this.deejEventHandler, 50, this));
+    serialService.on("serial:deej", this.deejEventHandler);
   }
 
   public onUpdated = (listener: (sliderKey: DeeJSliderKey, value: number) => void): void => {
