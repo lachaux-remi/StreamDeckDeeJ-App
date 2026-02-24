@@ -1,0 +1,27 @@
+appId: fr.remi-lachaux.streamdeck-deej
+productName: StreamDeck DeeJ
+directories:
+  buildResources: build
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!dist/*'
+  - '!electron.vite.config.*'
+  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.json,tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+asarUnpack:
+  - resources/**
+linux:
+  target:
+    - AppImage
+    - pacman
+  maintainer: contact@remi-lachaux.fr
+  category: Utility
+  icon: resources/logo.png
+  desktop:
+    StartupWMClass: streamdeck-deej
+appImage:
+  artifactName: ${name}-${version}.${ext}
+pacman:
+  artifactName: ${name}-${version}.pkg.tar.xz
+  compression: xz
