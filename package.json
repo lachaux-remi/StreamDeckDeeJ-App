@@ -1,6 +1,6 @@
 {
   "name": "streamdeck-deej",
-  "productName": "StreamDeck DeeJ",
+  "productName": "streamdeck-deej",
   "description": "Desktop app for controlling StreamDeck buttons and DeeJ audio sliders via Arduino",
   "license": "MIT",
   "version": "4.0.0",

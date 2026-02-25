@@ -19,6 +19,9 @@ const isDev = !app.isPackaged
 
 const AUTOSTART_DIR = join(homedir(), '.config', 'autostart')
 const AUTOSTART_FILE = join(AUTOSTART_DIR, 'streamdeck-deej.desktop')
+const APP_ICON = isDev
+  ? join(__dirname, '../../resources/logo.png')
+  : join(process.resourcesPath, 'logo.png')
 
 async function setAutostart(enabled: boolean): Promise<void> {
   if (isDev) return
@@ -29,10 +32,10 @@ async function setAutostart(enabled: boolean): Promise<void> {
         '[Desktop Entry]',
         'Type=Application',
         `Name=${app.getName()}`,
-        `Exec=${appPath}`,
+        `Exec="${appPath}"`,
         'X-GNOME-Autostart-enabled=true',
         'StartupWMClass=streamdeck-deej',
-        `Icon=${join(__dirname, '../../resources/logo.png')}`,
+        `Icon="${APP_ICON}"`,
         ''
       ].join('\n')
       await mkdir(AUTOSTART_DIR, { recursive: true })
@@ -58,7 +61,7 @@ app.whenReady().then(() => {
     height: 800,
     show: false,
     autoHideMenuBar: true,
-    icon: join(__dirname, '../../resources/logo.png'),
+    icon: APP_ICON,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -81,7 +84,7 @@ app.whenReady().then(() => {
   })
 
   // System tray
-  const tray = new Tray(join(__dirname, '../../resources/logo.png'))
+  const tray = new Tray(APP_ICON)
   tray.setToolTip(app.getName())
   tray.setContextMenu(
     Menu.buildFromTemplate([
