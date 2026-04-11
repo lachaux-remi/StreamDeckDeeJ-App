@@ -12,9 +12,23 @@ const REAPPLY_DELAYS = [100, 500, 1200]
 const MPRIS_REFRESH_INTERVAL = 10_000
 
 interface AudioSession {
-  sinkInputIndex: number
+  pwNodeId: number
   name: string
   volume: number
+}
+
+interface PwDumpObject {
+  id: number
+  type: string
+  info?: {
+    props?: Record<string, unknown>
+    params?: {
+      Props?: Array<{
+        channelVolumes?: number[]
+        volume?: number
+      }>
+    }
+  }
 }
 
 class SessionsService extends EventEmitter {
@@ -33,7 +47,7 @@ class SessionsService extends EventEmitter {
     super()
     loggerService.debug('INIT', SERVICE)
 
-    this.refreshSessions('initial load')
+    this.refreshSessions()
     this.runIsStaleTask()
     this.runIsFreshTask()
     this.startSubscribe()
@@ -46,17 +60,22 @@ class SessionsService extends EventEmitter {
   }
 
   public getAllSessions(): string[] {
-    this.refreshSessions('client request')
-    return ['master', ...this.sessions.map((s) => s.name.toLowerCase())]
+    this.refreshSessions()
+    const names = new Set(this.sessions.map((s) => s.name.toLowerCase()))
+    return ['master', ...names]
   }
 
-  private refreshSessions(_reason: string): void {
+  private refreshSessions(): void {
     try {
-      const output = execSync('pactl list sink-inputs', { encoding: 'utf-8', timeout: 5000 })
-      this.sessions = this.parsePactlOutput(output)
-    } catch (error) {
-      loggerService.error(`Failed to list audio sessions: ${error}`, SERVICE)
-      this.sessions = []
+      this.sessions = this.parsePwDump()
+    } catch {
+      try {
+        const output = execSync('pactl list sink-inputs', { encoding: 'utf-8', timeout: 5000 })
+        this.sessions = this.parsePactlOutput(output)
+      } catch (error) {
+        loggerService.error(`Failed to list audio sessions: ${error}`, SERVICE)
+        this.sessions = []
+      }
     }
 
     this.isFresh = true
@@ -67,13 +86,13 @@ class SessionsService extends EventEmitter {
 
   /**
    * Returns current OS volumes for each configured slider (0–1).
-   * Reads master via pactl get-sink-volume, per-app from cached sessions.
+   * Reads master via wpctl, per-app from cached sessions.
    */
   public getOsVolumes(): Record<string, number> {
     const deejConfig = configService.getConfig().deej || {}
     const volumes: Record<string, number> = {}
 
-    this.refreshSessions('os volumes')
+    this.refreshSessions()
 
     for (const [sliderKey, sessionNames] of Object.entries(deejConfig)) {
       if (!sessionNames || sessionNames.length === 0) continue
@@ -88,12 +107,21 @@ class SessionsService extends EventEmitter {
   private getSessionVolume(sessionName: string): number | null {
     try {
       if (sessionName === 'master') {
-        const output = execSync('pactl get-sink-volume @DEFAULT_SINK@', {
-          encoding: 'utf-8',
-          timeout: 2000
-        })
-        const match = output.match(/(\d+)%/)
-        return match ? parseInt(match[1]) / 100 : null
+        try {
+          const output = execSync('wpctl get-volume @DEFAULT_AUDIO_SINK@', {
+            encoding: 'utf-8',
+            timeout: 2000
+          })
+          const match = output.match(/Volume:\s+([\d.]+)/)
+          return match ? parseFloat(match[1]) : null
+        } catch {
+          const output = execSync('pactl get-sink-volume @DEFAULT_SINK@', {
+            encoding: 'utf-8',
+            timeout: 2000
+          })
+          const match = output.match(/(\d+)%/)
+          return match ? parseInt(match[1]) / 100 : null
+        }
       }
 
       const matching = this.sessions.find(
@@ -105,6 +133,9 @@ class SessionsService extends EventEmitter {
     }
   }
 
+  /**
+   * Fallback parser using pactl (for systems without PipeWire).
+   */
   private parsePactlOutput(output: string): AudioSession[] {
     const sessions: AudioSession[] = []
     const blocks = output.split('Sink Input #')
@@ -114,15 +145,84 @@ class SessionsService extends EventEmitter {
 
       const indexMatch = block.match(/^(\d+)/)
       const nameMatch = block.match(/application\.name\s*=\s*"([^"]+)"/)
+      const binaryMatch = block.match(/application\.process\.binary\s*=\s*"([^"]+)"/)
       const volumeMatch = block.match(/Volume:.*?(\d+)%/)
 
-      if (indexMatch && nameMatch) {
+      const name = nameMatch?.[1] ?? binaryMatch?.[1]
+
+      if (indexMatch && name) {
         sessions.push({
-          sinkInputIndex: parseInt(indexMatch[1], 10),
-          name: nameMatch[1],
+          pwNodeId: parseInt(indexMatch[1], 10),
+          name,
           volume: volumeMatch ? parseInt(volumeMatch[1]) / 100 : 0
         })
       }
+    }
+
+    return sessions
+  }
+
+  /**
+   * Uses pw-dump (PipeWire JSON) to discover audio streams.
+   * Resolves application names through the client.id → client object lookup,
+   * which is required for PipeWire-native apps (e.g. Spotify) whose stream
+   * node does NOT carry application.name itself.
+   */
+  private parsePwDump(): AudioSession[] {
+    const raw = execSync('pw-dump --no-colors', { encoding: 'utf-8', timeout: 5000 })
+    const objects: PwDumpObject[] = JSON.parse(raw)
+
+    const clientMap = new Map<number, Record<string, unknown>>()
+    for (const obj of objects) {
+      if (obj.type === 'PipeWire:Interface:Client' && obj.info?.props) {
+        clientMap.set(obj.id, obj.info.props)
+      }
+    }
+
+    const sessions: AudioSession[] = []
+
+    for (const obj of objects) {
+      const props = obj.info?.props
+      if (!props) continue
+      if (obj.type !== 'PipeWire:Interface:Node') continue
+      if (props['media.class'] !== 'Stream/Output/Audio') continue
+
+      let name = props['application.name'] as string | undefined
+
+      if (!name) {
+        const clientId = props['client.id'] as number | undefined
+        if (clientId !== undefined) {
+          const clientProps = clientMap.get(clientId)
+          if (clientProps) {
+            name =
+              (clientProps['application.name'] as string) ??
+              (clientProps['application.process.binary'] as string)
+          }
+        }
+      }
+
+      if (!name) {
+        name = (props['application.process.binary'] as string) ?? (props['node.name'] as string)
+      }
+
+      if (!name) continue
+
+      const paramsProps = obj.info?.params?.Props
+      let volume = 0
+      if (paramsProps && paramsProps.length > 0) {
+        const p = paramsProps[0]
+        if (p.channelVolumes && p.channelVolumes.length > 0) {
+          volume = Math.max(...p.channelVolumes)
+        } else if (p.volume !== undefined) {
+          volume = p.volume
+        }
+      }
+
+      sessions.push({
+        pwNodeId: obj.id,
+        name,
+        volume
+      })
     }
 
     return sessions
@@ -168,7 +268,7 @@ class SessionsService extends EventEmitter {
     for (const delay of REAPPLY_DELAYS) {
       this.reapplyTimers.push(
         setTimeout(() => {
-          this.refreshSessions('new sink-input')
+          this.refreshSessions()
           this.reapplyVolumes()
           if (delay === REAPPLY_DELAYS[REAPPLY_DELAYS.length - 1]) {
             this.reapplyTimers = []
@@ -216,8 +316,6 @@ class SessionsService extends EventEmitter {
 
     const target = sessionName.toLowerCase()
     for (const busName of this.mprisPlayers) {
-      // org.mpris.MediaPlayer2.spotify → spotify
-      // org.mpris.MediaPlayer2.firefox.instance_12345 → firefox
       const playerPart = busName.replace('org.mpris.MediaPlayer2.', '')
       const playerName = playerPart.split('.')[0].toLowerCase()
 
@@ -247,25 +345,25 @@ class SessionsService extends EventEmitter {
       setTimeout(() => (this.recentlySet = false), 150)
 
       if (sessionName === 'master') {
-        execSync(`pactl set-sink-volume @DEFAULT_SINK@ ${percent}%`, { timeout: 2000 })
+        try {
+          execSync(`wpctl set-volume @DEFAULT_AUDIO_SINK@ ${percent}%`, { timeout: 2000 })
+        } catch {
+          execSync(`pactl set-sink-volume @DEFAULT_SINK@ ${percent}%`, { timeout: 2000 })
+        }
       } else {
         const matching = this.sessions.filter(
           (s) => s.name.toLowerCase() === sessionName.toLowerCase()
         )
         for (const session of matching) {
           try {
-            execSync(`pactl set-sink-input-volume ${session.sinkInputIndex} ${percent}%`, {
-              timeout: 2000
-            })
+            execSync(`wpctl set-volume ${session.pwNodeId} ${percent}%`, { timeout: 2000 })
           } catch {
-            this.refreshSessions('stale sink-input index')
+            this.refreshSessions()
             const fresh = this.sessions.find(
               (s) => s.name.toLowerCase() === sessionName.toLowerCase()
             )
             if (fresh) {
-              execSync(`pactl set-sink-input-volume ${fresh.sinkInputIndex} ${percent}%`, {
-                timeout: 2000
-              })
+              execSync(`wpctl set-volume ${fresh.pwNodeId} ${percent}%`, { timeout: 2000 })
             }
           }
         }
@@ -274,7 +372,6 @@ class SessionsService extends EventEmitter {
       loggerService.error(`Failed to set volume for ${sessionName}: ${error}`, SERVICE)
     }
 
-    // Also set MPRIS volume so the app knows about it (prevents reset on track change)
     if (sessionName !== 'master') {
       const mprisBus = this.findMprisBusName(sessionName)
       if (mprisBus) this.setMprisVolume(mprisBus, value)
@@ -283,7 +380,7 @@ class SessionsService extends EventEmitter {
 
   private updateSessions(sliderKey: string, value: number): void {
     if (this.isStale) {
-      this.refreshSessions('staled out')
+      this.refreshSessions()
     }
 
     const targetSessions = configService.getConfig().deej?.[sliderKey] || []
@@ -294,7 +391,7 @@ class SessionsService extends EventEmitter {
         .every((name) => this.sessions.some((s) => s.name.toLowerCase() === name.toLowerCase())) &&
       !this.isFresh
     ) {
-      this.refreshSessions('target session not found')
+      this.refreshSessions()
     }
 
     targetSessions.forEach((sessionName) => this.setSessionVolume(sessionName, value))
