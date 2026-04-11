@@ -3,7 +3,7 @@
   "productName": "streamdeck-deej",
   "description": "Desktop app for controlling StreamDeck buttons and DeeJ audio sliders via Arduino",
   "license": "MIT",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "author": {
     "name": "LACHAUX Remi",
     "email": "contact@remi-lachaux.fr",
