@@ -354,27 +354,28 @@ class SessionsService extends EventEmitter {
         const matching = this.sessions.filter(
           (s) => s.name.toLowerCase() === sessionName.toLowerCase()
         )
-        for (const session of matching) {
-          try {
-            execSync(`wpctl set-volume ${session.pwNodeId} ${percent}%`, { timeout: 2000 })
-          } catch {
-            this.refreshSessions()
-            const fresh = this.sessions.find(
-              (s) => s.name.toLowerCase() === sessionName.toLowerCase()
-            )
-            if (fresh) {
-              execSync(`wpctl set-volume ${fresh.pwNodeId} ${percent}%`, { timeout: 2000 })
+        if (matching.length > 0) {
+          for (const session of matching) {
+            try {
+              execSync(`wpctl set-volume ${session.pwNodeId} ${percent}%`, { timeout: 2000 })
+            } catch {
+              this.refreshSessions()
+              const fresh = this.sessions.find(
+                (s) => s.name.toLowerCase() === sessionName.toLowerCase()
+              )
+              if (fresh) {
+                execSync(`wpctl set-volume ${fresh.pwNodeId} ${percent}%`, { timeout: 2000 })
+              }
             }
           }
+        } else {
+          // No PipeWire session found — fall back to MPRIS (e.g. native players bypassing PipeWire)
+          const mprisBus = this.findMprisBusName(sessionName)
+          if (mprisBus) this.setMprisVolume(mprisBus, value)
         }
       }
     } catch (error) {
       loggerService.error(`Failed to set volume for ${sessionName}: ${error}`, SERVICE)
-    }
-
-    if (sessionName !== 'master') {
-      const mprisBus = this.findMprisBusName(sessionName)
-      if (mprisBus) this.setMprisVolume(mprisBus, value)
     }
   }
 
