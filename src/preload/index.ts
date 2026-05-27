@@ -14,7 +14,15 @@ const api = {
       ipcRenderer.invoke('serial:status')
   },
   streamdeck: {
-    getKeys: (key: string): Promise<unknown> => ipcRenderer.invoke('streamdeck:keys', key)
+    getKeys: (key: string): Promise<unknown> => ipcRenderer.invoke('streamdeck:keys', key),
+    setLedOverride: (
+      streamdeck: unknown,
+      previewKey: string,
+      previewColor: { r: number; g: number; b: number } | null
+    ): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('streamdeck:setLedOverride', streamdeck, previewKey, previewColor),
+    setLedProfile: (profile: unknown): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('led:setProfile', profile)
   },
   deej: {
     getSliders: (): Promise<Record<string, number>> => ipcRenderer.invoke('deej:sliders'),

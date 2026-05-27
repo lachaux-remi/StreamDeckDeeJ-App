@@ -136,6 +136,17 @@ export default function StreamdeckButton({
         </span>
       )}
 
+      {/* LED color indicator */}
+      {config?.color && (
+        <div
+          className="absolute inset-x-0 bottom-0 h-1 rounded-b-xl"
+          style={{
+            background: `rgb(${config.color.r},${config.color.g},${config.color.b})`,
+            boxShadow: `0 0 8px rgb(${config.color.r},${config.color.g},${config.color.b})`
+          }}
+        />
+      )}
+
       {/* Bottom action indicators */}
       {(hasActions || hasActionIcons) && (
         <div className="absolute bottom-[5%] flex items-center gap-[4%]">

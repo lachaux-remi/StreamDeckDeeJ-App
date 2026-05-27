@@ -14,7 +14,7 @@ interface CustomSelectProps {
   onChange: (value: string) => void
   placeholder?: string
   className?: string
-  accent?: 'purple' | 'blue'
+  accent?: 'purple' | 'blue' | 'pink'
 }
 
 export default function CustomSelect({
@@ -61,6 +61,8 @@ export default function CustomSelect({
           isOpen
             ? accent === 'blue'
               ? 'border-neon-blue/50 bg-surface-3'
+              : accent === 'pink'
+              ? 'border-neon-pink/50 bg-surface-3'
               : 'border-neon-purple/50 bg-surface-3'
             : 'border-border/40 hover:border-border'
         )}
@@ -93,6 +95,8 @@ export default function CustomSelect({
                   isActive
                     ? accent === 'blue'
                       ? 'bg-neon-blue/10 text-neon-blue'
+                      : accent === 'pink'
+                      ? 'bg-neon-pink/10 text-neon-pink'
                       : 'bg-neon-purple/10 text-neon-purple'
                     : 'text-foreground/80 hover:bg-surface-3 hover:text-foreground'
                 )}

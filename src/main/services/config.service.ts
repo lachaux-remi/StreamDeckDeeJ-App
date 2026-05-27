@@ -21,7 +21,15 @@ const defaults: AppSettings = {
   runInBackground: false,
   closeToTray: true,
   devTools: false,
-  homeAssistant: { url: '' }
+  homeAssistant: { url: '' },
+  ledProfile: {
+    mode: 'rainbow',
+    speed: 50,
+    brightness: 80,
+    startColor: { r: 0, g: 0, b: 255 },
+    endColor: { r: 255, g: 0, b: 255 },
+    direction: 'horizontal'
+  }
 }
 
 class ConfigService extends EventEmitter {

@@ -5,6 +5,7 @@ import { mkdir, unlink, writeFile } from 'fs/promises'
 import { registerAllHandlers } from '@main/handlers'
 import { configService } from '@main/services/config.service'
 import { deckService } from '@main/services/deck.service'
+import { ledService } from '@main/services/led.service'
 import { loggerService } from '@main/services/logger.service'
 import { serialService } from '@main/services/serial.service'
 import { sliderService } from '@main/services/slider.service'
@@ -50,8 +51,9 @@ async function setAutostart(enabled: boolean): Promise<void> {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   configService.init()
+  await ledService.init()
   registerAllHandlers()
 
   const config = configService.getConfig()
@@ -150,6 +152,7 @@ app.whenReady().then(() => {
   let prevDevTools = config.devTools
   configService.onUpdated((newConfig) => {
     setAutostart(newConfig.runOnStartup)
+    ledService.updateOverrides(newConfig.streamdeck)
 
     if (newConfig.devTools !== prevDevTools) {
       prevDevTools = newConfig.devTools
@@ -169,6 +172,14 @@ app.whenReady().then(() => {
   }
 
   loggerService.info('Application started', 'Main')
+})
+
+app.on('before-quit', (event) => {
+  event.preventDefault()
+  ledService
+    .shutdown()
+    .catch(() => {})
+    .finally(() => app.exit())
 })
 
 app.on('window-all-closed', () => {

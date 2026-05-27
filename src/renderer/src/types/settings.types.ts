@@ -1,3 +1,28 @@
+export interface LedColor {
+  r: number
+  g: number
+  b: number
+}
+
+export type LedMode =
+  | 'static'
+  | 'rainbow'
+  | 'wave'
+  | 'pulse'
+  | 'colorshift'
+  | 'visor'
+  | 'sequential'
+  | 'spinner'
+
+export interface LedProfile {
+  mode: LedMode
+  speed: number
+  brightness: number
+  startColor: LedColor
+  endColor: LedColor
+  direction: 'horizontal' | 'vertical' | 'diagonal'
+}
+
 export interface StreamdeckInputKey {
   module: string
   params: string[]
@@ -6,6 +31,7 @@ export interface StreamdeckInputKey {
 
 export interface StreamdeckInputConfig {
   icon?: string
+  color?: LedColor
   pressed?: StreamdeckInputKey
   hold?: StreamdeckInputKey
 }
@@ -33,4 +59,5 @@ export interface AppSettings {
   closeToTray: boolean
   devTools: boolean
   homeAssistant: HomeAssistantConfig
+  ledProfile: LedProfile
 }

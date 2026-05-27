@@ -1,9 +1,27 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Cpu, Grid3X3, Home, Info, Monitor, RefreshCw, Settings, X } from 'lucide-react'
+import { AlertTriangle, Cpu, Grid3X3, Home, Info, Monitor, RefreshCw, Settings, Sparkles, X } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import { useSettingsStore } from '@renderer/stores/settings.store'
 import { useSerialStore } from '@renderer/stores/serial.store'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
+import ColorPicker from '@renderer/components/ui/ColorPicker'
+import type { LedMode } from '@renderer/types/settings.types'
+
+const LED_MODES: { value: LedMode; label: string; description: string }[] = [
+  { value: 'static', label: 'Statique', description: 'Couleur fixe uniforme' },
+  { value: 'rainbow', label: 'Arc-en-ciel', description: 'Spectre HSV animé' },
+  { value: 'wave', label: 'Vague', description: 'Onde sinusoïdale de couleur' },
+  { value: 'pulse', label: 'Pulsation', description: 'Respiration entre couleur et noir' },
+  { value: 'colorshift', label: 'Transition', description: 'Dégradé entre deux couleurs' },
+  { value: 'visor', label: 'Visor', description: 'Faisceau lumineux glissant' },
+  { value: 'sequential', label: 'Séquentiel', description: 'Allumage progressif bouton par bouton' },
+  { value: 'spinner', label: 'Spinner', description: 'Bouton lumineux tournant' }
+]
+
+const MODES_WITH_END_COLOR: LedMode[] = ['wave', 'colorshift', 'visor']
+const MODES_WITH_DIRECTION: LedMode[] = ['wave', 'visor']
+const MODES_WITH_SPEED: LedMode[] = ['rainbow', 'wave', 'pulse', 'colorshift', 'visor', 'sequential', 'spinner']
+
 
 interface SettingsSheetProps {
   isOpen: boolean
@@ -36,6 +54,11 @@ export default function SettingsSheet({
     }
   }, [isOpen, settings])
 
+  useEffect(() => {
+    if (!isOpen) return
+    void window.api.streamdeck.setLedProfile(localSettings.ledProfile)
+  }, [localSettings.ledProfile, isOpen])
+
   const handleClose = useCallback(() => {
     if (hasChanges) {
       setShowDiscardPrompt(true)
@@ -64,8 +87,9 @@ export default function SettingsSheet({
 
   if (!isOpen) return null
 
-  const inputClass =
-    'w-full rounded-lg border border-border/40 bg-surface-2 px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-neon-purple/50 focus:bg-surface-3'
+  const inputBase = 'w-full rounded-lg border border-border/40 bg-surface-2 px-3 py-2 text-sm text-foreground outline-none transition-colors focus:bg-surface-3'
+  const inputBlue  = `${inputBase} focus:border-neon-blue/50`
+  const inputGreen = `${inputBase} focus:border-neon-green/50`
 
 
   return (
@@ -185,7 +209,7 @@ export default function SettingsSheet({
                         gridCols: parseInt(e.target.value) || 4
                       })
                     }
-                    className={inputClass}
+                    className={inputBlue}
                   />
                 </div>
                 <div>
@@ -203,7 +227,7 @@ export default function SettingsSheet({
                         gridRows: parseInt(e.target.value) || 4
                       })
                     }
-                    className={inputClass}
+                    className={inputBlue}
                   />
                 </div>
               </div>
@@ -222,7 +246,7 @@ export default function SettingsSheet({
                       sliderCount: parseInt(e.target.value) || 4
                     })
                   }
-                  className={inputClass}
+                  className={inputBlue}
                 />
               </div>
               <label className="group mt-3 flex cursor-pointer items-center gap-3 text-muted-foreground hover:text-foreground transition-colors">
@@ -268,7 +292,7 @@ export default function SettingsSheet({
                     })
                   }
                   placeholder="http://homeassistant.local:8123"
-                  className={inputClass}
+                  className={inputGreen}
                 />
               </div>
             </section>
@@ -311,6 +335,144 @@ export default function SettingsSheet({
                     </div>
                   </label>
                 ))}
+              </div>
+            </section>
+
+            {/* Stream Deck RGB */}
+            <section>
+              <div className="mb-3 flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-neon-pink" />
+                <h3 className="font-display text-xs font-bold uppercase tracking-widest text-neon-pink">
+                  RGB Stream Deck
+                </h3>
+                <div className="gradient-line-h flex-1" />
+              </div>
+              <div className="space-y-3">
+                {/* Mode */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                    Mode d{"'"}effet
+                  </label>
+                  <CustomSelect
+                    value={localSettings.ledProfile.mode}
+                    onChange={(val) =>
+                      setLocalSettings({
+                        ...localSettings,
+                        ledProfile: { ...localSettings.ledProfile, mode: val as LedMode }
+                      })
+                    }
+                    options={LED_MODES.map((m) => ({
+                      value: m.value,
+                      label: m.label,
+                      description: m.description
+                    }))}
+                    accent="pink"
+                  />
+                </div>
+
+                {/* Brightness */}
+                <div>
+                  <label className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground/70">
+                    <span>Luminosité</span>
+                    <span className="tabular-nums text-muted-foreground">{localSettings.ledProfile.brightness}%</span>
+                  </label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={localSettings.ledProfile.brightness}
+                    onChange={(e) =>
+                      setLocalSettings({
+                        ...localSettings,
+                        ledProfile: { ...localSettings.ledProfile, brightness: parseInt(e.target.value) }
+                      })
+                    }
+                    className="w-full h-1.5 rounded-full appearance-none bg-surface-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-neon-pink [&::-webkit-slider-thumb]:shadow-[0_0_6px_#f472b680] cursor-pointer"
+                  />
+                </div>
+
+                {/* Speed */}
+                {MODES_WITH_SPEED.includes(localSettings.ledProfile.mode) && (
+                  <div>
+                    <label className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground/70">
+                      <span>Vitesse</span>
+                      <span className="tabular-nums text-muted-foreground">{localSettings.ledProfile.speed}%</span>
+                    </label>
+                    <input
+                      type="range"
+                      min={1}
+                      max={100}
+                      value={localSettings.ledProfile.speed}
+                      onChange={(e) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          ledProfile: { ...localSettings.ledProfile, speed: parseInt(e.target.value) }
+                        })
+                      }
+                      className="w-full h-1.5 rounded-full appearance-none bg-surface-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-neon-pink [&::-webkit-slider-thumb]:shadow-[0_0_6px_#f472b680] cursor-pointer"
+                    />
+                  </div>
+                )}
+
+                {/* Colors */}
+                <div className={cn('grid gap-3', MODES_WITH_END_COLOR.includes(localSettings.ledProfile.mode) ? 'grid-cols-2' : 'grid-cols-1')}>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                      Couleur principale
+                    </label>
+                    <ColorPicker
+                      value={localSettings.ledProfile.startColor}
+                      onChange={(c) =>
+                        setLocalSettings({ ...localSettings, ledProfile: { ...localSettings.ledProfile, startColor: c } })
+                      }
+                    />
+                  </div>
+
+                  {MODES_WITH_END_COLOR.includes(localSettings.ledProfile.mode) && (
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                        Couleur secondaire
+                      </label>
+                      <ColorPicker
+                        value={localSettings.ledProfile.endColor}
+                        onChange={(c) =>
+                          setLocalSettings({ ...localSettings, ledProfile: { ...localSettings.ledProfile, endColor: c } })
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Direction */}
+                {MODES_WITH_DIRECTION.includes(localSettings.ledProfile.mode) && (
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                      Direction
+                    </label>
+                    <div className="flex gap-2">
+                      {(['horizontal', 'vertical', 'diagonal'] as const).map((dir) => (
+                        <button
+                          key={dir}
+                          type="button"
+                          onClick={() =>
+                            setLocalSettings({
+                              ...localSettings,
+                              ledProfile: { ...localSettings.ledProfile, direction: dir }
+                            })
+                          }
+                          className={cn(
+                            'flex-1 rounded-lg border py-2 text-xs font-semibold uppercase tracking-wider transition-all',
+                            localSettings.ledProfile.direction === dir
+                              ? 'border-neon-pink/40 bg-neon-pink/15 text-neon-pink'
+                              : 'border-border/40 bg-surface-2 text-muted-foreground/50 hover:text-muted-foreground'
+                          )}
+                        >
+                          {dir === 'horizontal' ? 'Horizontal' : dir === 'vertical' ? 'Vertical' : 'Diagonal'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
 

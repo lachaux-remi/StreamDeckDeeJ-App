@@ -3,7 +3,8 @@ import { AlertTriangle, Eye, EyeOff, ImagePlus, Trash2, X } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import { useSettingsStore } from '@renderer/stores/settings.store'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
-import type { StreamdeckInputConfig, StreamdeckInputKey } from '@renderer/types/settings.types'
+import ColorPicker from '@renderer/components/ui/ColorPicker'
+import type { LedColor, StreamdeckInputConfig, StreamdeckInputKey } from '@renderer/types/settings.types'
 
 interface StreamdeckConfigDialogProps {
   buttonIndex: string | null
@@ -101,6 +102,8 @@ export default function StreamdeckConfigDialog({
   const [pressed, setPressed] = useState<StreamdeckInputKey | undefined>()
   const [hold, setHold] = useState<StreamdeckInputKey | undefined>()
   const [mainIcon, setMainIcon] = useState<string | undefined>()
+  const [ledOverrideEnabled, setLedOverrideEnabled] = useState(false)
+  const [ledColor, setLedColor] = useState<LedColor>({ r: 255, g: 0, b: 255 })
   const [activeTab, setActiveTab] = useState<'pressed' | 'hold'>('pressed')
   const [tabDirection, setTabDirection] = useState<'left' | 'right'>('right')
   const hasTabSwitched = useRef(false)
@@ -113,6 +116,8 @@ export default function StreamdeckConfigDialog({
       setPressed(config?.pressed)
       setHold(config?.hold)
       setMainIcon(config?.icon)
+      setLedOverrideEnabled(!!config?.color)
+      setLedColor(config?.color ?? { r: 255, g: 0, b: 255 })
       setActiveTab('pressed')
       setShowDiscardPrompt(false)
       hasTabSwitched.current = false
@@ -125,9 +130,18 @@ export default function StreamdeckConfigDialog({
     return (
       JSON.stringify(pressed) !== JSON.stringify(original?.pressed) ||
       JSON.stringify(hold) !== JSON.stringify(original?.hold) ||
-      mainIcon !== original?.icon
+      mainIcon !== original?.icon ||
+      JSON.stringify(original?.color ?? null) !== JSON.stringify(ledOverrideEnabled ? ledColor : null)
     )
-  }, [buttonIndex, streamdeck, pressed, hold, mainIcon])
+  }, [buttonIndex, streamdeck, pressed, hold, mainIcon, ledOverrideEnabled, ledColor])
+
+  const sendLedPreview = useCallback(
+    (enabled: boolean, color: LedColor) => {
+      if (buttonIndex === null) return
+      void window.api.streamdeck.setLedOverride(streamdeck, buttonIndex, enabled ? color : null)
+    },
+    [buttonIndex, streamdeck]
+  )
 
   const handleClose = useCallback(() => {
     if (hasChanges) {
@@ -139,18 +153,23 @@ export default function StreamdeckConfigDialog({
 
   const handleDiscard = useCallback(() => {
     setShowDiscardPrompt(false)
+    if (buttonIndex !== null) {
+      const original = streamdeck[buttonIndex]
+      sendLedPreview(!!original?.color, original?.color ?? { r: 255, g: 0, b: 255 })
+    }
     onClose()
-  }, [onClose])
+  }, [onClose, buttonIndex, streamdeck, sendLedPreview])
 
   const handleSave = useCallback(() => {
     if (buttonIndex === null) return
     const config: StreamdeckInputConfig = {}
     if (mainIcon) config.icon = mainIcon
+    if (ledOverrideEnabled) config.color = ledColor
     if (pressed?.module || pressed?.icon) config.pressed = pressed
     if (hold?.module || hold?.icon) config.hold = hold
     updateStreamdeckButton(buttonIndex, config)
     onClose()
-  }, [buttonIndex, mainIcon, pressed, hold, updateStreamdeckButton, onClose])
+  }, [buttonIndex, mainIcon, ledOverrideEnabled, ledColor, pressed, hold, updateStreamdeckButton, onClose])
 
   const handleDelete = useCallback(() => {
     if (buttonIndex === null) return
@@ -215,6 +234,46 @@ export default function StreamdeckConfigDialog({
             onRemove={() => setMainIcon(undefined)}
             size="md"
           />
+        </div>
+
+        {/* LED override */}
+        <div className="mb-5">
+          <label className="group flex cursor-pointer items-center justify-between gap-3 text-muted-foreground hover:text-foreground transition-colors">
+            <div>
+              <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 group-hover:text-muted-foreground/80 transition-colors">
+                Couleur LED
+              </span>
+              {!ledOverrideEnabled && (
+                <p className="text-[11px] text-muted-foreground/30">Suit l{"'"}animation globale</p>
+              )}
+            </div>
+            <div className="relative flex-shrink-0">
+              <input
+                type="checkbox"
+                checked={ledOverrideEnabled}
+                onChange={(e) => {
+                  const enabled = e.target.checked
+                  setLedOverrideEnabled(enabled)
+                  sendLedPreview(enabled, ledColor)
+                }}
+                className="peer sr-only"
+              />
+              <div className="h-6 w-11 rounded-full border border-border/50 bg-surface-3 transition-all duration-300 peer-checked:border-neon-pink/40 peer-checked:bg-neon-pink/20 peer-checked:shadow-[0_0_8px_#f472b64d]" />
+              <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-muted-foreground/40 shadow-sm transition-all duration-300 peer-checked:left-[22px] peer-checked:bg-neon-pink peer-checked:shadow-[0_0_6px_#f472b680]" />
+            </div>
+          </label>
+
+          {ledOverrideEnabled && (
+            <div className="mt-3 animate-fade-in">
+              <ColorPicker
+                value={ledColor}
+                onChange={(c) => {
+                  setLedColor(c)
+                  sendLedPreview(true, c)
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
