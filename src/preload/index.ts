@@ -33,6 +33,34 @@ const api = {
     getLogs: (): Promise<unknown[]> => ipcRenderer.invoke('electron:logs'),
     toggleDevTools: (): void => ipcRenderer.send('app:toggle-devtools')
   },
+  conditions: {
+    getState: (): Promise<{
+      micMuted: boolean
+      discordMuted: boolean
+      discordDeafened: boolean
+      discordConnected: boolean
+    }> => ipcRenderer.invoke('conditions:state'),
+    onChange: (
+      callback: (state: Partial<{
+        micMuted: boolean
+        discordMuted: boolean
+        discordDeafened: boolean
+        discordConnected: boolean
+      }>) => void
+    ): (() => void) => {
+      const handler = (
+        _: unknown,
+        state: Partial<{
+          micMuted: boolean
+          discordMuted: boolean
+          discordDeafened: boolean
+          discordConnected: boolean
+        }>
+      ): void => callback(state)
+      ipcRenderer.on('conditions:change', handler)
+      return () => ipcRenderer.removeListener('conditions:change', handler)
+    }
+  },
   on: {
     slidersUpdate: (callback: (sliders: Record<string, number>) => void): (() => void) => {
       const handler = (_: unknown, sliders: Record<string, number>): void => callback(sliders)

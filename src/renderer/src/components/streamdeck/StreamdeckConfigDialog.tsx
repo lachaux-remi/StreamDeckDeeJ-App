@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Eye, EyeOff, ImagePlus, Trash2, X } from 'lucide-react'
+import { AlertTriangle, Eye, EyeOff, ImagePlus, Plus, Trash2, WifiOff, X, Zap } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import { useSettingsStore } from '@renderer/stores/settings.store'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
 import ColorPicker from '@renderer/components/ui/ColorPicker'
-import type { LedColor, StreamdeckInputConfig, StreamdeckInputKey } from '@renderer/types/settings.types'
+import type {
+  ConditionsState,
+  LedColor,
+  LedCondition,
+  LedConditionType,
+  StreamdeckInputConfig,
+  StreamdeckInputKey
+} from '@renderer/types/settings.types'
 
 interface StreamdeckConfigDialogProps {
   buttonIndex: string | null
@@ -16,6 +23,27 @@ const MODULES = [
   { value: 'ir', label: 'Télécommande IR' },
   { value: 'macro', label: 'Macro' }
 ]
+
+const CONDITION_OPTIONS: { value: LedConditionType; label: string }[] = [
+  { value: 'mic-mute', label: 'Micro muet' },
+  { value: 'discord-mute', label: 'Discord muet' },
+  { value: 'discord-deafen', label: 'Discord sourd' }
+]
+
+const DEFAULT_CONDITIONS_STATE: ConditionsState = {
+  micMuted: false,
+  discordMuted: false,
+  discordDeafened: false,
+  discordConnected: false
+}
+
+function isConditionActive(type: LedConditionType, state: ConditionsState): boolean {
+  switch (type) {
+    case 'mic-mute': return state.micMuted
+    case 'discord-mute': return state.discordMuted
+    case 'discord-deafen': return state.discordDeafened
+  }
+}
 
 interface ModuleParam {
   label: string
@@ -104,6 +132,8 @@ export default function StreamdeckConfigDialog({
   const [mainIcon, setMainIcon] = useState<string | undefined>()
   const [ledOverrideEnabled, setLedOverrideEnabled] = useState(false)
   const [ledColor, setLedColor] = useState<LedColor>({ r: 255, g: 0, b: 255 })
+  const [ledConditions, setLedConditions] = useState<LedCondition[]>([])
+  const [conditionsState, setConditionsState] = useState<ConditionsState>(DEFAULT_CONDITIONS_STATE)
   const [activeTab, setActiveTab] = useState<'pressed' | 'hold'>('pressed')
   const [tabDirection, setTabDirection] = useState<'left' | 'right'>('right')
   const hasTabSwitched = useRef(false)
@@ -118,11 +148,21 @@ export default function StreamdeckConfigDialog({
       setMainIcon(config?.icon)
       setLedOverrideEnabled(!!config?.color)
       setLedColor(config?.color ?? { r: 255, g: 0, b: 255 })
+      setLedConditions(config?.ledConditions ?? [])
       setActiveTab('pressed')
       setShowDiscardPrompt(false)
       hasTabSwitched.current = false
+
+      void window.api.conditions.getState().then(setConditionsState)
     }
   }, [buttonIndex, streamdeck])
+
+  useEffect(() => {
+    if (buttonIndex === null) return
+    return window.api.conditions.onChange((partial) => {
+      setConditionsState((prev) => ({ ...prev, ...partial }))
+    })
+  }, [buttonIndex])
 
   const hasChanges = useMemo(() => {
     if (buttonIndex === null) return false
@@ -131,9 +171,10 @@ export default function StreamdeckConfigDialog({
       JSON.stringify(pressed) !== JSON.stringify(original?.pressed) ||
       JSON.stringify(hold) !== JSON.stringify(original?.hold) ||
       mainIcon !== original?.icon ||
-      JSON.stringify(original?.color ?? null) !== JSON.stringify(ledOverrideEnabled ? ledColor : null)
+      JSON.stringify(original?.color ?? null) !== JSON.stringify(ledOverrideEnabled ? ledColor : null) ||
+      JSON.stringify(original?.ledConditions ?? []) !== JSON.stringify(ledConditions)
     )
-  }, [buttonIndex, streamdeck, pressed, hold, mainIcon, ledOverrideEnabled, ledColor])
+  }, [buttonIndex, streamdeck, pressed, hold, mainIcon, ledOverrideEnabled, ledColor, ledConditions])
 
   const sendLedPreview = useCallback(
     (enabled: boolean, color: LedColor) => {
@@ -165,11 +206,12 @@ export default function StreamdeckConfigDialog({
     const config: StreamdeckInputConfig = {}
     if (mainIcon) config.icon = mainIcon
     if (ledOverrideEnabled) config.color = ledColor
+    if (ledConditions.length > 0) config.ledConditions = ledConditions
     if (pressed?.module || pressed?.icon) config.pressed = pressed
     if (hold?.module || hold?.icon) config.hold = hold
     updateStreamdeckButton(buttonIndex, config)
     onClose()
-  }, [buttonIndex, mainIcon, ledOverrideEnabled, ledColor, pressed, hold, updateStreamdeckButton, onClose])
+  }, [buttonIndex, mainIcon, ledOverrideEnabled, ledColor, ledConditions, pressed, hold, updateStreamdeckButton, onClose])
 
   const handleDelete = useCallback(() => {
     if (buttonIndex === null) return
@@ -272,6 +314,104 @@ export default function StreamdeckConfigDialog({
                   sendLedPreview(true, c)
                 }}
               />
+            </div>
+          )}
+        </div>
+
+        {/* LED conditions */}
+        <div className="mb-5">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Zap className="h-3 w-3 text-neon-pink/60" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                Conditions LED
+              </span>
+            </div>
+            <button
+              onClick={() =>
+                setLedConditions((prev) => [
+                  ...prev,
+                  { type: 'mic-mute', color: { r: 255, g: 0, b: 0 } }
+                ])
+              }
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground/50 hover:text-neon-pink hover:bg-neon-pink/10 transition-colors"
+            >
+              <Plus className="h-3 w-3" />
+              Ajouter
+            </button>
+          </div>
+
+          {/* Discord disconnected warning */}
+          {ledConditions.some((c) => c.type.startsWith('discord')) &&
+            !conditionsState.discordConnected && (
+              <div className="mb-2 flex items-center gap-2 rounded-lg border border-neon-orange/20 bg-neon-orange/5 px-3 py-2">
+                <WifiOff className="h-3 w-3 shrink-0 text-neon-orange/70" />
+                <span className="text-[11px] text-neon-orange/70">
+                  Discord non connecté — lance Discord et accepte l'autorisation RPC
+                </span>
+              </div>
+            )}
+
+          {ledConditions.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground/30">Aucune condition configurée</p>
+          ) : (
+            <div className="space-y-2">
+              {ledConditions.map((cond, idx) => {
+                const active = isConditionActive(cond.type, conditionsState)
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 rounded-lg border border-border/30 bg-surface-2/50 px-3 py-2"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <CustomSelect
+                        value={cond.type}
+                        onChange={(val) => {
+                          setLedConditions((prev) =>
+                            prev.map((c, i) =>
+                              i === idx ? { ...c, type: val as LedConditionType } : c
+                            )
+                          )
+                        }}
+                        options={CONDITION_OPTIONS}
+                        accent="pink"
+                      />
+                    </div>
+
+                    <div
+                      className={cn(
+                        'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+                        active
+                          ? 'bg-neon-green/15 text-neon-green'
+                          : 'bg-surface-3 text-muted-foreground/40'
+                      )}
+                    >
+                      {active ? '● ACTIF' : '○ inactif'}
+                    </div>
+
+                    <div className="shrink-0">
+                      <ColorPicker
+                        value={cond.color}
+                        onChange={(c) => {
+                          setLedConditions((prev) =>
+                            prev.map((item, i) => (i === idx ? { ...item, color: c } : item))
+                          )
+                        }}
+                        compact
+                      />
+                    </div>
+
+                    <button
+                      onClick={() =>
+                        setLedConditions((prev) => prev.filter((_, i) => i !== idx))
+                      }
+                      className="shrink-0 rounded p-1 text-muted-foreground/30 hover:text-neon-red transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

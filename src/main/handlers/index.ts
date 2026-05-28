@@ -1,4 +1,5 @@
 import { registerAppHandlers } from './app.handlers'
+import { registerConditionsHandlers } from './conditions.handlers'
 import { registerDeejHandlers } from './deej.handlers'
 import { registerSerialHandlers } from './serial.handlers'
 import { registerSettingsHandlers } from './settings.handlers'
@@ -10,4 +11,5 @@ export function registerAllHandlers(): void {
   registerStreamdeckHandlers()
   registerDeejHandlers()
   registerAppHandlers()
+  registerConditionsHandlers()
 }

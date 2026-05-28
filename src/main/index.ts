@@ -3,10 +3,13 @@ import { join } from 'path'
 import { homedir } from 'os'
 import { mkdir, unlink, writeFile } from 'fs/promises'
 import { registerAllHandlers } from '@main/handlers'
+import { conditionService } from '@main/services/condition.service'
 import { configService } from '@main/services/config.service'
 import { deckService } from '@main/services/deck.service'
+import { discordService } from '@main/services/discord.service'
 import { ledService } from '@main/services/led.service'
 import { loggerService } from '@main/services/logger.service'
+import { micService } from '@main/services/mic.service'
 import { serialService } from '@main/services/serial.service'
 import { sliderService } from '@main/services/slider.service'
 import '@main/services/sessions.service'
@@ -53,6 +56,9 @@ async function setAutostart(enabled: boolean): Promise<void> {
 
 app.whenReady().then(async () => {
   configService.init()
+  await micService.init()
+  await discordService.init()
+  conditionService.init(micService, discordService)
   await ledService.init()
   registerAllHandlers()
 
@@ -137,6 +143,17 @@ app.whenReady().then(async () => {
   serialService.on('status', (status) => webContents.send('serial:status', status))
   loggerService.on('log', (log) => webContents.send('electron:log', log))
 
+  micService.on('change', () =>
+    webContents.send('conditions:change', { micMuted: micService.isMuted() })
+  )
+  discordService.on('change', () =>
+    webContents.send('conditions:change', {
+      discordMuted: discordService.isMuted(),
+      discordDeafened: discordService.isDeafened(),
+      discordConnected: discordService.isConnected()
+    })
+  )
+
   // External links
   webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
@@ -150,9 +167,15 @@ app.whenReady().then(async () => {
 
   // Config sync
   let prevDevTools = config.devTools
+  let prevDiscordClientId = config.discord?.clientId
   configService.onUpdated((newConfig) => {
     setAutostart(newConfig.runOnStartup)
     ledService.updateOverrides(newConfig.streamdeck)
+
+    if (newConfig.discord?.clientId !== prevDiscordClientId) {
+      prevDiscordClientId = newConfig.discord?.clientId
+      discordService.reconnect()
+    }
 
     if (newConfig.devTools !== prevDevTools) {
       prevDevTools = newConfig.devTools

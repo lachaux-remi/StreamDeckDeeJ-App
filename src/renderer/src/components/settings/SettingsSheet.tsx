@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Cpu, Grid3X3, Home, Info, Monitor, RefreshCw, Settings, Sparkles, X } from 'lucide-react'
+import { AlertTriangle, Cpu, Grid3X3, Headphones, Home, Info, Monitor, RefreshCw, Settings, Sparkles, X } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import { useSettingsStore } from '@renderer/stores/settings.store'
 import { useSerialStore } from '@renderer/stores/serial.store'
@@ -294,6 +294,108 @@ export default function SettingsSheet({
                   placeholder="http://homeassistant.local:8123"
                   className={inputGreen}
                 />
+              </div>
+            </section>
+
+            {/* Discord */}
+            <section>
+              <div className="mb-3 flex items-center gap-2">
+                <Headphones className="h-3.5 w-3.5 text-[#5865F2]" />
+                <h3 className="font-display text-xs font-bold uppercase tracking-widest text-[#5865F2]">
+                  Discord
+                </h3>
+                <div className="gradient-line-h flex-1" />
+              </div>
+
+              <div className="mb-3 rounded-lg border border-border/20 bg-surface-2/50 px-3 py-2.5">
+                <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                  Nécessaire pour les conditions LED{' '}
+                  <span className="text-[#5865F2]">discord-mute</span> et{' '}
+                  <span className="text-[#5865F2]">discord-deafen</span>.{' '}
+                  <span className="text-muted-foreground/40">
+                    discord.com/developers → New Application → OAuth2 → copy Client ID &amp; Secret
+                  </span>
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                    Client ID
+                  </label>
+                  <input
+                    type="text"
+                    value={localSettings.discord?.clientId ?? ''}
+                    onChange={(e) =>
+                      setLocalSettings({
+                        ...localSettings,
+                        discord: {
+                          clientId: e.target.value,
+                          clientSecret: localSettings.discord?.clientSecret ?? ''
+                        }
+                      })
+                    }
+                    placeholder="123456789012345678"
+                    className={`${inputBase} focus:border-[#5865F2]/50`}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                    Client Secret
+                  </label>
+                  <input
+                    type="password"
+                    value={localSettings.discord?.clientSecret ?? ''}
+                    onChange={(e) =>
+                      setLocalSettings({
+                        ...localSettings,
+                        discord: {
+                          clientId: localSettings.discord?.clientId ?? '',
+                          clientSecret: e.target.value
+                        }
+                      })
+                    }
+                    placeholder="••••••••••••••••••••••••••••••••"
+                    className={`${inputBase} focus:border-[#5865F2]/50`}
+                  />
+                </div>
+
+                {/* Status + reset token */}
+                <div className="flex items-center justify-between">
+                  <span
+                    className={cn(
+                      'text-[11px] font-medium',
+                      localSettings.discord?.accessToken
+                        ? 'text-neon-green'
+                        : localSettings.discord?.clientId && localSettings.discord?.clientSecret
+                          ? 'text-neon-orange'
+                          : 'text-muted-foreground/40'
+                    )}
+                  >
+                    {localSettings.discord?.accessToken
+                      ? '● Token sauvegardé — authentifié'
+                      : localSettings.discord?.clientId && localSettings.discord?.clientSecret
+                        ? '○ Non authentifié — sauvegarde pour lancer le flux'
+                        : '○ Non configuré'}
+                  </span>
+                  {localSettings.discord?.accessToken && (
+                    <button
+                      onClick={() =>
+                        setLocalSettings({
+                          ...localSettings,
+                          discord: {
+                            clientId: localSettings.discord?.clientId ?? '',
+                            clientSecret: localSettings.discord?.clientSecret ?? '',
+                            accessToken: undefined
+                          }
+                        })
+                      }
+                      className="text-[11px] text-neon-red/50 hover:text-neon-red transition-colors"
+                    >
+                      Réinitialiser le token
+                    </button>
+                  )}
+                </div>
               </div>
             </section>
 

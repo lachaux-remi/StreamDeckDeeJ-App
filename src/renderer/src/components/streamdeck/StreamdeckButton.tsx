@@ -1,3 +1,4 @@
+import { Zap } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import type { StreamdeckInputConfig } from '@renderer/types/settings.types'
 
@@ -145,6 +146,13 @@ export default function StreamdeckButton({
             boxShadow: `0 0 8px rgb(${config.color.r},${config.color.g},${config.color.b})`
           }}
         />
+      )}
+
+      {/* Conditions indicator */}
+      {!!config?.ledConditions?.length && (
+        <div className="absolute right-1 top-1 text-neon-pink/70 drop-shadow-[0_0_4px_rgba(244,114,182,0.6)]">
+          <Zap className="h-2 w-2 fill-current" />
+        </div>
       )}
 
       {/* Bottom action indicators */}

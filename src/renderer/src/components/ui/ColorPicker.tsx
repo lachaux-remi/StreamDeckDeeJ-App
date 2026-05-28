@@ -59,9 +59,10 @@ interface ColorPickerProps {
   value: LedColor
   onChange: (color: LedColor) => void
   className?: string
+  compact?: boolean
 }
 
-export default function ColorPicker({ value, onChange, className }: ColorPickerProps): React.JSX.Element {
+export default function ColorPicker({ value, onChange, className, compact }: ColorPickerProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
   const [hsv, setHsv] = useState<[number, number, number]>(() => rgbToHsv(value))
   const [hexInput, setHexInput] = useState(() => toHex(value).slice(1))
@@ -122,21 +123,32 @@ export default function ColorPicker({ value, onChange, className }: ColorPickerP
   return (
     <div className={cn('relative', className)}>
       {/* Trigger */}
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={handleToggle}
-        className={cn(
-          'flex w-full items-center gap-2.5 rounded-lg border bg-surface-2 px-3 py-2 text-sm transition-colors',
-          isOpen ? 'border-border bg-surface-3' : 'border-border/40 hover:border-border'
-        )}
-      >
-        <div
-          className="h-5 w-5 flex-shrink-0 rounded border border-white/10"
-          style={{ background: hex, boxShadow: `0 0 6px ${hex}80` }}
+      {compact ? (
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={handleToggle}
+          className="h-7 w-7 flex-shrink-0 rounded-md border border-white/10 transition-transform hover:scale-110 active:scale-95"
+          style={{ background: hex, boxShadow: `0 0 8px ${hex}80` }}
+          title={hex}
         />
-        <span className="font-mono text-xs uppercase text-muted-foreground/80">{hex}</span>
-      </button>
+      ) : (
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={handleToggle}
+          className={cn(
+            'flex w-full items-center gap-2.5 rounded-lg border bg-surface-2 px-3 py-2 text-sm transition-colors',
+            isOpen ? 'border-border bg-surface-3' : 'border-border/40 hover:border-border'
+          )}
+        >
+          <div
+            className="h-5 w-5 flex-shrink-0 rounded border border-white/10"
+            style={{ background: hex, boxShadow: `0 0 6px ${hex}80` }}
+          />
+          <span className="font-mono text-xs uppercase text-muted-foreground/80">{hex}</span>
+        </button>
+      )}
 
       {/* Floating panel — portaled to body to escape transform/overflow-clip ancestors */}
       {isOpen && createPortal(

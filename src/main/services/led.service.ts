@@ -2,6 +2,9 @@ import HID from 'node-hid'
 import type { AppSettings, LedColor, LedProfile, StreamdeckConfig } from '@main/types/settings.types'
 import { configService } from './config.service'
 import { loggerService } from './logger.service'
+import { conditionService } from './condition.service'
+import { discordService } from './discord.service'
+import { micService } from './mic.service'
 import { LedEngine } from './led-engine'
 
 const SERVICE = 'LedService'
@@ -25,6 +28,7 @@ class LedService {
   private animTimer: ReturnType<typeof setInterval> | null = null
   private profile: LedProfile = { ...DEFAULT_PROFILE }
   private overrides: Record<number, LedColor> = {}
+  private buttonConfigs: StreamdeckConfig = {}
   private gridCols = 4
   private isShuttingDown = false
 
@@ -33,6 +37,7 @@ class LedService {
     this.profile = config.ledProfile ?? { ...DEFAULT_PROFILE }
     this.gridCols = config.gridCols ?? 4
     this.loadOverrides(config.streamdeck)
+    this.buttonConfigs = config.streamdeck
 
     await this.connect()
 
@@ -40,11 +45,19 @@ class LedService {
       this.startAnimation()
     }
 
+    micService.on('change', () => void this.flush())
+    discordService.on('change', () => void this.flush())
+
     configService.onUpdated((newConfig: AppSettings) => {
       this.profile = newConfig.ledProfile ?? { ...DEFAULT_PROFILE }
       this.gridCols = newConfig.gridCols ?? 4
       this.loadOverrides(newConfig.streamdeck)
+      this.buttonConfigs = newConfig.streamdeck
     })
+  }
+
+  updateButtonConfigs(streamdeck: StreamdeckConfig): void {
+    this.buttonConfigs = streamdeck
   }
 
   private loadOverrides(streamdeck: StreamdeckConfig): void {
@@ -70,8 +83,18 @@ class LedService {
     try {
       const base = this.engine.compute(this.profile, LED_COUNT, this.gridCols, performance.now())
 
-      for (const [idx, color] of Object.entries(this.overrides)) {
-        base[Number(idx)] = color
+      for (let i = 0; i < LED_COUNT; i++) {
+        const btnCfg = this.buttonConfigs[String(i)]
+        if (btnCfg?.ledConditions?.length) {
+          const condColor = conditionService.resolveColor(btnCfg.ledConditions)
+          if (condColor) {
+            base[i] = condColor
+            continue
+          }
+        }
+        if (this.overrides[i]) {
+          base[i] = this.overrides[i]
+        }
       }
 
       const packet = this.buildPacket(base)
