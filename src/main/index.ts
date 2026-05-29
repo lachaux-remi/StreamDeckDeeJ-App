@@ -150,6 +150,7 @@ app.whenReady().then(async () => {
     webContents.send('conditions:change', {
       discordMuted: discordService.isMuted(),
       discordDeafened: discordService.isDeafened(),
+      discordStreaming: discordService.isStreaming(),
       discordConnected: discordService.isConnected()
     })
   )

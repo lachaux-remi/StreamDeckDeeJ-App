@@ -27,7 +27,7 @@ function interpolateColor(c1: LedColor, c2: LedColor, t: number): LedColor {
   }
 }
 
-function applyBrightness(c: LedColor, brightness: number): LedColor {
+export function applyBrightness(c: LedColor, brightness: number): LedColor {
   const b = Math.max(0, Math.min(1, brightness / 100))
   return { r: Math.round(c.r * b), g: Math.round(c.g * b), b: Math.round(c.b * b) }
 }

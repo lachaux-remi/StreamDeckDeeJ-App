@@ -29,7 +29,7 @@ export interface StreamdeckInputKey {
   icon?: string
 }
 
-export type LedConditionType = 'mic-mute' | 'discord-mute' | 'discord-deafen'
+export type LedConditionType = 'mic-mute' | 'discord-mute' | 'discord-deafen' | 'discord-stream'
 
 export interface LedCondition {
   type: LedConditionType
@@ -48,6 +48,7 @@ export interface ConditionsState {
   micMuted: boolean
   discordMuted: boolean
   discordDeafened: boolean
+  discordStreaming: boolean
   discordConnected: boolean
 }
 
@@ -63,6 +64,7 @@ export interface DiscordConfig {
   clientId: string
   clientSecret: string
   accessToken?: string
+  refreshToken?: string
 }
 
 export interface AppSettings {

@@ -22,6 +22,8 @@ class ConditionService {
         return this.discordSvc?.isMuted() ?? false
       case 'discord-deafen':
         return this.discordSvc?.isDeafened() ?? false
+      case 'discord-stream':
+        return this.discordSvc?.isStreaming() ?? false
     }
   }
 

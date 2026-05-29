@@ -5,7 +5,7 @@ import { loggerService } from './logger.service'
 import { conditionService } from './condition.service'
 import { discordService } from './discord.service'
 import { micService } from './mic.service'
-import { LedEngine } from './led-engine'
+import { LedEngine, applyBrightness } from './led-engine'
 
 const SERVICE = 'LedService'
 const VID = 0x5239
@@ -88,12 +88,12 @@ class LedService {
         if (btnCfg?.ledConditions?.length) {
           const condColor = conditionService.resolveColor(btnCfg.ledConditions)
           if (condColor) {
-            base[i] = condColor
+            base[i] = applyBrightness(condColor, this.profile.brightness)
             continue
           }
         }
         if (this.overrides[i]) {
-          base[i] = this.overrides[i]
+          base[i] = applyBrightness(this.overrides[i], this.profile.brightness)
         }
       }
 

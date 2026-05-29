@@ -38,6 +38,7 @@ const api = {
       micMuted: boolean
       discordMuted: boolean
       discordDeafened: boolean
+      discordStreaming: boolean
       discordConnected: boolean
     }> => ipcRenderer.invoke('conditions:state'),
     onChange: (
@@ -45,6 +46,7 @@ const api = {
         micMuted: boolean
         discordMuted: boolean
         discordDeafened: boolean
+        discordStreaming: boolean
         discordConnected: boolean
       }>) => void
     ): (() => void) => {
@@ -54,6 +56,7 @@ const api = {
           micMuted: boolean
           discordMuted: boolean
           discordDeafened: boolean
+          discordStreaming: boolean
           discordConnected: boolean
         }>
       ): void => callback(state)

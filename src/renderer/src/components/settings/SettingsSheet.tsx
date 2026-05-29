@@ -386,7 +386,8 @@ export default function SettingsSheet({
                           discord: {
                             clientId: localSettings.discord?.clientId ?? '',
                             clientSecret: localSettings.discord?.clientSecret ?? '',
-                            accessToken: undefined
+                            accessToken: undefined,
+                            refreshToken: undefined
                           }
                         })
                       }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Eye, EyeOff, ImagePlus, Plus, Trash2, WifiOff, X, Zap } from 'lucide-react'
+import { AlertTriangle, Eye, EyeOff, ImagePlus, Plus, Trash2, WifiOff, X } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import { useSettingsStore } from '@renderer/stores/settings.store'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
@@ -24,26 +24,21 @@ const MODULES = [
   { value: 'macro', label: 'Macro' }
 ]
 
-const CONDITION_OPTIONS: { value: LedConditionType; label: string }[] = [
-  { value: 'mic-mute', label: 'Micro muet' },
-  { value: 'discord-mute', label: 'Discord muet' },
-  { value: 'discord-deafen', label: 'Discord sourd' }
+const CONDITION_OPTIONS: { value: LedConditionType; label: string; description?: string }[] = [
+  { value: 'mic-mute', label: 'Micro muet', description: 'Micro coupé au niveau du système' },
+  { value: 'discord-mute', label: 'Discord muet', description: 'Micro coupé dans Discord' },
+  { value: 'discord-deafen', label: 'Discord sourd', description: 'Audio coupé dans Discord' },
+  { value: 'discord-stream', label: 'Discord stream', description: 'Partage d\'écran actif' }
 ]
 
 const DEFAULT_CONDITIONS_STATE: ConditionsState = {
   micMuted: false,
   discordMuted: false,
   discordDeafened: false,
+  discordStreaming: false,
   discordConnected: false
 }
 
-function isConditionActive(type: LedConditionType, state: ConditionsState): boolean {
-  switch (type) {
-    case 'mic-mute': return state.micMuted
-    case 'discord-mute': return state.discordMuted
-    case 'discord-deafen': return state.discordDeafened
-  }
-}
 
 interface ModuleParam {
   label: string
@@ -251,7 +246,7 @@ export default function StreamdeckConfigDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={handleClose} />
-      <div className="relative w-full max-w-md overflow-x-clip rounded-2xl border border-border/50 bg-surface-1 p-6 shadow-2xl animate-slide-up">
+      <div className="relative w-full max-w-2xl overflow-x-clip rounded-2xl border border-border/50 bg-surface-1 p-6 shadow-2xl animate-slide-up">
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">
           <h3 className="font-display text-lg font-bold">
@@ -265,325 +260,323 @@ export default function StreamdeckConfigDialog({
           </button>
         </div>
 
-        {/* Main icon */}
-        <div className="mb-5">
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-            Icône principale
-          </label>
-          <IconUpload
-            icon={mainIcon}
-            onUpload={handleMainIconUpload}
-            onRemove={() => setMainIcon(undefined)}
-            size="md"
-          />
-        </div>
+        {/* Two-column body */}
+        <div className="grid grid-cols-2 items-start divide-x divide-border/20">
 
-        {/* LED override */}
-        <div className="mb-5">
-          <label className="group flex cursor-pointer items-center justify-between gap-3 text-muted-foreground hover:text-foreground transition-colors">
+          {/* Left column : LED */}
+          <div className="space-y-5 pr-6">
+
+            {/* Main icon */}
             <div>
-              <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 group-hover:text-muted-foreground/80 transition-colors">
-                Couleur LED
-              </span>
-              {!ledOverrideEnabled && (
-                <p className="text-[11px] text-muted-foreground/30">Suit l{"'"}animation globale</p>
-              )}
-            </div>
-            <div className="relative flex-shrink-0">
-              <input
-                type="checkbox"
-                checked={ledOverrideEnabled}
-                onChange={(e) => {
-                  const enabled = e.target.checked
-                  setLedOverrideEnabled(enabled)
-                  sendLedPreview(enabled, ledColor)
-                }}
-                className="peer sr-only"
-              />
-              <div className="h-6 w-11 rounded-full border border-border/50 bg-surface-3 transition-all duration-300 peer-checked:border-neon-pink/40 peer-checked:bg-neon-pink/20 peer-checked:shadow-[0_0_8px_#f472b64d]" />
-              <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-muted-foreground/40 shadow-sm transition-all duration-300 peer-checked:left-[22px] peer-checked:bg-neon-pink peer-checked:shadow-[0_0_6px_#f472b680]" />
-            </div>
-          </label>
-
-          {ledOverrideEnabled && (
-            <div className="mt-3 animate-fade-in">
-              <ColorPicker
-                value={ledColor}
-                onChange={(c) => {
-                  setLedColor(c)
-                  sendLedPreview(true, c)
-                }}
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                Icône principale
+              </label>
+              <IconUpload
+                icon={mainIcon}
+                onUpload={handleMainIconUpload}
+                onRemove={() => setMainIcon(undefined)}
+                size="md"
               />
             </div>
-          )}
-        </div>
 
-        {/* LED conditions */}
-        <div className="mb-5">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Zap className="h-3 w-3 text-neon-pink/60" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-                Conditions LED
-              </span>
-            </div>
-            <button
-              onClick={() =>
-                setLedConditions((prev) => [
-                  ...prev,
-                  { type: 'mic-mute', color: { r: 255, g: 0, b: 0 } }
-                ])
-              }
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground/50 hover:text-neon-pink hover:bg-neon-pink/10 transition-colors"
-            >
-              <Plus className="h-3 w-3" />
-              Ajouter
-            </button>
-          </div>
+            {/* LED override */}
+            <div>
+              <label className="group flex cursor-pointer items-center justify-between gap-3 text-muted-foreground hover:text-foreground transition-colors">
+                <div>
+                  <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 group-hover:text-muted-foreground/80 transition-colors">
+                    Couleur LED
+                  </span>
+                  {!ledOverrideEnabled && (
+                    <p className="text-[11px] text-muted-foreground/30">Suit l{"'"}animation globale</p>
+                  )}
+                </div>
+                <div className="relative flex-shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={ledOverrideEnabled}
+                    onChange={(e) => {
+                      const enabled = e.target.checked
+                      setLedOverrideEnabled(enabled)
+                      sendLedPreview(enabled, ledColor)
+                    }}
+                    className="peer sr-only"
+                  />
+                  <div className="h-6 w-11 rounded-full border border-border/50 bg-surface-3 transition-all duration-300 peer-checked:border-neon-pink/40 peer-checked:bg-neon-pink/20 peer-checked:shadow-[0_0_8px_#f472b64d]" />
+                  <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-muted-foreground/40 shadow-sm transition-all duration-300 peer-checked:left-[22px] peer-checked:bg-neon-pink peer-checked:shadow-[0_0_6px_#f472b680]" />
+                </div>
+              </label>
 
-          {/* Discord disconnected warning */}
-          {ledConditions.some((c) => c.type.startsWith('discord')) &&
-            !conditionsState.discordConnected && (
-              <div className="mb-2 flex items-center gap-2 rounded-lg border border-neon-orange/20 bg-neon-orange/5 px-3 py-2">
-                <WifiOff className="h-3 w-3 shrink-0 text-neon-orange/70" />
-                <span className="text-[11px] text-neon-orange/70">
-                  Discord non connecté — lance Discord et accepte l'autorisation RPC
-                </span>
-              </div>
-            )}
-
-          {ledConditions.length === 0 ? (
-            <p className="text-[11px] text-muted-foreground/30">Aucune condition configurée</p>
-          ) : (
-            <div className="space-y-2">
-              {ledConditions.map((cond, idx) => {
-                const active = isConditionActive(cond.type, conditionsState)
-                return (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-2 rounded-lg border border-border/30 bg-surface-2/50 px-3 py-2"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <CustomSelect
-                        value={cond.type}
-                        onChange={(val) => {
-                          setLedConditions((prev) =>
-                            prev.map((c, i) =>
-                              i === idx ? { ...c, type: val as LedConditionType } : c
-                            )
-                          )
-                        }}
-                        options={CONDITION_OPTIONS}
-                        accent="pink"
-                      />
-                    </div>
-
-                    <div
-                      className={cn(
-                        'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                        active
-                          ? 'bg-neon-green/15 text-neon-green'
-                          : 'bg-surface-3 text-muted-foreground/40'
-                      )}
-                    >
-                      {active ? '● ACTIF' : '○ inactif'}
-                    </div>
-
-                    <div className="shrink-0">
-                      <ColorPicker
-                        value={cond.color}
-                        onChange={(c) => {
-                          setLedConditions((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, color: c } : item))
-                          )
-                        }}
-                        compact
-                      />
-                    </div>
-
-                    <button
-                      onClick={() =>
-                        setLedConditions((prev) => prev.filter((_, i) => i !== idx))
-                      }
-                      className="shrink-0 rounded p-1 text-muted-foreground/30 hover:text-neon-red transition-colors"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Tabs */}
-        <div className="mb-4 flex gap-1 rounded-lg bg-surface-2 p-1">
-          {(['pressed', 'hold'] as const).map((tab) => {
-            const tabAction = tab === 'pressed' ? pressed : hold
-            return (
-              <button
-                key={tab}
-                onClick={() => {
-                  hasTabSwitched.current = true
-                  setTabDirection(tab === 'hold' ? 'right' : 'left')
-                  setActiveTab(tab)
-                }}
-                className={cn(
-                  'flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-all duration-200',
-                  activeTab === tab
-                    ? tab === 'pressed'
-                      ? 'bg-neon-purple/20 text-neon-purple border border-neon-purple/20'
-                      : 'bg-neon-blue/20 text-neon-blue border border-neon-blue/20'
-                    : 'text-muted-foreground/50 border border-transparent hover:text-muted-foreground'
-                )}
-              >
-                {tabAction?.icon && (
-                  <div
-                    className="h-4 w-4 bg-current"
-                    style={{
-                      maskImage: `url(${tabAction.icon})`,
-                      maskSize: 'contain',
-                      maskRepeat: 'no-repeat',
-                      maskPosition: 'center',
-                      WebkitMaskImage: `url(${tabAction.icon})`,
-                      WebkitMaskSize: 'contain',
-                      WebkitMaskRepeat: 'no-repeat',
-                      WebkitMaskPosition: 'center'
+              {ledOverrideEnabled && (
+                <div className="mt-3 animate-fade-in">
+                  <ColorPicker
+                    value={ledColor}
+                    onChange={(c) => {
+                      setLedColor(c)
+                      sendLedPreview(true, c)
                     }}
                   />
+                </div>
+              )}
+            </div>
+
+            {/* LED conditions */}
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                  Conditions LED
+                </span>
+                <button
+                  onClick={() =>
+                    setLedConditions((prev) => [
+                      ...prev,
+                      { type: 'mic-mute', color: { r: 255, g: 0, b: 0 } }
+                    ])
+                  }
+                  className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground/50 hover:text-neon-pink hover:bg-neon-pink/10 transition-colors"
+                >
+                  <Plus className="h-3 w-3" />
+                  Ajouter
+                </button>
+              </div>
+
+              {ledConditions.some((c) => c.type.startsWith('discord')) &&
+                !conditionsState.discordConnected && (
+                  <div className="mb-2 flex items-center gap-2 rounded-lg border border-neon-orange/20 bg-neon-orange/5 px-3 py-2">
+                    <WifiOff className="h-3 w-3 shrink-0 text-neon-orange/70" />
+                    <span className="text-[11px] text-neon-orange/70">
+                      Discord non connecté
+                    </span>
+                  </div>
                 )}
-                {tab === 'pressed' ? 'Appui' : 'Maintien'}
-              </button>
-            )
-          })}
-        </div>
 
-        {/* Action config */}
-        <div
-          key={activeTab}
-          className={cn(
-            'space-y-3',
-            hasTabSwitched.current &&
-              (tabDirection === 'right' ? 'animate-slide-tab-right' : 'animate-slide-tab-left')
-          )}
-        >
-          {/* Action icon */}
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-              Icône d{"'"}action
-            </label>
-            <IconUpload
-              icon={currentAction?.icon}
-              onUpload={handleActionIconUpload}
-              onRemove={() =>
-                setCurrentAction((prev) => (prev ? { ...prev, icon: undefined } : undefined))
-              }
-              size="sm"
-            />
-          </div>
+              {ledConditions.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground/30">Aucune condition configurée</p>
+              ) : (
+                <div className="space-y-2">
+                  {ledConditions.map((cond, idx) => {
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 rounded-lg border border-border/30 bg-surface-2/50 px-3 py-2"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <CustomSelect
+                            value={cond.type}
+                            onChange={(val) => {
+                              setLedConditions((prev) =>
+                                prev.map((c, i) =>
+                                  i === idx ? { ...c, type: val as LedConditionType } : c
+                                )
+                              )
+                            }}
+                            options={CONDITION_OPTIONS}
+                            accent="pink"
+                          />
+                        </div>
 
-          {/* Module */}
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-              Module
-            </label>
-            <CustomSelect
-              value={currentAction?.module || ''}
-              onChange={(mod) => {
-                const paramDefs = MODULE_PARAMS[mod]
-                setCurrentAction((prev) =>
-                  mod
-                    ? {
-                        module: mod,
-                        params: paramDefs
-                          ? paramDefs.map((_, i) => prev?.params?.[i] || '')
-                          : [''],
-                        icon: prev?.icon
-                      }
-                    : prev?.icon
-                      ? { module: '', params: [''], icon: prev.icon }
-                      : undefined
-                )
-              }}
-              options={[
-                { value: '', label: 'Aucun' },
-                ...MODULES.map((m) => ({ value: m.value, label: m.label }))
-              ]}
-              placeholder="Aucun"
-              accent={activeTab === 'hold' ? 'blue' : 'purple'}
-            />
-          </div>
+                        <div className="shrink-0 flex items-center">
+                          <ColorPicker
+                            value={cond.color}
+                            onChange={(c) => {
+                              setLedConditions((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, color: c } : item))
+                              )
+                            }}
+                            compact
+                          />
+                        </div>
 
-          {/* Parameters */}
-          {currentAction?.module && MODULE_PARAMS[currentAction.module] && (
-            <div className="space-y-2">
-              {MODULE_PARAMS[currentAction.module].map((paramDef, i) => {
-                const inputClass = cn(
-                  'w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/30 outline-none transition-colors',
-                  activeTab === 'hold' ? 'focus:border-neon-blue/50' : 'focus:border-neon-purple/50'
-                )
-                const value = currentAction.params?.[i] || ''
-                const onChange = (
-                  e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-                ): void => {
-                  const params = [...(currentAction.params || [])]
-                  params[i] = e.target.value
-                  setCurrentAction((prev) => (prev ? { ...prev, params } : prev))
-                }
-
-                return (
-                  <div key={paramDef.label}>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-                      {paramDef.label}
-                    </label>
-                    {paramDef.type === 'textarea' ? (
-                      <textarea
-                        value={value}
-                        onChange={onChange}
-                        placeholder={paramDef.placeholder}
-                        rows={3}
-                        className={cn(inputClass, 'resize-none')}
-                      />
-                    ) : paramDef.type === 'password' ? (
-                      <div className="relative">
-                        <input
-                          type={showPasswords[paramDef.label] ? 'text' : 'password'}
-                          value={value}
-                          onChange={onChange}
-                          placeholder={paramDef.placeholder}
-                          className={cn(inputClass, 'pr-10')}
-                        />
                         <button
-                          type="button"
                           onClick={() =>
-                            setShowPasswords((prev) => ({
-                              ...prev,
-                              [paramDef.label]: !prev[paramDef.label]
-                            }))
+                            setLedConditions((prev) => prev.filter((_, i) => i !== idx))
                           }
-                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground/40 hover:text-foreground transition-colors"
+                          className="shrink-0 rounded p-1 text-muted-foreground/30 hover:text-neon-red transition-colors"
                         >
-                          {showPasswords[paramDef.label] ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
+                          <X className="h-3 w-3" />
                         </button>
                       </div>
-                    ) : (
-                      <input
-                        type="text"
-                        value={value}
-                        onChange={onChange}
-                        placeholder={paramDef.placeholder}
-                        className={inputClass}
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          {/* Right column : Actions */}
+          <div className="space-y-4 overflow-hidden pl-6">
+
+            {/* Tabs */}
+            <div className="flex gap-1 rounded-lg bg-surface-2 p-1">
+              {(['pressed', 'hold'] as const).map((tab) => {
+                const tabAction = tab === 'pressed' ? pressed : hold
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => {
+                      hasTabSwitched.current = true
+                      setTabDirection(tab === 'hold' ? 'right' : 'left')
+                      setActiveTab(tab)
+                    }}
+                    className={cn(
+                      'flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-all duration-200',
+                      activeTab === tab
+                        ? tab === 'pressed'
+                          ? 'bg-neon-purple/20 text-neon-purple border border-neon-purple/20'
+                          : 'bg-neon-blue/20 text-neon-blue border border-neon-blue/20'
+                        : 'text-muted-foreground/50 border border-transparent hover:text-muted-foreground'
+                    )}
+                  >
+                    {tabAction?.icon && (
+                      <div
+                        className="h-4 w-4 bg-current"
+                        style={{
+                          maskImage: `url(${tabAction.icon})`,
+                          maskSize: 'contain',
+                          maskRepeat: 'no-repeat',
+                          maskPosition: 'center',
+                          WebkitMaskImage: `url(${tabAction.icon})`,
+                          WebkitMaskSize: 'contain',
+                          WebkitMaskRepeat: 'no-repeat',
+                          WebkitMaskPosition: 'center'
+                        }}
                       />
                     )}
-                  </div>
+                    {tab === 'pressed' ? 'Appui' : 'Maintien'}
+                  </button>
                 )
               })}
             </div>
-          )}
+
+            {/* Action config */}
+            <div
+              key={activeTab}
+              className={cn(
+                'space-y-3',
+                hasTabSwitched.current &&
+                  (tabDirection === 'right' ? 'animate-slide-tab-right' : 'animate-slide-tab-left')
+              )}
+            >
+              {/* Action icon */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                  Icône d{"'"}action
+                </label>
+                <IconUpload
+                  icon={currentAction?.icon}
+                  onUpload={handleActionIconUpload}
+                  onRemove={() =>
+                    setCurrentAction((prev) => (prev ? { ...prev, icon: undefined } : undefined))
+                  }
+                  size="sm"
+                />
+              </div>
+
+              {/* Module */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                  Module
+                </label>
+                <CustomSelect
+                  value={currentAction?.module || ''}
+                  onChange={(mod) => {
+                    const paramDefs = MODULE_PARAMS[mod]
+                    setCurrentAction((prev) =>
+                      mod
+                        ? {
+                            module: mod,
+                            params: paramDefs
+                              ? paramDefs.map((_, i) => prev?.params?.[i] || '')
+                              : [''],
+                            icon: prev?.icon
+                          }
+                        : prev?.icon
+                          ? { module: '', params: [''], icon: prev.icon }
+                          : undefined
+                    )
+                  }}
+                  options={[
+                    { value: '', label: 'Aucun' },
+                    ...MODULES.map((m) => ({ value: m.value, label: m.label }))
+                  ]}
+                  placeholder="Aucun"
+                  accent={activeTab === 'hold' ? 'blue' : 'purple'}
+                />
+              </div>
+
+              {/* Parameters */}
+              {currentAction?.module && MODULE_PARAMS[currentAction.module] && (
+                <div className="space-y-2">
+                  {MODULE_PARAMS[currentAction.module].map((paramDef, i) => {
+                    const inputClass = cn(
+                      'w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/30 outline-none transition-colors',
+                      activeTab === 'hold' ? 'focus:border-neon-blue/50' : 'focus:border-neon-purple/50'
+                    )
+                    const value = currentAction.params?.[i] || ''
+                    const onChange = (
+                      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+                    ): void => {
+                      const params = [...(currentAction.params || [])]
+                      params[i] = e.target.value
+                      setCurrentAction((prev) => (prev ? { ...prev, params } : prev))
+                    }
+
+                    return (
+                      <div key={paramDef.label}>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                          {paramDef.label}
+                        </label>
+                        {paramDef.type === 'textarea' ? (
+                          <textarea
+                            value={value}
+                            onChange={onChange}
+                            placeholder={paramDef.placeholder}
+                            rows={3}
+                            className={cn(inputClass, 'resize-none')}
+                          />
+                        ) : paramDef.type === 'password' ? (
+                          <div className="relative">
+                            <input
+                              type={showPasswords[paramDef.label] ? 'text' : 'password'}
+                              value={value}
+                              onChange={onChange}
+                              placeholder={paramDef.placeholder}
+                              className={cn(inputClass, 'pr-10')}
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setShowPasswords((prev) => ({
+                                  ...prev,
+                                  [paramDef.label]: !prev[paramDef.label]
+                                }))
+                              }
+                              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground/40 hover:text-foreground transition-colors"
+                            >
+                              {showPasswords[paramDef.label] ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            value={value}
+                            onChange={onChange}
+                            placeholder={paramDef.placeholder}
+                            className={inputClass}
+                          />
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+          </div>
         </div>
 
         {/* Discard confirmation */}
@@ -610,7 +603,7 @@ export default function StreamdeckConfigDialog({
           </div>
         )}
 
-        {/* Actions */}
+        {/* Footer */}
         <div className="mt-6 flex items-center justify-between border-t border-border/30 pt-4">
           <button
             onClick={handleDelete}

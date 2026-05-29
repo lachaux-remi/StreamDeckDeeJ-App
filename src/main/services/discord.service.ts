@@ -22,6 +22,7 @@ class DiscordService extends EventEmitter {
   private socket: net.Socket | null = null
   private muted = false
   private deafened = false
+  private streaming = false
   private _connected = false
   private buf = Buffer.alloc(0)
   private reconnectTimer: NodeJS.Timeout | null = null
@@ -46,6 +47,7 @@ class DiscordService extends EventEmitter {
 
   isMuted(): boolean { return this.muted }
   isDeafened(): boolean { return this.deafened }
+  isStreaming(): boolean { return this.streaming }
   isConnected(): boolean { return this._connected }
 
   private socketPaths(index: number): string[] {
@@ -136,10 +138,14 @@ class DiscordService extends EventEmitter {
       if (code) void this.handleAuthCode(code)
     } else if (msg.cmd === 'AUTHENTICATE') {
       if (msg.evt === 'ERROR') {
-        loggerService.warn('Discord RPC: token invalide, relance authentification', SERVICE)
+        loggerService.warn('Discord RPC: token invalide, tentative de refresh', SERVICE)
         const discord = configService.getConfig().discord
-        if (discord) configService.setConfig({ discord: { ...discord, accessToken: undefined } })
-        this.authorize()
+        if (discord?.refreshToken) {
+          void this.tryRefreshToken(discord.refreshToken)
+        } else {
+          if (discord) configService.setConfig({ discord: { ...discord, accessToken: undefined, refreshToken: undefined } })
+          this.authorize()
+        }
       } else {
         loggerService.info('Discord RPC: authentifié avec succès', SERVICE)
         this.subscribeVoiceSettings()
@@ -152,6 +158,13 @@ class DiscordService extends EventEmitter {
       if (nm !== this.muted || nd !== this.deafened) {
         this.muted = nm
         this.deafened = nd
+        this.emit('change')
+      }
+    } else if (msg.evt === 'SCREENSHARE_STATE_UPDATE') {
+      const d = msg.data as { active?: boolean } | null | undefined
+      const ns = !!d?.active
+      if (ns !== this.streaming) {
+        this.streaming = ns
         this.emit('change')
       }
     } else if (msg.evt === 'ERROR') {
@@ -182,7 +195,7 @@ class DiscordService extends EventEmitter {
       args: {
         client_id: clientId,
         scopes: [
-          'rpc','rpc.voice.write','rpc.voice.read','rpc.video.write','rpc.activities.write','rpc.notifications.read','rpc.video.read','rpc.screenshare.write','rpc.screenshare.read'
+          'rpc','rpc.voice.read','rpc.notifications.read','rpc.video.read','rpc.screenshare.read'
         ],
         prompt: 'consent'
       },
@@ -207,10 +220,10 @@ class DiscordService extends EventEmitter {
         })
       })
 
-      const data = await resp.json() as { access_token?: string; error?: string }
+      const data = await resp.json() as { access_token?: string; refresh_token?: string; error?: string }
 
       if (data.access_token) {
-        configService.setConfig({ discord: { ...discord, accessToken: data.access_token } })
+        configService.setConfig({ discord: { ...discord, accessToken: data.access_token, refreshToken: data.refresh_token } })
         loggerService.info('Discord RPC: token OAuth obtenu et sauvegardé', SERVICE)
         this.authenticate(data.access_token)
       } else {
@@ -221,6 +234,37 @@ class DiscordService extends EventEmitter {
       }
     } catch (err) {
       loggerService.warn(`Discord RPC: erreur réseau lors de l'échange: ${err}`, SERVICE)
+    }
+  }
+
+  private async tryRefreshToken(refreshToken: string): Promise<void> {
+    const discord = configService.getConfig().discord
+    if (!discord?.clientId || !discord?.clientSecret) return
+    try {
+      const resp = await fetch('https://discord.com/api/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: discord.clientId,
+          client_secret: discord.clientSecret,
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken
+        })
+      })
+      const data = await resp.json() as { access_token?: string; refresh_token?: string; error?: string }
+      if (data.access_token) {
+        configService.setConfig({ discord: { ...discord, accessToken: data.access_token, refreshToken: data.refresh_token ?? refreshToken } })
+        loggerService.info('Discord RPC: token rafraîchi silencieusement', SERVICE)
+        this.authenticate(data.access_token)
+      } else {
+        loggerService.warn('Discord RPC: refresh échoué, relance autorisation', SERVICE)
+        configService.setConfig({ discord: { ...discord, accessToken: undefined, refreshToken: undefined } })
+        this.authorize()
+      }
+    } catch (err) {
+      loggerService.warn(`Discord RPC: erreur réseau lors du refresh: ${err}`, SERVICE)
+      configService.setConfig({ discord: { ...discord, accessToken: undefined, refreshToken: undefined } })
+      this.authorize()
     }
   }
 
@@ -244,6 +288,12 @@ class DiscordService extends EventEmitter {
       args: {},
       nonce: `get-voice-${Date.now()}`
     })
+    this.writeFrame(OP_FRAME, {
+      cmd: 'SUBSCRIBE',
+      args: {},
+      evt: 'SCREENSHARE_STATE_UPDATE',
+      nonce: 'sub-screenshare'
+    })
   }
 
   private onDisconnect(): void {
@@ -252,9 +302,10 @@ class DiscordService extends EventEmitter {
     this.socket = null
     const hadState = this._connected
     this._connected = false
-    if (this.muted || this.deafened) {
+    if (this.muted || this.deafened || this.streaming) {
       this.muted = false
       this.deafened = false
+      this.streaming = false
       this.emit('change')
     } else if (hadState) {
       this.emit('change')

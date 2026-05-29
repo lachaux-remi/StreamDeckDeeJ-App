@@ -1,4 +1,3 @@
-import { Zap } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import type { StreamdeckInputConfig } from '@renderer/types/settings.types'
 
@@ -135,24 +134,6 @@ export default function StreamdeckButton({
         <span className="font-mono text-base font-medium text-muted-foreground/15 transition-colors duration-300 group-hover:text-muted-foreground/40">
           {parseInt(index) + 1}
         </span>
-      )}
-
-      {/* LED color indicator */}
-      {config?.color && (
-        <div
-          className="absolute inset-x-0 bottom-0 h-1 rounded-b-xl"
-          style={{
-            background: `rgb(${config.color.r},${config.color.g},${config.color.b})`,
-            boxShadow: `0 0 8px rgb(${config.color.r},${config.color.g},${config.color.b})`
-          }}
-        />
-      )}
-
-      {/* Conditions indicator */}
-      {!!config?.ledConditions?.length && (
-        <div className="absolute right-1 top-1 text-neon-pink/70 drop-shadow-[0_0_4px_rgba(244,114,182,0.6)]">
-          <Zap className="h-2 w-2 fill-current" />
-        </div>
       )}
 
       {/* Bottom action indicators */}

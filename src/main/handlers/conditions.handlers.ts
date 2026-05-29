@@ -7,6 +7,7 @@ export function registerConditionsHandlers(): void {
     micMuted: micService.isMuted(),
     discordMuted: discordService.isMuted(),
     discordDeafened: discordService.isDeafened(),
+    discordStreaming: discordService.isStreaming(),
     discordConnected: discordService.isConnected()
   }))
 }

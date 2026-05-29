@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Check, ChevronDown } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 
@@ -26,7 +27,9 @@ export default function CustomSelect({
   accent = 'purple'
 }: CustomSelectProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 })
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   const selected = options.find((o) => o.value === value)
 
@@ -34,9 +37,10 @@ export default function CustomSelect({
     if (!isOpen) return
 
     const handleClickOutside = (e: MouseEvent): void => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setIsOpen(false)
-      }
+      if (
+        !triggerRef.current?.contains(e.target as Node) &&
+        !panelRef.current?.contains(e.target as Node)
+      ) setIsOpen(false)
     }
 
     const handleEscape = (e: KeyboardEvent): void => {
@@ -51,11 +55,20 @@ export default function CustomSelect({
     }
   }, [isOpen])
 
+  const handleToggle = (): void => {
+    if (!isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+    }
+    setIsOpen((v) => !v)
+  }
+
   return (
-    <div ref={ref} className={cn('relative', className)}>
+    <div className={cn('relative', className)}>
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className={cn(
           'flex w-full items-center justify-between rounded-lg border bg-surface-2 pl-3 pr-2.5 py-2 text-sm transition-colors cursor-pointer',
           isOpen
@@ -78,8 +91,12 @@ export default function CustomSelect({
         />
       </button>
 
-      {isOpen && (
-        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-border/50 bg-surface-2 py-1 shadow-xl animate-fade-in">
+      {isOpen && createPortal(
+        <div
+          ref={panelRef}
+          className="fixed z-[300] overflow-hidden rounded-lg border border-border/50 bg-surface-2 py-1 shadow-xl animate-fade-in"
+          style={{ top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
+        >
           {options.map((option) => {
             const isActive = option.value === value
             return (
@@ -118,7 +135,8 @@ export default function CustomSelect({
               </button>
             )
           })}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

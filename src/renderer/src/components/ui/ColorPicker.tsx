@@ -121,7 +121,7 @@ export default function ColorPicker({ value, onChange, className, compact }: Col
   }, [h, applyHsv])
 
   return (
-    <div className={cn('relative', className)}>
+    <div className={cn(compact ? 'flex items-center' : 'relative', className)}>
       {/* Trigger */}
       {compact ? (
         <button
