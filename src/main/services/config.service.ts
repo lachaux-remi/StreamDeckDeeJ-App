@@ -21,7 +21,7 @@ const defaults: AppSettings = {
   runInBackground: false,
   closeToTray: true,
   devTools: false,
-  homeAssistant: { url: '' },
+  homeAssistant: { url: '', token: '' },
   ledProfile: {
     mode: 'rainbow',
     speed: 50,
@@ -57,7 +57,14 @@ class ConfigService extends EventEmitter {
       if (existsSync(this.configPath)) {
         const raw = readFileSync(this.configPath, 'utf-8')
         const parsed = JSON.parse(raw) as Partial<AppSettings>
-        this.data = { ...defaults, ...parsed }
+        this.data = {
+          ...defaults,
+          ...parsed,
+          homeAssistant: {
+            ...defaults.homeAssistant,
+            ...(parsed.homeAssistant ?? {})
+          }
+        }
       } else {
         this.data = { ...defaults }
         this.save()

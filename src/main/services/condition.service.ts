@@ -14,7 +14,7 @@ class ConditionService {
     this.discordSvc = discordSvc
   }
 
-  evaluate(condition: LedCondition): boolean {
+  evaluate(condition: LedCondition, haState?: string): boolean {
     switch (condition.type) {
       case 'mic-mute':
         return this.micSvc?.isMuted() ?? false
@@ -24,12 +24,16 @@ class ConditionService {
         return this.discordSvc?.isDeafened() ?? false
       case 'discord-stream':
         return this.discordSvc?.isStreaming() ?? false
+      case 'ha-on':
+        return haState === 'on'
+      case 'ha-off':
+        return haState === 'off'
     }
   }
 
-  resolveColor(conditions: LedCondition[]): LedColor | undefined {
+  resolveColor(conditions: LedCondition[], haState?: string): LedColor | undefined {
     for (const cond of conditions) {
-      if (this.evaluate(cond)) return cond.color
+      if (this.evaluate(cond, haState)) return cond.color
     }
     return undefined
   }

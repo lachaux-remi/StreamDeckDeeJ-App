@@ -58,7 +58,12 @@ export default function CustomSelect({
   const handleToggle = (): void => {
     if (!isOpen && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
-      setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+      const estimatedH = options.length * 48
+      const spaceBelow = window.innerHeight - rect.bottom
+      const top = spaceBelow < estimatedH + 8 && rect.top > estimatedH
+        ? rect.top - estimatedH - 4
+        : rect.bottom + 4
+      setDropdownPos({ top, left: rect.left, width: rect.width })
     }
     setIsOpen((v) => !v)
   }

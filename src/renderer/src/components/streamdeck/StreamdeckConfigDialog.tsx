@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Eye, EyeOff, ImagePlus, Plus, Trash2, WifiOff, X } from 'lucide-react'
+import { AlertTriangle, Eye, EyeOff, GripVertical, ImagePlus, Plus, Trash2, WifiOff, X } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import { useSettingsStore } from '@renderer/stores/settings.store'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
@@ -28,7 +28,9 @@ const CONDITION_OPTIONS: { value: LedConditionType; label: string; description?:
   { value: 'mic-mute', label: 'Micro muet', description: 'Micro coupé au niveau du système' },
   { value: 'discord-mute', label: 'Discord muet', description: 'Micro coupé dans Discord' },
   { value: 'discord-deafen', label: 'Discord sourd', description: 'Audio coupé dans Discord' },
-  { value: 'discord-stream', label: 'Discord stream', description: 'Partage d\'écran actif' }
+  { value: 'discord-stream', label: 'Discord stream', description: 'Partage d\'écran actif' },
+  { value: 'ha-on', label: 'HA allumée', description: 'Entité Home Assistant en état ON' },
+  { value: 'ha-off', label: 'HA éteinte', description: 'Entité Home Assistant en état OFF' }
 ]
 
 const DEFAULT_CONDITIONS_STATE: ConditionsState = {
@@ -48,8 +50,9 @@ interface ModuleParam {
 
 const MODULE_PARAMS: Record<string, ModuleParam[]> = {
   'home-assistant': [
-    { label: 'Webhook ID', placeholder: 'ex : my_webhook_id', type: 'password' },
-    { label: "ID de l'entité", placeholder: 'ex : light.living_room', type: 'text' }
+    { label: 'Service', placeholder: 'ex : light.turn_on', type: 'text' },
+    { label: "ID de l'entité", placeholder: 'ex : light.living_room', type: 'text' },
+    { label: 'Pas brightness (%)', placeholder: 'ex : 25  (optionnel)', type: 'text' }
   ],
   ir: [{ label: 'Code infrarouge', placeholder: 'ex : 0xFFA25D', type: 'textarea' }],
   macro: [{ label: 'Code Arduino', placeholder: 'ex : open_browser', type: 'text' }]
@@ -128,6 +131,8 @@ export default function StreamdeckConfigDialog({
   const [ledOverrideEnabled, setLedOverrideEnabled] = useState(false)
   const [ledColor, setLedColor] = useState<LedColor>({ r: 255, g: 0, b: 255 })
   const [ledConditions, setLedConditions] = useState<LedCondition[]>([])
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [conditionsState, setConditionsState] = useState<ConditionsState>(DEFAULT_CONDITIONS_STATE)
   const [activeTab, setActiveTab] = useState<'pressed' | 'hold'>('pressed')
   const [tabDirection, setTabDirection] = useState<'left' | 'right'>('right')
@@ -353,50 +358,85 @@ export default function StreamdeckConfigDialog({
                 <p className="text-[11px] text-muted-foreground/30">Aucune condition configurée</p>
               ) : (
                 <div className="space-y-2">
-                  {ledConditions.map((cond, idx) => {
-                    return (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-2 rounded-lg border border-border/30 bg-surface-2/50 px-3 py-2"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <CustomSelect
-                            value={cond.type}
-                            onChange={(val) => {
-                              setLedConditions((prev) =>
-                                prev.map((c, i) =>
-                                  i === idx ? { ...c, type: val as LedConditionType } : c
-                                )
-                              )
-                            }}
-                            options={CONDITION_OPTIONS}
-                            accent="pink"
-                          />
-                        </div>
+                  {ledConditions.map((cond, idx) => (
+                    <div
+                      key={idx}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.effectAllowed = 'move'
+                        setDragIndex(idx)
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        e.dataTransfer.dropEffect = 'move'
+                        if (dragOverIndex !== idx) setDragOverIndex(idx)
+                      }}
+                      onDragLeave={() => setDragOverIndex(null)}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        if (dragIndex !== null && dragIndex !== idx) {
+                          setLedConditions((prev) => {
+                            const next = [...prev]
+                            const [item] = next.splice(dragIndex, 1)
+                            next.splice(idx, 0, item)
+                            return next
+                          })
+                        }
+                        setDragIndex(null)
+                        setDragOverIndex(null)
+                      }}
+                      onDragEnd={() => {
+                        setDragIndex(null)
+                        setDragOverIndex(null)
+                      }}
+                      className={cn(
+                        'flex items-center gap-2 rounded-lg border bg-surface-2/50 px-2 py-2 transition-colors',
+                        dragOverIndex === idx
+                          ? 'border-neon-pink/50 bg-neon-pink/5'
+                          : dragIndex === idx
+                            ? 'border-border/30 opacity-40'
+                            : 'border-border/30'
+                      )}
+                    >
+                      <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/20 active:cursor-grabbing" />
 
-                        <div className="shrink-0 flex items-center">
-                          <ColorPicker
-                            value={cond.color}
-                            onChange={(c) => {
-                              setLedConditions((prev) =>
-                                prev.map((item, i) => (i === idx ? { ...item, color: c } : item))
+                      <div className="flex-1 min-w-0">
+                        <CustomSelect
+                          value={cond.type}
+                          onChange={(val) => {
+                            setLedConditions((prev) =>
+                              prev.map((c, i) =>
+                                i === idx ? { ...c, type: val as LedConditionType } : c
                               )
-                            }}
-                            compact
-                          />
-                        </div>
-
-                        <button
-                          onClick={() =>
-                            setLedConditions((prev) => prev.filter((_, i) => i !== idx))
-                          }
-                          className="shrink-0 rounded p-1 text-muted-foreground/30 hover:text-neon-red transition-colors"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
+                            )
+                          }}
+                          options={CONDITION_OPTIONS}
+                          accent="pink"
+                        />
                       </div>
-                    )
-                  })}
+
+                      <div className="shrink-0 flex items-center">
+                        <ColorPicker
+                          value={cond.color}
+                          onChange={(c) => {
+                            setLedConditions((prev) =>
+                              prev.map((item, i) => (i === idx ? { ...item, color: c } : item))
+                            )
+                          }}
+                          compact
+                        />
+                      </div>
+
+                      <button
+                        onClick={() =>
+                          setLedConditions((prev) => prev.filter((_, i) => i !== idx))
+                        }
+                        className="shrink-0 rounded p-1 text-muted-foreground/30 hover:text-neon-red transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

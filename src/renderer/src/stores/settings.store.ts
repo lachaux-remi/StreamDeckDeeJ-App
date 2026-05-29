@@ -15,7 +15,7 @@ const defaultSettings: AppSettings = {
   runInBackground: false,
   closeToTray: true,
   devTools: false,
-  homeAssistant: { url: '' },
+  homeAssistant: { url: '', token: '' },
   ledProfile: {
     mode: 'rainbow',
     speed: 50,

@@ -31,7 +31,7 @@ export interface StreamdeckInputKey {
   icon?: string
 }
 
-export type LedConditionType = 'mic-mute' | 'discord-mute' | 'discord-deafen' | 'discord-stream'
+export type LedConditionType = 'mic-mute' | 'discord-mute' | 'discord-deafen' | 'discord-stream' | 'ha-on' | 'ha-off'
 
 export interface LedCondition {
   type: LedConditionType
@@ -54,6 +54,7 @@ export type DeeJConfig = Record<string, DeeJSliderConfig>
 
 export interface HomeAssistantConfig {
   url: string
+  token: string
 }
 
 export interface DiscordConfig {

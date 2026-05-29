@@ -31,6 +31,7 @@ class LedService {
   private buttonConfigs: StreamdeckConfig = {}
   private gridCols = 4
   private isShuttingDown = false
+  private haButtonStates: Record<string, string> = {}
 
   async init(): Promise<void> {
     const config = configService.getConfig()
@@ -56,8 +57,9 @@ class LedService {
     })
   }
 
-  updateButtonConfigs(streamdeck: StreamdeckConfig): void {
-    this.buttonConfigs = streamdeck
+  setHAButtonState(buttonKey: string, state: string): void {
+    this.haButtonStates[buttonKey] = state
+    void this.flush()
   }
 
   private loadOverrides(streamdeck: StreamdeckConfig): void {
@@ -86,7 +88,8 @@ class LedService {
       for (let i = 0; i < LED_COUNT; i++) {
         const btnCfg = this.buttonConfigs[String(i)]
         if (btnCfg?.ledConditions?.length) {
-          const condColor = conditionService.resolveColor(btnCfg.ledConditions)
+          const haState = this.haButtonStates[String(i)]
+          const condColor = conditionService.resolveColor(btnCfg.ledConditions, haState)
           if (condColor) {
             base[i] = applyBrightness(condColor, this.profile.brightness)
             continue

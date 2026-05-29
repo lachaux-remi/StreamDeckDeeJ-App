@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Cpu, Grid3X3, Headphones, Home, Info, Monitor, RefreshCw, Settings, Sparkles, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AlertTriangle, Cpu, Eye, EyeOff, Grid3X3, Headphones, Home, Monitor, RefreshCw, Settings, Sparkles, X } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import { useSettingsStore } from '@renderer/stores/settings.store'
 import { useSerialStore } from '@renderer/stores/serial.store'
@@ -22,16 +22,20 @@ const MODES_WITH_END_COLOR: LedMode[] = ['wave', 'colorshift', 'visor']
 const MODES_WITH_DIRECTION: LedMode[] = ['wave', 'visor']
 const MODES_WITH_SPEED: LedMode[] = ['rainbow', 'wave', 'pulse', 'colorshift', 'visor', 'sequential', 'spinner']
 
+type Tab = 'hardware' | 'integrations' | 'rgb'
+
+const TABS: { id: Tab; label: string; icon: React.ReactNode; accent: string }[] = [
+  { id: 'hardware', label: 'Système', icon: <Cpu className="h-3.5 w-3.5" />, accent: 'neon-purple' },
+  { id: 'integrations', label: 'Intégrations', icon: <Home className="h-3.5 w-3.5" />, accent: 'neon-green' },
+  { id: 'rgb', label: 'RGB', icon: <Sparkles className="h-3.5 w-3.5" />, accent: 'neon-pink' }
+]
 
 interface SettingsSheetProps {
   isOpen: boolean
   onClose: () => void
 }
 
-export default function SettingsSheet({
-  isOpen,
-  onClose
-}: SettingsSheetProps): React.JSX.Element | null {
+export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): React.JSX.Element | null {
   const settings = useSettingsStore((s) => s.settings)
   const updateConfig = useSettingsStore((s) => s.updateConfig)
   const serialPorts = useSerialStore((s) => s.serialPorts)
@@ -39,8 +43,13 @@ export default function SettingsSheet({
   const versions = useSerialStore((s) => s.versions)
 
   const [localSettings, setLocalSettings] = useState(settings)
+  const [activeTab, setActiveTab] = useState<Tab>('hardware')
+  const [tabDirection, setTabDirection] = useState<'left' | 'right'>('right')
+  const hasTabSwitched = useRef(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false)
+  const [showHAToken, setShowHAToken] = useState(false)
+  const [showDiscordSecret, setShowDiscordSecret] = useState(false)
 
   const hasChanges = useMemo(
     () => JSON.stringify(localSettings) !== JSON.stringify(settings),
@@ -60,11 +69,8 @@ export default function SettingsSheet({
   }, [localSettings.ledProfile, isOpen])
 
   const handleClose = useCallback(() => {
-    if (hasChanges) {
-      setShowDiscardPrompt(true)
-    } else {
-      onClose()
-    }
+    if (hasChanges) setShowDiscardPrompt(true)
+    else onClose()
   }, [hasChanges, onClose])
 
   const handleDiscard = useCallback(() => {
@@ -90,18 +96,16 @@ export default function SettingsSheet({
   const inputBase = 'w-full rounded-lg border border-border/40 bg-surface-2 px-3 py-2 text-sm text-foreground outline-none transition-colors focus:bg-surface-3'
   const inputBlue  = `${inputBase} focus:border-neon-blue/50`
   const inputGreen = `${inputBase} focus:border-neon-green/50`
-
+  const inputDiscord = `${inputBase} focus:border-[#5865F2]/50`
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm animate-fade-in"
         onClick={handleClose}
       />
 
-      {/* Sheet */}
-      <div className="fixed inset-y-0 right-0 z-50 w-[380px] border-l border-border/30 bg-surface-0 shadow-2xl animate-slide-in-right">
+      <div className="fixed inset-y-0 right-0 z-50 w-[400px] border-l border-border/30 bg-surface-0 shadow-2xl animate-slide-in-right">
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-border/30 px-6 py-4">
@@ -117,498 +121,518 @@ export default function SettingsSheet({
             </button>
           </div>
 
+          {/* Tabs */}
+          <div className="flex border-b border-border/20 px-3 pt-3 gap-1">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  const currentIdx = TABS.findIndex((t) => t.id === activeTab)
+                  const nextIdx = TABS.findIndex((t) => t.id === tab.id)
+                  if (nextIdx !== currentIdx) {
+                    hasTabSwitched.current = true
+                    setTabDirection(nextIdx > currentIdx ? 'right' : 'left')
+                    setActiveTab(tab.id)
+                  }
+                }}
+                className={cn(
+                  'flex flex-1 items-center justify-center gap-1.5 rounded-t-lg px-2 pb-2.5 pt-2 text-[11px] font-semibold uppercase tracking-wider transition-all',
+                  activeTab === tab.id
+                    ? `text-${tab.accent} border-b-2 border-${tab.accent}`
+                    : 'text-muted-foreground/50 hover:text-muted-foreground border-b-2 border-transparent'
+                )}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-            {/* Micro controller */}
-            <section>
-              <div className="mb-3 flex items-center gap-2">
-                <Cpu className="h-3.5 w-3.5 text-neon-purple" />
-                <h3 className="font-display text-xs font-bold uppercase tracking-widest text-neon-purple">
-                  Microcontrôleur
-                </h3>
-<div className="gradient-line-h flex-1" />
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                    Port série
-                  </label>
-                  <div className="flex gap-2">
-                    <CustomSelect
-                      value={localSettings.comPort}
-                      onChange={(val) =>
-                        setLocalSettings({ ...localSettings, comPort: val })
-                      }
-                      options={[
-                        ...serialPorts.map((port) => {
-                          const name = port.displayName.replace(/\s*\(.*\)$/, '')
-                          const details = [port.manufacturer, port.path].filter(Boolean).join(' — ')
-                          return {
-                            value: port.path,
-                            label: name,
-                            description: details
-                          }
-                        }),
-                        ...(!serialPorts.some((p) => p.path === localSettings.comPort)
-                          ? [{ value: localSettings.comPort, label: localSettings.comPort }]
-                          : [])
-                      ]}
-                      placeholder="Sélectionner un port..."
-                      className="flex-1"
-                    />
-                    <button
-                      onClick={refreshPorts}
-                      className="rounded-lg border border-border/40 bg-surface-2 p-2.5 text-muted-foreground transition-all hover:text-neon-purple hover:border-neon-purple/30 hover:bg-surface-3"
-                    >
-                      <RefreshCw
-                        className={cn('h-4 w-4 transition-transform', isRefreshing && 'animate-spin')}
-                      />
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                    Débit en bauds
-                  </label>
-                  <CustomSelect
-                    value={String(localSettings.baudRate)}
-                    onChange={(val) =>
-                      setLocalSettings({ ...localSettings, baudRate: parseInt(val) })
-                    }
-                    options={[
-                      { value: '9600', label: '9600' },
-                      { value: '115200', label: '115200' }
-                    ]}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-5">
+          <div
+            key={activeTab}
+            className={cn(
+              'space-y-6',
+              hasTabSwitched.current && (tabDirection === 'right' ? 'animate-slide-tab-right' : 'animate-slide-tab-left')
+            )}
+          >
+            {/* ── Matériel ── */}
+            {activeTab === 'hardware' && (
+              <>
+                <section>
+                  <SectionTitle
+                    icon={<Cpu className="h-3.5 w-3.5 text-neon-purple" />}
+                    label="Microcontrôleur"
+                    color="text-neon-purple"
                   />
-                </div>
-              </div>
-            </section>
-
-            {/* Grid & Sliders */}
-            <section>
-              <div className="mb-3 flex items-center gap-2">
-                <Grid3X3 className="h-3.5 w-3.5 text-neon-blue" />
-                <h3 className="font-display text-xs font-bold uppercase tracking-widest text-neon-blue">
-                  Disposition
-                </h3>
-<div className="gradient-line-h flex-1" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                    Colonnes
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={8}
-                    value={localSettings.gridCols}
-                    onChange={(e) =>
-                      setLocalSettings({
-                        ...localSettings,
-                        gridCols: parseInt(e.target.value) || 4
-                      })
-                    }
-                    className={inputBlue}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                    Lignes
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={8}
-                    value={localSettings.gridRows}
-                    onChange={(e) =>
-                      setLocalSettings({
-                        ...localSettings,
-                        gridRows: parseInt(e.target.value) || 4
-                      })
-                    }
-                    className={inputBlue}
-                  />
-                </div>
-              </div>
-              <div className="mt-3">
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                  Nombre de sliders
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={16}
-                  value={localSettings.sliderCount}
-                  onChange={(e) =>
-                    setLocalSettings({
-                      ...localSettings,
-                      sliderCount: parseInt(e.target.value) || 4
-                    })
-                  }
-                  className={inputBlue}
-                />
-              </div>
-              <label className="group mt-3 flex cursor-pointer items-center gap-3 text-muted-foreground hover:text-foreground transition-colors">
-                <div className="relative flex-shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={localSettings.invertSliders}
-                    onChange={(e) =>
-                      setLocalSettings({ ...localSettings, invertSliders: e.target.checked })
-                    }
-                    className="peer sr-only"
-                  />
-                  <div className="h-6 w-11 rounded-full border border-border/50 bg-surface-3 transition-all duration-300 peer-checked:border-neon-blue/40 peer-checked:bg-neon-blue/20 peer-checked:shadow-[0_0_8px_#38bdf84d]" />
-                  <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-muted-foreground/40 shadow-sm transition-all duration-300 peer-checked:left-[22px] peer-checked:bg-neon-blue peer-checked:shadow-[0_0_6px_#38bdf880]" />
-                </div>
-                <div>
-                  <span className="block text-xs font-medium">Inverser les sliders</span>
-                  <p className="text-[11px] text-muted-foreground/40 whitespace-nowrap">Inverser les valeurs (0-100 → 100-0)</p>
-                </div>
-              </label>
-            </section>
-
-            {/* Home Assistant */}
-            <section>
-              <div className="mb-3 flex items-center gap-2">
-                <Home className="h-3.5 w-3.5 text-neon-green" />
-                <h3 className="font-display text-xs font-bold uppercase tracking-widest text-neon-green">
-                  Home Assistant
-                </h3>
-<div className="gradient-line-h flex-1" />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                  URL
-                </label>
-                <input
-                  type="text"
-                  value={localSettings.homeAssistant.url}
-                  onChange={(e) =>
-                    setLocalSettings({
-                      ...localSettings,
-                      homeAssistant: { ...localSettings.homeAssistant, url: e.target.value }
-                    })
-                  }
-                  placeholder="http://homeassistant.local:8123"
-                  className={inputGreen}
-                />
-              </div>
-            </section>
-
-            {/* Discord */}
-            <section>
-              <div className="mb-3 flex items-center gap-2">
-                <Headphones className="h-3.5 w-3.5 text-[#5865F2]" />
-                <h3 className="font-display text-xs font-bold uppercase tracking-widest text-[#5865F2]">
-                  Discord
-                </h3>
-                <div className="gradient-line-h flex-1" />
-              </div>
-
-              <div className="mb-3 rounded-lg border border-border/20 bg-surface-2/50 px-3 py-2.5">
-                <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-                  Nécessaire pour les conditions LED{' '}
-                  <span className="text-[#5865F2]">discord-mute</span> et{' '}
-                  <span className="text-[#5865F2]">discord-deafen</span>.{' '}
-                  <span className="text-muted-foreground/40">
-                    discord.com/developers → New Application → OAuth2 → copy Client ID &amp; Secret
-                  </span>
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                    Client ID
-                  </label>
-                  <input
-                    type="text"
-                    value={localSettings.discord?.clientId ?? ''}
-                    onChange={(e) =>
-                      setLocalSettings({
-                        ...localSettings,
-                        discord: {
-                          clientId: e.target.value,
-                          clientSecret: localSettings.discord?.clientSecret ?? ''
-                        }
-                      })
-                    }
-                    placeholder="123456789012345678"
-                    className={`${inputBase} focus:border-[#5865F2]/50`}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                    Client Secret
-                  </label>
-                  <input
-                    type="password"
-                    value={localSettings.discord?.clientSecret ?? ''}
-                    onChange={(e) =>
-                      setLocalSettings({
-                        ...localSettings,
-                        discord: {
-                          clientId: localSettings.discord?.clientId ?? '',
-                          clientSecret: e.target.value
-                        }
-                      })
-                    }
-                    placeholder="••••••••••••••••••••••••••••••••"
-                    className={`${inputBase} focus:border-[#5865F2]/50`}
-                  />
-                </div>
-
-                {/* Status + reset token */}
-                <div className="flex items-center justify-between">
-                  <span
-                    className={cn(
-                      'text-[11px] font-medium',
-                      localSettings.discord?.accessToken
-                        ? 'text-neon-green'
-                        : localSettings.discord?.clientId && localSettings.discord?.clientSecret
-                          ? 'text-neon-orange'
-                          : 'text-muted-foreground/40'
-                    )}
-                  >
-                    {localSettings.discord?.accessToken
-                      ? '● Token sauvegardé — authentifié'
-                      : localSettings.discord?.clientId && localSettings.discord?.clientSecret
-                        ? '○ Non authentifié — sauvegarde pour lancer le flux'
-                        : '○ Non configuré'}
-                  </span>
-                  {localSettings.discord?.accessToken && (
-                    <button
-                      onClick={() =>
-                        setLocalSettings({
-                          ...localSettings,
-                          discord: {
-                            clientId: localSettings.discord?.clientId ?? '',
-                            clientSecret: localSettings.discord?.clientSecret ?? '',
-                            accessToken: undefined,
-                            refreshToken: undefined
-                          }
-                        })
-                      }
-                      className="text-[11px] text-neon-red/50 hover:text-neon-red transition-colors"
-                    >
-                      Réinitialiser le token
-                    </button>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            {/* App config */}
-            <section>
-              <div className="mb-3 flex items-center gap-2">
-                <Monitor className="h-3.5 w-3.5 text-neon-cyan" />
-                <h3 className="font-display text-xs font-bold uppercase tracking-widest text-neon-cyan">
-                  Application
-                </h3>
-<div className="gradient-line-h flex-1" />
-              </div>
-              <div className="space-y-2.5">
-                {[
-                  { key: 'runOnStartup' as const, label: 'Lancer au démarrage', desc: "Démarrer l'application avec le système" },
-                  { key: 'runInBackground' as const, label: "Démarrer en arrière-plan", desc: "Lancer minimisé en arrière-plan" },
-                  { key: 'closeToTray' as const, label: 'Minimiser dans la barre des tâches', desc: 'Minimiser dans la zone de notification' },
-                  { key: 'devTools' as const, label: 'Outils de développement', desc: 'Ouvrir les DevTools au lancement' }
-                ].map(({ key, label, desc }) => (
-                  <label
-                    key={key}
-                    className="group flex cursor-pointer items-center gap-3 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <div className="relative flex-shrink-0">
-                      <input
-                        type="checkbox"
-                        checked={localSettings[key]}
-                        onChange={(e) =>
-                          setLocalSettings({ ...localSettings, [key]: e.target.checked })
-                        }
-                        className="peer sr-only"
-                      />
-                      <div className="h-6 w-11 rounded-full border border-border/50 bg-surface-3 transition-all duration-300 peer-checked:border-neon-cyan/40 peer-checked:bg-neon-cyan/20 peer-checked:shadow-[0_0_8px_#22d3ee4d]" />
-                      <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-muted-foreground/40 shadow-sm transition-all duration-300 peer-checked:left-[22px] peer-checked:bg-neon-cyan peer-checked:shadow-[0_0_6px_#22d3ee80]" />
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                        Port série
+                      </label>
+                      <div className="flex gap-2">
+                        <CustomSelect
+                          value={localSettings.comPort}
+                          onChange={(val) => setLocalSettings({ ...localSettings, comPort: val })}
+                          options={[
+                            ...serialPorts.map((port) => ({
+                              value: port.path,
+                              label: port.displayName.replace(/\s*\(.*\)$/, ''),
+                              description: [port.manufacturer, port.path]
+                                .filter(Boolean)
+                                .join(' — ')
+                            })),
+                            ...(!serialPorts.some((p) => p.path === localSettings.comPort)
+                              ? [{ value: localSettings.comPort, label: localSettings.comPort }]
+                              : [])
+                          ]}
+                          placeholder="Sélectionner un port..."
+                          className="flex-1"
+                        />
+                        <button
+                          onClick={refreshPorts}
+                          className="rounded-lg border border-border/40 bg-surface-2 p-2.5 text-muted-foreground transition-all hover:text-neon-purple hover:border-neon-purple/30 hover:bg-surface-3"
+                        >
+                          <RefreshCw
+                            className={cn(
+                              'h-4 w-4 transition-transform',
+                              isRefreshing && 'animate-spin'
+                            )}
+                          />
+                        </button>
+                      </div>
                     </div>
                     <div>
-                      <span className="block text-xs font-medium">{label}</span>
-                      <p className="text-[11px] text-muted-foreground/40">{desc}</p>
+                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                        Débit en bauds
+                      </label>
+                      <CustomSelect
+                        value={String(localSettings.baudRate)}
+                        onChange={(val) =>
+                          setLocalSettings({ ...localSettings, baudRate: parseInt(val) })
+                        }
+                        options={[
+                          { value: '9600', label: '9600' },
+                          { value: '115200', label: '115200' }
+                        ]}
+                      />
                     </div>
-                  </label>
-                ))}
-              </div>
-            </section>
+                  </div>
+                </section>
 
-            {/* Stream Deck RGB */}
-            <section>
-              <div className="mb-3 flex items-center gap-2">
-                <Sparkles className="h-3.5 w-3.5 text-neon-pink" />
-                <h3 className="font-display text-xs font-bold uppercase tracking-widest text-neon-pink">
-                  RGB Stream Deck
-                </h3>
-                <div className="gradient-line-h flex-1" />
-              </div>
-              <div className="space-y-3">
-                {/* Mode */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                    Mode d{"'"}effet
-                  </label>
-                  <CustomSelect
-                    value={localSettings.ledProfile.mode}
-                    onChange={(val) =>
-                      setLocalSettings({
-                        ...localSettings,
-                        ledProfile: { ...localSettings.ledProfile, mode: val as LedMode }
-                      })
-                    }
-                    options={LED_MODES.map((m) => ({
-                      value: m.value,
-                      label: m.label,
-                      description: m.description
-                    }))}
-                    accent="pink"
+                <section>
+                  <SectionTitle
+                    icon={<Grid3X3 className="h-3.5 w-3.5 text-neon-blue" />}
+                    label="Disposition"
+                    color="text-neon-blue"
                   />
-                </div>
-
-                {/* Brightness */}
-                <div>
-                  <label className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground/70">
-                    <span>Luminosité</span>
-                    <span className="tabular-nums text-muted-foreground">{localSettings.ledProfile.brightness}%</span>
-                  </label>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={localSettings.ledProfile.brightness}
-                    onChange={(e) =>
-                      setLocalSettings({
-                        ...localSettings,
-                        ledProfile: { ...localSettings.ledProfile, brightness: parseInt(e.target.value) }
-                      })
-                    }
-                    className="w-full h-1.5 rounded-full appearance-none bg-surface-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-neon-pink [&::-webkit-slider-thumb]:shadow-[0_0_6px_#f472b680] cursor-pointer"
-                  />
-                </div>
-
-                {/* Speed */}
-                {MODES_WITH_SPEED.includes(localSettings.ledProfile.mode) && (
-                  <div>
-                    <label className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground/70">
-                      <span>Vitesse</span>
-                      <span className="tabular-nums text-muted-foreground">{localSettings.ledProfile.speed}%</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                        Colonnes
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={8}
+                        value={localSettings.gridCols}
+                        onChange={(e) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            gridCols: parseInt(e.target.value) || 4
+                          })
+                        }
+                        className={inputBlue}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                        Lignes
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={8}
+                        value={localSettings.gridRows}
+                        onChange={(e) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            gridRows: parseInt(e.target.value) || 4
+                          })
+                        }
+                        className={inputBlue}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                      Nombre de sliders
                     </label>
                     <input
-                      type="range"
+                      type="number"
                       min={1}
-                      max={100}
-                      value={localSettings.ledProfile.speed}
+                      max={16}
+                      value={localSettings.sliderCount}
                       onChange={(e) =>
                         setLocalSettings({
                           ...localSettings,
-                          ledProfile: { ...localSettings.ledProfile, speed: parseInt(e.target.value) }
+                          sliderCount: parseInt(e.target.value) || 4
                         })
                       }
-                      className="w-full h-1.5 rounded-full appearance-none bg-surface-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-neon-pink [&::-webkit-slider-thumb]:shadow-[0_0_6px_#f472b680] cursor-pointer"
+                      className={inputBlue}
                     />
                   </div>
-                )}
+                  <Toggle
+                    checked={localSettings.invertSliders}
+                    onChange={(v) => setLocalSettings({ ...localSettings, invertSliders: v })}
+                    label="Inverser les sliders"
+                    desc="Inverser les valeurs (0-100 → 100-0)"
+                    color="neon-blue"
+                    className="mt-3"
+                  />
+                </section>
 
-                {/* Colors */}
-                <div className={cn('grid gap-3', MODES_WITH_END_COLOR.includes(localSettings.ledProfile.mode) ? 'grid-cols-2' : 'grid-cols-1')}>
+                <section>
+                  <SectionTitle
+                    icon={<Monitor className="h-3.5 w-3.5 text-neon-cyan" />}
+                    label="Application"
+                    color="text-neon-cyan"
+                  />
+                  <div className="space-y-2.5">
+                    {(
+                      [
+                        {
+                          key: 'runOnStartup',
+                          label: 'Lancer au démarrage',
+                          desc: "Démarrer l'application avec le système"
+                        },
+                        {
+                          key: 'runInBackground',
+                          label: 'Démarrer en arrière-plan',
+                          desc: 'Lancer minimisé en arrière-plan'
+                        },
+                        {
+                          key: 'closeToTray',
+                          label: 'Minimiser dans la barre',
+                          desc: 'Minimiser dans la zone de notification'
+                        },
+                        {
+                          key: 'devTools',
+                          label: 'Outils de développement',
+                          desc: 'Ouvrir les DevTools au lancement'
+                        }
+                      ] as { key: keyof typeof localSettings; label: string; desc: string }[]
+                    ).map(({ key, label, desc }) => (
+                      <Toggle
+                        key={key}
+                        checked={localSettings[key] as boolean}
+                        onChange={(v) => setLocalSettings({ ...localSettings, [key]: v })}
+                        label={label}
+                        desc={desc}
+                        color="neon-cyan"
+                      />
+                    ))}
+                  </div>
+                </section>
+              </>
+            )}
+
+            {/* ── Intégrations ── */}
+            {activeTab === 'integrations' && (
+              <>
+                <section>
+                  <SectionTitle
+                    icon={<Home className="h-3.5 w-3.5 text-neon-green" />}
+                    label="Home Assistant"
+                    color="text-neon-green"
+                  />
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                        URL
+                      </label>
+                      <input
+                        type="text"
+                        value={localSettings.homeAssistant.url}
+                        onChange={(e) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            homeAssistant: { ...localSettings.homeAssistant, url: e.target.value }
+                          })
+                        }
+                        placeholder="http://homeassistant.local:8123"
+                        className={inputGreen}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                        Token (Long-Lived Access Token)
+                      </label>
+                      <PasswordInput
+                        value={localSettings.homeAssistant.token}
+                        onChange={(v) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            homeAssistant: { ...localSettings.homeAssistant, token: v }
+                          })
+                        }
+                        show={showHAToken}
+                        onToggle={() => setShowHAToken((s) => !s)}
+                        className={`${inputGreen} pr-9`}
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                <section>
+                  <SectionTitle
+                    icon={<Headphones className="h-3.5 w-3.5 text-[#5865F2]" />}
+                    label="Discord"
+                    color="text-[#5865F2]"
+                  />
+                  <div className="mb-3 rounded-lg border border-border/20 bg-surface-2/50 px-3 py-2.5">
+                    <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                      Nécessaire pour les conditions LED{' '}
+                      <span className="text-[#5865F2]">discord-mute</span>,{' '}
+                      <span className="text-[#5865F2]">discord-deafen</span> et{' '}
+                      <span className="text-[#5865F2]">discord-stream</span>.{' '}
+                      <span className="text-muted-foreground/40">
+                        discord.com/developers → New Application → OAuth2
+                      </span>
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                        Client ID
+                      </label>
+                      <input
+                        type="text"
+                        value={localSettings.discord?.clientId ?? ''}
+                        onChange={(e) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            discord: {
+                              clientId: e.target.value,
+                              clientSecret: localSettings.discord?.clientSecret ?? ''
+                            }
+                          })
+                        }
+                        placeholder="123456789012345678"
+                        className={inputDiscord}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                        Client Secret
+                      </label>
+                      <PasswordInput
+                        value={localSettings.discord?.clientSecret ?? ''}
+                        onChange={(v) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            discord: {
+                              clientId: localSettings.discord?.clientId ?? '',
+                              clientSecret: v
+                            }
+                          })
+                        }
+                        show={showDiscordSecret}
+                        onToggle={() => setShowDiscordSecret((s) => !s)}
+                        className={`${inputDiscord} pr-9`}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={cn(
+                          'text-[11px] font-medium',
+                          localSettings.discord?.accessToken
+                            ? 'text-neon-green'
+                            : localSettings.discord?.clientId && localSettings.discord?.clientSecret
+                              ? 'text-neon-orange'
+                              : 'text-muted-foreground/40'
+                        )}
+                      >
+                        {localSettings.discord?.accessToken
+                          ? '● Token sauvegardé — authentifié'
+                          : localSettings.discord?.clientId && localSettings.discord?.clientSecret
+                            ? '○ Non authentifié — sauvegarde pour lancer le flux'
+                            : '○ Non configuré'}
+                      </span>
+                      {localSettings.discord?.accessToken && (
+                        <button
+                          onClick={() =>
+                            setLocalSettings({
+                              ...localSettings,
+                              discord: {
+                                clientId: localSettings.discord?.clientId ?? '',
+                                clientSecret: localSettings.discord?.clientSecret ?? '',
+                                accessToken: undefined,
+                                refreshToken: undefined
+                              }
+                            })
+                          }
+                          className="text-[11px] text-neon-red/50 hover:text-neon-red transition-colors"
+                        >
+                          Réinitialiser
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </section>
+              </>
+            )}
+
+            {/* ── RGB ── */}
+            {activeTab === 'rgb' && (
+              <section>
+                <SectionTitle
+                  icon={<Sparkles className="h-3.5 w-3.5 text-neon-pink" />}
+                  label="RGB Stream Deck"
+                  color="text-neon-pink"
+                />
+                <div className="space-y-3">
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                      Couleur principale
+                      Mode d&apos;effet
                     </label>
-                    <ColorPicker
-                      value={localSettings.ledProfile.startColor}
-                      onChange={(c) =>
-                        setLocalSettings({ ...localSettings, ledProfile: { ...localSettings.ledProfile, startColor: c } })
+                    <CustomSelect
+                      value={localSettings.ledProfile.mode}
+                      onChange={(val) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          ledProfile: { ...localSettings.ledProfile, mode: val as LedMode }
+                        })
+                      }
+                      options={LED_MODES.map((m) => ({
+                        value: m.value,
+                        label: m.label,
+                        description: m.description
+                      }))}
+                      accent="pink"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground/70">
+                      <span>Luminosité</span>
+                      <span className="tabular-nums text-muted-foreground">
+                        {localSettings.ledProfile.brightness}%
+                      </span>
+                    </label>
+                    <Slider
+                      value={localSettings.ledProfile.brightness}
+                      min={0}
+                      max={100}
+                      onChange={(v) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          ledProfile: { ...localSettings.ledProfile, brightness: v }
+                        })
                       }
                     />
                   </div>
 
-                  {MODES_WITH_END_COLOR.includes(localSettings.ledProfile.mode) && (
+                  {MODES_WITH_SPEED.includes(localSettings.ledProfile.mode) && (
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                        Couleur secondaire
+                      <label className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground/70">
+                        <span>Vitesse</span>
+                        <span className="tabular-nums text-muted-foreground">
+                          {localSettings.ledProfile.speed}%
+                        </span>
                       </label>
-                      <ColorPicker
-                        value={localSettings.ledProfile.endColor}
-                        onChange={(c) =>
-                          setLocalSettings({ ...localSettings, ledProfile: { ...localSettings.ledProfile, endColor: c } })
+                      <Slider
+                        value={localSettings.ledProfile.speed}
+                        min={1}
+                        max={100}
+                        onChange={(v) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            ledProfile: { ...localSettings.ledProfile, speed: v }
+                          })
                         }
                       />
                     </div>
                   )}
-                </div>
 
-                {/* Direction */}
-                {MODES_WITH_DIRECTION.includes(localSettings.ledProfile.mode) && (
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                      Direction
-                    </label>
-                    <div className="flex gap-2">
-                      {(['horizontal', 'vertical', 'diagonal'] as const).map((dir) => (
-                        <button
-                          key={dir}
-                          type="button"
-                          onClick={() =>
+                  <div
+                    className={cn(
+                      'grid gap-3',
+                      MODES_WITH_END_COLOR.includes(localSettings.ledProfile.mode)
+                        ? 'grid-cols-2'
+                        : 'grid-cols-1'
+                    )}
+                  >
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                        Couleur principale
+                      </label>
+                      <ColorPicker
+                        value={localSettings.ledProfile.startColor}
+                        onChange={(c) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            ledProfile: { ...localSettings.ledProfile, startColor: c }
+                          })
+                        }
+                      />
+                    </div>
+                    {MODES_WITH_END_COLOR.includes(localSettings.ledProfile.mode) && (
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                          Couleur secondaire
+                        </label>
+                        <ColorPicker
+                          value={localSettings.ledProfile.endColor}
+                          onChange={(c) =>
                             setLocalSettings({
                               ...localSettings,
-                              ledProfile: { ...localSettings.ledProfile, direction: dir }
+                              ledProfile: { ...localSettings.ledProfile, endColor: c }
                             })
                           }
-                          className={cn(
-                            'flex-1 rounded-lg border py-2 text-xs font-semibold uppercase tracking-wider transition-all',
-                            localSettings.ledProfile.direction === dir
-                              ? 'border-neon-pink/40 bg-neon-pink/15 text-neon-pink'
-                              : 'border-border/40 bg-surface-2 text-muted-foreground/50 hover:text-muted-foreground'
-                          )}
-                        >
-                          {dir === 'horizontal' ? 'Horizontal' : dir === 'vertical' ? 'Vertical' : 'Diagonal'}
-                        </button>
-                      ))}
-                    </div>
+                        />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </section>
 
-            {/* About */}
-            {versions && (
-              <section>
-                <div className="mb-3 flex items-center gap-2">
-                  <Info className="h-3.5 w-3.5 text-muted-foreground/50" />
-                  <h3 className="font-display text-xs font-bold uppercase tracking-widest text-muted-foreground/50">
-                    À propos
-                  </h3>
-                  <div className="gradient-line-h flex-1" />
-                </div>
-                <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground/50">
-                  <span className="font-semibold text-muted-foreground">StreamDeck DeeJ</span> est un mélangeur de volume mais aussi un Stream Deck pour les PC. Il se compose d{"'"}un client de bureau léger écrit en JavaScript avec Electron et d{"'"}une configuration matérielle basée sur Raspberry Pi Pico simple et peu coûteuse à construire.
-                </p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-lg bg-surface-2/50 p-3">
-                  {[
-                    { label: 'App', value: versions.app },
-                    { label: 'Electron', value: versions.electron },
-                    { label: 'Node', value: versions.node },
-                    { label: 'Chrome', value: versions.chrome }
-                  ].map(({ label, value }) => (
-                    <div key={label} className="flex items-center justify-between">
-                      <span className="text-[11px] text-muted-foreground/50">{label}</span>
-                      <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-                        v{value}
-                      </span>
+                  {MODES_WITH_DIRECTION.includes(localSettings.ledProfile.mode) && (
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                        Direction
+                      </label>
+                      <div className="flex gap-2">
+                        {(['horizontal', 'vertical', 'diagonal'] as const).map((dir) => (
+                          <button
+                            key={dir}
+                            type="button"
+                            onClick={() =>
+                              setLocalSettings({
+                                ...localSettings,
+                                ledProfile: { ...localSettings.ledProfile, direction: dir }
+                              })
+                            }
+                            className={cn(
+                              'flex-1 rounded-lg border py-2 text-xs font-semibold uppercase tracking-wider transition-all',
+                              localSettings.ledProfile.direction === dir
+                                ? 'border-neon-pink/40 bg-neon-pink/15 text-neon-pink'
+                                : 'border-border/40 bg-surface-2 text-muted-foreground/50 hover:text-muted-foreground'
+                            )}
+                          >
+                            {dir === 'horizontal'
+                              ? 'Horiz.'
+                              : dir === 'vertical'
+                                ? 'Vert.'
+                                : 'Diag.'}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </section>
             )}
+          </div>
           </div>
 
           {/* Discard confirmation */}
@@ -616,7 +640,9 @@ export default function SettingsSheet({
             <div className="border-t border-neon-orange/20 bg-neon-orange/5 px-6 py-3 animate-slide-up">
               <div className="flex items-center gap-2 mb-2.5">
                 <AlertTriangle className="h-3.5 w-3.5 text-neon-orange" />
-                <span className="text-xs font-semibold text-neon-orange">Modifications non sauvegardées</span>
+                <span className="text-xs font-semibold text-neon-orange">
+                  Modifications non sauvegardées
+                </span>
               </div>
               <div className="flex gap-2">
                 <button
@@ -637,6 +663,24 @@ export default function SettingsSheet({
 
           {/* Footer */}
           <div className="border-t border-border/30 px-6 py-4">
+            {versions && (
+              <div className="mb-3 space-y-1.5">
+                <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground/50">
+                  <span className="font-semibold text-muted-foreground">StreamDeck DeeJ</span> est
+                  un mélangeur de volume mais aussi un Stream Deck pour les PC. Il se compose d{"'"}
+                  un client de bureau léger écrit en JavaScript avec Electron et d{"'"}une
+                  configuration matérielle basée sur Raspberry Pi Pico simple et peu coûteuse à
+                  construire.
+                </p>
+                <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground/50 tabular-nums">
+                  <span>App v{versions.app}</span>
+                  <span>·</span>
+                  <span>Electron v{versions.electron}</span>
+                  <span>·</span>
+                  <span>Node v{versions.node}</span>
+                </div>
+              </div>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={handleClose}
@@ -655,5 +699,69 @@ export default function SettingsSheet({
         </div>
       </div>
     </>
+  )
+}
+
+function SectionTitle({ icon, label, color }: { icon: React.ReactNode; label: string; color: string }): React.JSX.Element {
+  return (
+    <div className="mb-3 flex items-center gap-2">
+      {icon}
+      <h3 className={cn('font-display text-xs font-bold uppercase tracking-widest', color)}>{label}</h3>
+      <div className="gradient-line-h flex-1" />
+    </div>
+  )
+}
+
+function Toggle({ checked, onChange, label, desc, color, className }: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  label: string
+  desc: string
+  color: string
+  className?: string
+}): React.JSX.Element {
+  return (
+    <label className={cn('group flex cursor-pointer items-center gap-3 text-muted-foreground hover:text-foreground transition-colors', className)}>
+      <div className="relative flex-shrink-0">
+        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
+        <div className={cn('h-6 w-11 rounded-full border border-border/50 bg-surface-3 transition-all duration-300',
+          `peer-checked:border-${color}/40 peer-checked:bg-${color}/20`)} />
+        <div className={cn('absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-muted-foreground/40 shadow-sm transition-all duration-300',
+          `peer-checked:left-[22px] peer-checked:bg-${color}`)} />
+      </div>
+      <div>
+        <span className="block text-xs font-medium">{label}</span>
+        <p className="text-[11px] text-muted-foreground/40">{desc}</p>
+      </div>
+    </label>
+  )
+}
+
+function Slider({ value, min, max, onChange }: { value: number; min: number; max: number; onChange: (v: number) => void }): React.JSX.Element {
+  return (
+    <input type="range" min={min} max={max} value={value} onChange={(e) => onChange(parseInt(e.target.value))}
+      className="w-full h-1.5 rounded-full appearance-none bg-surface-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-neon-pink [&::-webkit-slider-thumb]:shadow-[0_0_6px_#f472b680] cursor-pointer" />
+  )
+}
+
+function PasswordInput({ value, onChange, show, onToggle, className }: {
+  value: string
+  onChange: (v: string) => void
+  show: boolean
+  onToggle: () => void
+  className?: string
+}): React.JSX.Element {
+  return (
+    <div className="relative">
+      <input type={show ? 'text' : 'password'} value={value} onChange={(e) => onChange(e.target.value)}
+        placeholder="••••••••••••••••••••••••••••••••"
+        className={className} />
+      <button type="button" onClick={onToggle}
+        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors">
+        {show
+          ? <EyeOff className="h-3.5 w-3.5" />
+          : <Eye className="h-3.5 w-3.5" />}
+      </button>
+    </div>
   )
 }
