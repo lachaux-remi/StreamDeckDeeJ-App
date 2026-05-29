@@ -347,6 +347,17 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
                     label="Home Assistant"
                     color="text-neon-green"
                   />
+                  <div className="mb-3 rounded-lg border border-border/20 bg-surface-2/50 px-3 py-2.5 space-y-1">
+                    <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                      Nécessaire pour les actions des boutons et les conditions LED{' '}
+                      <span className="text-neon-green">Actif</span> et{' '}
+                      <span className="text-neon-green">Inactif</span>{' '}
+                      (Home Assistant).
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/40">
+                      Profil HA › Tokens d&apos;accès longue durée › Créer un token
+                    </p>
+                  </div>
                   <div className="space-y-3">
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
@@ -391,15 +402,16 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
                     label="Discord"
                     color="text-[#5865F2]"
                   />
-                  <div className="mb-3 rounded-lg border border-border/20 bg-surface-2/50 px-3 py-2.5">
+                  <div className="mb-3 rounded-lg border border-border/20 bg-surface-2/50 px-3 py-2.5 space-y-1">
                     <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
                       Nécessaire pour les conditions LED{' '}
-                      <span className="text-[#5865F2]">discord-mute</span>,{' '}
-                      <span className="text-[#5865F2]">discord-deafen</span> et{' '}
-                      <span className="text-[#5865F2]">discord-stream</span>.{' '}
-                      <span className="text-muted-foreground/40">
-                        discord.com/developers → New Application → OAuth2
-                      </span>
+                      <span className="text-[#5865F2]">Muet</span>,{' '}
+                      <span className="text-[#5865F2]">Sourd</span> et{' '}
+                      <span className="text-[#5865F2]">Stream</span>{' '}
+                      (Discord).
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/40">
+                      discord.com/developers › New Application › OAuth2
                     </p>
                   </div>
                   <div className="space-y-3">
@@ -712,6 +724,25 @@ function SectionTitle({ icon, label, color }: { icon: React.ReactNode; label: st
   )
 }
 
+const TOGGLE_VARIANTS: Record<string, { track: string; dot: string }> = {
+  'neon-blue': {
+    track: 'peer-checked:border-neon-blue/40 peer-checked:bg-neon-blue/20 peer-checked:shadow-[0_0_8px_#38bdf84d]',
+    dot:   'peer-checked:left-[22px] peer-checked:bg-neon-blue peer-checked:shadow-[0_0_6px_#38bdf880]'
+  },
+  'neon-cyan': {
+    track: 'peer-checked:border-neon-cyan/40 peer-checked:bg-neon-cyan/20 peer-checked:shadow-[0_0_8px_#22d3ee4d]',
+    dot:   'peer-checked:left-[22px] peer-checked:bg-neon-cyan peer-checked:shadow-[0_0_6px_#22d3ee80]'
+  },
+  'neon-purple': {
+    track: 'peer-checked:border-neon-purple/40 peer-checked:bg-neon-purple/20 peer-checked:shadow-[0_0_8px_#a855f74d]',
+    dot:   'peer-checked:left-[22px] peer-checked:bg-neon-purple peer-checked:shadow-[0_0_6px_#a855f780]'
+  },
+  'neon-pink': {
+    track: 'peer-checked:border-neon-pink/40 peer-checked:bg-neon-pink/20 peer-checked:shadow-[0_0_8px_#f472b64d]',
+    dot:   'peer-checked:left-[22px] peer-checked:bg-neon-pink peer-checked:shadow-[0_0_6px_#f472b680]'
+  }
+}
+
 function Toggle({ checked, onChange, label, desc, color, className }: {
   checked: boolean
   onChange: (v: boolean) => void
@@ -720,14 +751,13 @@ function Toggle({ checked, onChange, label, desc, color, className }: {
   color: string
   className?: string
 }): React.JSX.Element {
+  const variant = TOGGLE_VARIANTS[color] ?? TOGGLE_VARIANTS['neon-cyan']
   return (
     <label className={cn('group flex cursor-pointer items-center gap-3 text-muted-foreground hover:text-foreground transition-colors', className)}>
       <div className="relative flex-shrink-0">
         <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
-        <div className={cn('h-6 w-11 rounded-full border border-border/50 bg-surface-3 transition-all duration-300',
-          `peer-checked:border-${color}/40 peer-checked:bg-${color}/20`)} />
-        <div className={cn('absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-muted-foreground/40 shadow-sm transition-all duration-300',
-          `peer-checked:left-[22px] peer-checked:bg-${color}`)} />
+        <div className={cn('h-6 w-11 rounded-full border border-border/50 bg-surface-3 transition-all duration-300', variant.track)} />
+        <div className={cn('absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-muted-foreground/40 shadow-sm transition-all duration-300', variant.dot)} />
       </div>
       <div>
         <span className="block text-xs font-medium">{label}</span>

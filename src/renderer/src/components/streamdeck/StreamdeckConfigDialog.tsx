@@ -25,12 +25,12 @@ const MODULES = [
 ]
 
 const CONDITION_OPTIONS: { value: LedConditionType; label: string; description?: string }[] = [
-  { value: 'mic-mute', label: 'Micro muet', description: 'Micro coupé au niveau du système' },
-  { value: 'discord-mute', label: 'Discord muet', description: 'Micro coupé dans Discord' },
-  { value: 'discord-deafen', label: 'Discord sourd', description: 'Audio coupé dans Discord' },
-  { value: 'discord-stream', label: 'Discord stream', description: 'Partage d\'écran actif' },
-  { value: 'ha-on', label: 'HA allumée', description: 'Entité Home Assistant en état ON' },
-  { value: 'ha-off', label: 'HA éteinte', description: 'Entité Home Assistant en état OFF' }
+  { value: 'mic-mute', label: 'Micro muet', description: 'Système' },
+  { value: 'discord-mute', label: 'Muet', description: 'Discord' },
+  { value: 'discord-deafen', label: 'Sourd', description: 'Discord' },
+  { value: 'discord-stream', label: 'Stream', description: 'Discord' },
+  { value: 'ha-on', label: 'Actif', description: 'Home Assistant' },
+  { value: 'ha-off', label: 'Inactif', description: 'Home Assistant' }
 ]
 
 const DEFAULT_CONDITIONS_STATE: ConditionsState = {
