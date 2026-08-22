@@ -12,8 +12,12 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: [
+        'scripts/linux-permissions.mjs',
+        'src/main/handlers/hardware-permissions.contract.ts',
+        'src/main/handlers/trusted-ipc-core.ts',
         'src/main/services/audio-command.ts',
         'src/main/services/config-transfer.ts',
+        'src/main/services/hardware-permissions-core.ts',
         'src/main/services/renderer-settings.ts',
         'src/main/services/secret-storage.ts',
         'src/main/services/serial-port-discovery.ts',
@@ -27,6 +31,18 @@ export default defineConfig({
         functions: 97.05,
         lines: 98,
         statements: 95.03,
+        'scripts/linux-permissions.mjs': {
+          branches: 100,
+          functions: 100,
+          lines: 100,
+          statements: 100
+        },
+        'src/main/handlers/{hardware-permissions.contract,trusted-ipc-core}.ts': {
+          branches: 100,
+          functions: 100,
+          lines: 100,
+          statements: 100
+        },
         'src/main/services/{audio-command,serial-protocol}.ts': {
           branches: 87.95,
           functions: 95.83,
@@ -50,6 +66,12 @@ export default defineConfig({
           functions: 100,
           lines: 98.75,
           statements: 97.67
+        },
+        'src/main/services/hardware-permissions-core.ts': {
+          branches: 95.74,
+          functions: 100,
+          lines: 100,
+          statements: 100
         },
         'src/main/services/renderer-settings.ts': {
           branches: 50,

@@ -1,12 +1,6 @@
 import { ipcMain } from 'electron'
-import type { IpcMainEvent, IpcMainInvokeEvent, WebContents } from 'electron'
-
-function isTrustedSender(
-  event: IpcMainEvent | IpcMainInvokeEvent,
-  trustedSender: WebContents
-): boolean {
-  return event.sender === trustedSender && event.senderFrame === trustedSender.mainFrame
-}
+import type { IpcMainInvokeEvent, WebContents } from 'electron'
+import { isTrustedSender } from './trusted-ipc-core'
 
 function assertTrustedSender(event: IpcMainInvokeEvent, trustedSender: WebContents): void {
   if (!isTrustedSender(event, trustedSender)) {

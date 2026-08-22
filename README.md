@@ -30,7 +30,48 @@ Sur Arch Linux :
 sudo pacman -S --needed base-devel python pkgconf libusb
 ```
 
-L’utilisateur doit aussi avoir accès au port série. Il faut généralement l’ajouter au groupe `dialout` (Debian/Ubuntu) ou `uucp` (Arch), puis fermer et rouvrir sa session.
+Le module officiel est un périphérique USB composite Raspberry Pi Pico/Adafruit TinyUSB : son
+[firmware](https://github.com/lachaux-remi/StreamDeckDeeJ-Arduino/blob/master/streamdeck_deej/streamdeck_deej.ino)
+déclare le VID `5239`, le PID `0001`, une interface série CDC ACM et l’interface HID générique 2
+utilisée pour les LEDs. La règle udev fournie cible uniquement cet identifiant, séparément pour le
+port série et HID :
+
+```udev
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="5239", ATTRS{idProduct}=="0001", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="5239", ATTRS{idProduct}=="0001", MODE="0660", TAG+="uaccess"
+```
+
+Le paquet pacman installe et recharge automatiquement cette règle. À l’installation, sa copie par
+hook remplace de façon déterministe tout fichier déjà présent au chemin fixe ci-dessus ; ce mécanisme
+de copie ne dispose pas d’une base de propriété des fichiers. À la désinstallation, le hook recalcule
+le hash du fichier installé : il le supprime uniquement si son contenu est encore la règle canonique,
+sinon il le conserve et affiche un avertissement.
+
+L’AppImage affiche un diagnostic dans **Paramètres › Système** et peut proposer une installation
+explicite : après confirmation, `pkexec` affiche la demande d’authentification administrateur et
+exécute uniquement le script immuable embarqué, qui vérifie le hash de sa règle source. Cette action
+explicite remplace elle aussi tout fichier déjà présent au chemin fixe. Sans `pkexec`, aucune élévation
+n’est tentée.
+
+Pour installer la règle manuellement depuis une copie vérifiée de ce dépôt :
+
+```bash
+rule_file="$(mktemp)"
+cat >"$rule_file" <<'EOF'
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="5239", ATTRS{idProduct}=="0001", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="5239", ATTRS{idProduct}=="0001", MODE="0660", TAG+="uaccess"
+EOF
+sudo install -Dm0644 "$rule_file" /etc/udev/rules.d/70-streamdeck-deej.rules
+rm -f "$rule_file"
+sudo udevadm control --reload-rules
+sudo udevadm trigger --subsystem-match=hidraw
+sudo udevadm trigger --subsystem-match=tty
+```
+
+Les autres contrôleurs série restent pris en charge, quels que soient leurs identifiants USB, leur
+débit ou leur nombre de sliders. Ils ne sont volontairement pas couverts par cette règle ciblée :
+leur utilisateur doit généralement appartenir à `dialout` (Debian/Ubuntu) ou `uucp` (Arch), puis
+fermer et rouvrir sa session. L’application ne modifie jamais les groupes ou utilisateurs.
 
 ## Installation
 
@@ -63,7 +104,10 @@ Le workflow utilise le secret Actions `RELEASE_PLEASE_TOKEN`, configuré avec un
 
 La configuration se fait depuis l’interface : port série, grille, boutons, sessions audio, LEDs et intégrations. Les identifiants Home Assistant et Discord sont enregistrés dans le fichier de configuration local de l’application avec des permissions limitées à l’utilisateur. Ils ne doivent jamais être ajoutés au dépôt ni copiés dans un rapport de bug.
 
-L’intégration audio attend une pile PipeWire/PulseAudio fonctionnelle. Si aucun port série n’apparaît, vérifier les permissions du groupe et la présence de l’Arduino dans `/dev/ttyACM*` ou `/dev/ttyUSB*`.
+L’intégration audio attend une pile PipeWire/PulseAudio fonctionnelle. Si aucun port série tiers
+n’apparaît, vérifier ses permissions de groupe et sa présence dans `/dev/ttyACM*` ou `/dev/ttyUSB*`.
+Le diagnostic du module officiel distingue l’absence du matériel d’un accès refusé pour HID et pour
+le port série, sans rendre `5239:0001` obligatoire pour les autres contrôleurs.
 
 ## Sécurité
 

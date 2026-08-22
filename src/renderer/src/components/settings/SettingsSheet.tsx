@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Cpu, Download, Eye, EyeOff, Grid3X3, Headphones, Home, Monitor, RefreshCw, Settings, Sparkles, Upload, X } from 'lucide-react'
+import { AlertTriangle, Cpu, Download, Eye, EyeOff, Grid3X3, Headphones, Home, Monitor, RefreshCw, Settings, ShieldCheck, Sparkles, Upload, X } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import { useSettingsStore } from '@renderer/stores/settings.store'
 import { useSerialStore } from '@renderer/stores/serial.store'
@@ -23,6 +23,7 @@ const MODES_WITH_DIRECTION: LedMode[] = ['wave', 'visor']
 const MODES_WITH_SPEED: LedMode[] = ['rainbow', 'wave', 'pulse', 'colorshift', 'visor', 'sequential', 'spinner']
 
 type Tab = 'hardware' | 'integrations' | 'rgb'
+type HardwarePermissionsDiagnostic = Awaited<ReturnType<Window['api']['hardwarePermissions']['diagnose']>>
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode; accent: string }[] = [
   { id: 'hardware', label: 'Système', icon: <Cpu className="h-3.5 w-3.5" />, accent: 'neon-purple' },
@@ -56,6 +57,9 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
     action: 'unchanged'
   })
   const [clearDiscordTokens, setClearDiscordTokens] = useState(false)
+  const [hardwarePermissions, setHardwarePermissions] = useState<HardwarePermissionsDiagnostic | null>(null)
+  const [isInstallingPermissions, setIsInstallingPermissions] = useState(false)
+  const [permissionMessage, setPermissionMessage] = useState<string | null>(null)
   const [isTransferring, setIsTransferring] = useState(false)
   const [transferMessage, setTransferMessage] = useState<{
     status: 'success' | 'cancelled' | 'error'
@@ -87,6 +91,11 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
     void window.api.streamdeck.setLedProfile(localSettings.ledProfile)
   }, [localSettings.ledProfile, isOpen])
 
+  useEffect(() => {
+    if (!isOpen) return
+    void window.api.hardwarePermissions.diagnose().then(setHardwarePermissions)
+  }, [isOpen])
+
   const handleClose = useCallback(() => {
     if (hasChanges) setShowDiscardPrompt(true)
     else onClose()
@@ -103,10 +112,39 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
 
   const refreshPorts = useCallback(async () => {
     setIsRefreshing(true)
-    const ports = await window.api.serial.list()
+    const [ports, permissions] = await Promise.all([
+      window.api.serial.list(),
+      window.api.hardwarePermissions.diagnose()
+    ])
     setSerialPorts(ports)
+    setHardwarePermissions(permissions)
     setTimeout(() => setIsRefreshing(false), 500)
   }, [setSerialPorts])
+
+  const installHardwarePermissions = useCallback(async () => {
+    const confirmed = window.confirm(
+      "Installer la règle udev du module officiel StreamDeck DeeJ ? Une demande d'authentification administrateur va s'ouvrir."
+    )
+    if (!confirmed) return
+
+    setIsInstallingPermissions(true)
+    setPermissionMessage(null)
+    try {
+      const { result, diagnostic } = await window.api.hardwarePermissions.install()
+      setHardwarePermissions(diagnostic)
+      setPermissionMessage(
+        result === 'installed'
+          ? 'Règle installée. Rebranchez le module si les accès ne sont pas encore actifs.'
+          : result === 'cancelled'
+            ? "Installation annulée : aucun changement n'a été effectué."
+            : "L'installation a échoué. Utilisez le paquet pacman ou les instructions manuelles."
+      )
+    } catch {
+      setPermissionMessage("L'installation a échoué sans modifier les groupes ou utilisateurs.")
+    } finally {
+      setIsInstallingPermissions(false)
+    }
+  }, [])
 
   const handleSave = useCallback(async () => {
     const homeAssistantTokenConfigured = secretConfigured(
@@ -306,6 +344,62 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
                         ]}
                       />
                     </div>
+                  </div>
+                </section>
+
+                <section>
+                  <SectionTitle
+                    icon={<ShieldCheck className="h-3.5 w-3.5 text-neon-green" />}
+                    label="Accès Linux — module officiel"
+                    color="text-neon-green"
+                  />
+                  <div className="space-y-2 rounded-lg border border-border/20 bg-surface-2/50 p-3">
+                    <p className="text-[11px] leading-relaxed text-muted-foreground/75">
+                      Diagnostic ciblé sur le périphérique composite officiel 5239:0001. Les
+                      contrôleurs série tiers restent utilisables et conservent leur configuration
+                      manuelle.
+                    </p>
+                    {hardwarePermissions ? (
+                      <>
+                        <PermissionStateRow label="HID RGB" state={hardwarePermissions.hid} />
+                        <PermissionStateRow label="Port série officiel" state={hardwarePermissions.serial} />
+                        <PermissionStateRow label="Règle udev" state={hardwarePermissions.rule} />
+                        {hardwarePermissions.installAction === 'available' &&
+                          hardwarePermissions.rule !== 'installed' && (
+                            <button
+                              type="button"
+                              disabled={isInstallingPermissions}
+                              onClick={installHardwarePermissions}
+                              className="mt-1 w-full rounded-lg border border-neon-green/30 bg-neon-green/10 py-2 text-xs font-semibold text-neon-green transition-all hover:bg-neon-green/20 disabled:cursor-wait disabled:opacity-50"
+                            >
+                              {isInstallingPermissions
+                                ? 'Demande administrateur en cours…'
+                                : 'Installer la règle udev…'}
+                            </button>
+                          )}
+                        {hardwarePermissions.installAction === 'unavailable' &&
+                          hardwarePermissions.rule !== 'installed' && (
+                            <div className="space-y-1.5">
+                              <p className="text-[11px] leading-relaxed text-neon-orange/80">
+                                Le paquet pacman installe cette règle automatiquement. Sinon, exécutez
+                                explicitement cette commande fixe dans un terminal :
+                              </p>
+                              {hardwarePermissions.manualCommand && (
+                                <code className="block overflow-x-auto whitespace-nowrap rounded bg-surface-3 p-2 text-[10px] leading-relaxed text-muted-foreground/80">
+                                  {hardwarePermissions.manualCommand}
+                                </code>
+                              )}
+                            </div>
+                          )}
+                      </>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground/40">Diagnostic en cours…</p>
+                    )}
+                    {permissionMessage && (
+                      <p className="text-[11px] leading-relaxed text-muted-foreground">
+                        {permissionMessage}
+                      </p>
+                    )}
                   </div>
                 </section>
 
@@ -902,6 +996,30 @@ function ConfiguredState({ configured }: { configured: boolean }): React.JSX.Ele
     >
       {configured ? '● Configuré' : '○ Non configuré'}
     </span>
+  )
+}
+
+function PermissionStateRow({
+  label,
+  state
+}: {
+  label: string
+  state: 'accessible' | 'permission-denied' | 'not-detected' | 'installed' | 'missing' | 'different'
+}): React.JSX.Element {
+  const display = {
+    accessible: { label: 'Accessible', color: 'text-neon-green' },
+    'permission-denied': { label: 'Accès refusé', color: 'text-neon-orange' },
+    'not-detected': { label: 'Non détecté', color: 'text-muted-foreground/70' },
+    installed: { label: 'Installée', color: 'text-neon-green' },
+    missing: { label: 'Absente', color: 'text-neon-orange' },
+    different: { label: 'Contenu différent', color: 'text-neon-orange' }
+  }[state]
+
+  return (
+    <div className="flex items-center justify-between text-[11px]">
+      <span className="text-muted-foreground/60">{label}</span>
+      <span className={cn('font-medium', display.color)}>{display.label}</span>
+    </div>
   )
 }
 
