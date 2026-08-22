@@ -23,7 +23,13 @@ export default defineConfig({
         branches: 83.05,
         functions: 100,
         lines: 95.96,
-        statements: 91.91
+        statements: 91.91,
+        'src/main/services/serial-protocol.ts': {
+          branches: 91.04,
+          functions: 100,
+          lines: 97.01,
+          statements: 93.15
+        }
       }
     },
     environment: 'node',
