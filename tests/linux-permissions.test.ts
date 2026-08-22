@@ -4,7 +4,7 @@ import { access, chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promise
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test } from 'vitest'
-import { generateLinuxPermissionAssets, UDEV_RULE } from '../../../scripts/linux-permissions.mjs'
+import { generateLinuxPermissionAssets, UDEV_RULE } from '../scripts/linux-permissions.mjs'
 
 const execFileAsync = promisify(execFile)
 

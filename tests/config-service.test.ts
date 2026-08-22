@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
-import { defaultSettings as rendererDefaults } from '../../renderer/src/stores/settings.defaults'
-import { applySettingsDefaults, defaultSettings } from './settings-defaults'
+import { applySettingsDefaults, defaultSettings } from '@main/services/settings-defaults'
+import { defaultSettings as rendererDefaults } from '@renderer/stores/settings.defaults'
 
 test('main and renderer propose the official firmware defaults to new users', () => {
   const expected = {

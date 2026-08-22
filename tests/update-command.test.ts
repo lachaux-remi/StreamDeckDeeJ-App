@@ -3,7 +3,7 @@ import {
   createSerialCommandExecutor,
   executeLinuxUpdateCommand,
   type LinuxUpdateActions
-} from './update-command'
+} from '@main/services/update-command'
 
 function actions(calls: string[]): LinuxUpdateActions {
   return {

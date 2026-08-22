@@ -3,7 +3,7 @@ import {
   configureSecureAppImageUpdater,
   OFFICIAL_GITHUB_RELEASE_API,
   OFFICIAL_GITHUB_RELEASE_PAGE
-} from './linux-update-policy'
+} from '@main/services/linux-update-policy'
 
 test('hardcodes the official HTTPS GitHub release endpoints', () => {
   expect(OFFICIAL_GITHUB_RELEASE_API).toBe(

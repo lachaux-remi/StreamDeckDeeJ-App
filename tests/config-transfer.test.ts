@@ -8,8 +8,8 @@ import {
   MAX_CONFIG_IMPORT_BYTES,
   ConfigTransferController,
   ConfigTransferService
-} from './config-transfer'
-import type { RendererSettings, RendererSettingsUpdate } from '../types/settings.types'
+} from '@main/services/config-transfer'
+import type { RendererSettings, RendererSettingsUpdate } from '@main/types/settings.types'
 
 const rendererSettings: RendererSettings = {
   comPort: '/dev/ttyACM1',

@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test } from 'vitest'
-import { ElectronSafeStorageSecretCodec, SettingsPersistence } from './secret-storage'
+import { ElectronSafeStorageSecretCodec, SettingsPersistence } from '@main/services/secret-storage'
 
 const fixtureSecret = 'synthetic-fixture-value'
 

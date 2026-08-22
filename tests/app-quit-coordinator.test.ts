@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { AppQuitCoordinator } from './app-quit-coordinator'
+import { AppQuitCoordinator } from '@main/services/app-quit-coordinator'
 
 function deferred(): {
   promise: Promise<void>
