@@ -245,6 +245,15 @@ test('returns clear, secret-free results for export, import, failure, and cancel
     message: 'Configuration importée. Les secrets existants ont été conservés.'
   })
 
+  const exportFailure = new ConfigTransferController(service, {
+    chooseExportPath: async () => directory,
+    chooseImportPath: async () => null
+  })
+  await expect(exportFailure.exportConfiguration()).resolves.toEqual({
+    status: 'error',
+    message: 'Export impossible. Aucun secret n’a été écrit.'
+  })
+
   const cancelled = new ConfigTransferController(service, {
     chooseExportPath: async () => null,
     chooseImportPath: async () => null
@@ -266,4 +275,38 @@ test('returns clear, secret-free results for export, import, failure, and cancel
     message: 'Import impossible : fichier JSON invalide ou incompatible.'
   })
   expect(failure.message).not.toContain('{')
+})
+
+test('returns specific secret-free messages for oversized input and restored apply failure', async () => {
+  const oversized = harness()
+  const oversizedPath = join(oversized.directory, 'oversized.json')
+  writeFileSync(oversizedPath, Buffer.alloc(MAX_CONFIG_IMPORT_BYTES + 1, 0x20))
+  const oversizedController = new ConfigTransferController(oversized.service, {
+    chooseExportPath: async () => null,
+    chooseImportPath: async () => oversizedPath
+  })
+
+  await expect(oversizedController.importConfiguration()).resolves.toEqual({
+    status: 'error',
+    message: 'Import impossible : le fichier dépasse la taille maximale autorisée.'
+  })
+
+  const failed = harness()
+  const failedPath = join(failed.directory, 'settings.json')
+  writeFileSync(failedPath, JSON.stringify(failed.service.createExportDocument()))
+  let attempts = 0
+  failed.adapter.updateFromRenderer = () => {
+    attempts += 1
+    if (attempts === 1) throw new Error('simulated apply failure')
+  }
+  const failedController = new ConfigTransferController(failed.service, {
+    chooseExportPath: async () => null,
+    chooseImportPath: async () => failedPath
+  })
+
+  await expect(failedController.importConfiguration()).resolves.toEqual({
+    status: 'error',
+    message: 'Import impossible. La configuration précédente a été restaurée.'
+  })
+  expect(attempts).toBe(2)
 })

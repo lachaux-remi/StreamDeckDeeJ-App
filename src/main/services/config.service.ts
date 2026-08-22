@@ -1,5 +1,5 @@
-import { app } from 'electron'
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { app, safeStorage } from 'electron'
+import { existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { EventEmitter } from 'node:events'
 import {
@@ -10,6 +10,8 @@ import {
   type SecretChange
 } from '@main/types/settings.types'
 import { loggerService } from './logger.service'
+import { toRendererSettings } from './renderer-settings'
+import { ElectronSafeStorageSecretCodec, SettingsPersistence } from './secret-storage'
 
 const SERVICE = 'ConfigService'
 
@@ -41,6 +43,8 @@ const defaults: AppSettings = {
 class ConfigService extends EventEmitter {
   private data: AppSettings = { ...defaults }
   private configPath: string = ''
+  private persistence: SettingsPersistence | undefined
+  private persistenceEnabled = true
 
   constructor() {
     super()
@@ -52,6 +56,19 @@ class ConfigService extends EventEmitter {
       mkdirSync(userDataPath, { recursive: true })
     }
     this.configPath = join(userDataPath, 'config.json')
+    const secretCodec = new ElectronSafeStorageSecretCodec(safeStorage, () =>
+      loggerService.warn(
+        'Keyring encryption failed; secrets are stored in the mode 0600 config file',
+        SERVICE
+      )
+    )
+    if (!secretCodec.usesSecureBackend()) {
+      loggerService.warn(
+        'Secure keyring unavailable; secrets are stored in the mode 0600 config file',
+        SERVICE
+      )
+    }
+    this.persistence = new SettingsPersistence(this.configPath, secretCodec)
     this.load()
     loggerService.debug('INIT', SERVICE)
     // Notify services so they re-init with actual config (not defaults)
@@ -61,8 +78,7 @@ class ConfigService extends EventEmitter {
   private load(): void {
     try {
       if (existsSync(this.configPath)) {
-        const raw = readFileSync(this.configPath, 'utf-8')
-        const parsed = JSON.parse(raw) as Partial<AppSettings>
+        const parsed = this.persistence?.load() as Partial<AppSettings>
         const candidate = {
           ...defaults,
           ...parsed,
@@ -78,23 +94,27 @@ class ConfigService extends EventEmitter {
         this.save()
       }
     } catch {
-      loggerService.warn('Failed to load config, using defaults', SERVICE)
+      loggerService.warn(
+        'Config is unreadable; using defaults and leaving the existing file unchanged',
+        SERVICE
+      )
       this.data = { ...defaults }
-      this.save()
+      this.persistenceEnabled = false
+      try {
+        this.persistence?.protectFile()
+      } catch {
+        loggerService.error('Failed to enforce config file permissions', SERVICE)
+      }
     }
   }
 
-  private save(): boolean {
+  private save(data: AppSettings = this.data): void {
+    if (!this.persistenceEnabled) throw new Error('Config persistence is unavailable')
     try {
-      writeFileSync(this.configPath, JSON.stringify(this.data, null, 2), {
-        encoding: 'utf-8',
-        mode: 0o600
-      })
-      chmodSync(this.configPath, 0o600)
-      return true
-    } catch (err) {
-      loggerService.error(`Failed to save config: ${err}`, SERVICE)
-      return false
+      this.persistence?.save(data)
+    } catch {
+      loggerService.error('Failed to save config', SERVICE)
+      throw new Error('Config persistence failed')
     }
   }
 
@@ -103,19 +123,7 @@ class ConfigService extends EventEmitter {
   }
 
   public getRendererConfig(): RendererSettings {
-    const { homeAssistant, discord, ...settings } = this.data
-    return {
-      ...settings,
-      homeAssistant: {
-        url: homeAssistant.url,
-        tokenConfigured: homeAssistant.token.length > 0
-      },
-      discord: {
-        clientId: discord?.clientId ?? '',
-        clientSecretConfigured: Boolean(discord?.clientSecret),
-        authenticated: Boolean(discord?.accessToken)
-      }
-    }
+    return toRendererSettings(this.data)
   }
 
   public updateFromRenderer(update: RendererSettingsUpdate): void {
@@ -149,12 +157,9 @@ class ConfigService extends EventEmitter {
   }
 
   public setConfig(config: Partial<AppSettings>): void {
-    const previous = this.data
-    this.data = { ...this.data, ...config }
-    if (!this.save()) {
-      this.data = previous
-      throw new Error('Failed to persist config')
-    }
+    const nextData = { ...this.data, ...config }
+    this.save(nextData)
+    this.data = nextData
     loggerService.debug('Config updated', SERVICE)
     this.emit('config:updated', this.data)
   }
