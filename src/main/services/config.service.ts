@@ -2,7 +2,13 @@ import { app } from 'electron'
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { EventEmitter } from 'node:events'
-import type { AppSettings } from '@main/types/settings.types'
+import {
+  isAppSettings,
+  type AppSettings,
+  type RendererSettings,
+  type RendererSettingsUpdate,
+  type SecretChange
+} from '@main/types/settings.types'
 import { loggerService } from './logger.service'
 
 const SERVICE = 'ConfigService'
@@ -57,7 +63,7 @@ class ConfigService extends EventEmitter {
       if (existsSync(this.configPath)) {
         const raw = readFileSync(this.configPath, 'utf-8')
         const parsed = JSON.parse(raw) as Partial<AppSettings>
-        this.data = {
+        const candidate = {
           ...defaults,
           ...parsed,
           homeAssistant: {
@@ -65,6 +71,8 @@ class ConfigService extends EventEmitter {
             ...(parsed.homeAssistant ?? {})
           }
         }
+        if (!isAppSettings(candidate)) throw new Error('Invalid config')
+        this.data = candidate
       } else {
         this.data = { ...defaults }
         this.save()
@@ -92,6 +100,52 @@ class ConfigService extends EventEmitter {
     return { ...this.data }
   }
 
+  public getRendererConfig(): RendererSettings {
+    const { homeAssistant, discord, ...settings } = this.data
+    return {
+      ...settings,
+      homeAssistant: {
+        url: homeAssistant.url,
+        tokenConfigured: homeAssistant.token.length > 0
+      },
+      discord: {
+        clientId: discord?.clientId ?? '',
+        clientSecretConfigured: Boolean(discord?.clientSecret),
+        authenticated: Boolean(discord?.accessToken)
+      }
+    }
+  }
+
+  public updateFromRenderer(update: RendererSettingsUpdate): void {
+    const { settings, secrets } = update
+    const { homeAssistant, discord, ...sharedSettings } = settings
+    const currentDiscord = this.data.discord
+    const nextDiscord = {
+      clientId: discord.clientId,
+      clientSecret: this.applySecretChange(
+        currentDiscord?.clientSecret ?? '',
+        secrets.discordClientSecret
+      ),
+      accessToken: secrets.discordTokens === 'clear' ? undefined : currentDiscord?.accessToken,
+      refreshToken: secrets.discordTokens === 'clear' ? undefined : currentDiscord?.refreshToken
+    }
+
+    this.setConfig({
+      ...sharedSettings,
+      homeAssistant: {
+        url: homeAssistant.url,
+        token: this.applySecretChange(this.data.homeAssistant.token, secrets.homeAssistantToken)
+      },
+      discord:
+        nextDiscord.clientId ||
+        nextDiscord.clientSecret ||
+        nextDiscord.accessToken ||
+        nextDiscord.refreshToken
+          ? nextDiscord
+          : undefined
+    })
+  }
+
   public setConfig(config: Partial<AppSettings>): void {
     this.data = { ...this.data, ...config }
     this.save()
@@ -101,6 +155,12 @@ class ConfigService extends EventEmitter {
 
   public onUpdated(listener: (config: AppSettings) => void): void {
     this.on('config:updated', listener)
+  }
+
+  private applySecretChange(currentValue: string, change: SecretChange): string {
+    if (change.action === 'set') return change.value
+    if (change.action === 'clear') return ''
+    return currentValue
   }
 }
 
