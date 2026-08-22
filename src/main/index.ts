@@ -88,8 +88,8 @@ app.whenReady().then(async () => {
 
   registerAllHandlers(mainWindow.webContents)
   mainWindow.webContents.session.setPermissionCheckHandler(() => false)
-  mainWindow.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) =>
-    callback(false)
+  mainWindow.webContents.session.setPermissionRequestHandler(
+    (_webContents, _permission, callback) => callback(false)
   )
 
   mainWindow.setMenu(null)

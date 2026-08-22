@@ -5,9 +5,7 @@ import type { LedColor, LedProfile, StreamdeckConfig } from '@main/types/setting
 import { handleIpc } from './trusted-ipc'
 
 export function registerStreamdeckHandlers(trustedSender: WebContents): void {
-  handleIpc(trustedSender, 'streamdeck:keys', (deckKey: string) =>
-    deckService.getKeyInfo(deckKey)
-  )
+  handleIpc(trustedSender, 'streamdeck:keys', (deckKey: string) => deckService.getKeyInfo(deckKey))
 
   handleIpc(
     trustedSender,
