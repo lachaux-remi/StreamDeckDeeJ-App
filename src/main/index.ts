@@ -1,7 +1,6 @@
 import { BrowserWindow, Menu, Tray, app, protocol, shell } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
-import { mkdir, unlink, writeFile } from 'fs/promises'
 import { registerAllHandlers } from '@main/handlers'
 import { RENDERER_URL, registerRendererProtocol } from '@main/renderer-protocol'
 import { conditionService } from '@main/services/condition.service'
@@ -12,9 +11,11 @@ import { discordService } from '@main/services/discord.service'
 import { ledService } from '@main/services/led.service'
 import { loggerService } from '@main/services/logger.service'
 import { linuxUpdateService } from '@main/services/linux-update.service'
+import { setLinuxAutostart } from '@main/services/linux-autostart'
 import { micService } from '@main/services/mic.service'
 import { serialService } from '@main/services/serial.service'
 import { sliderService } from '@main/services/slider.service'
+import { createWindowCloseHandler } from '@main/services/window-close-handler'
 import '@main/services/sessions.service'
 
 protocol.registerSchemesAsPrivileged([
@@ -41,7 +42,10 @@ const appQuitCoordinator = new AppQuitCoordinator({
   shutdown: async () => {
     await Promise.all([ledService.shutdown(), serialService.shutdown()])
   },
-  exit: () => app.exit()
+  exit: () => app.exit(),
+  shutdownTimeoutMs: 3_000,
+  onShutdownTimeout: () =>
+    loggerService.warn('Shutdown deadline exceeded; continuing application quit', 'Main')
 })
 
 function isSafeExternalUrl(url: string): boolean {
@@ -62,23 +66,18 @@ function isSafeExternalUrl(url: string): boolean {
 async function setAutostart(enabled: boolean): Promise<void> {
   if (isDev) return
   try {
+    await setLinuxAutostart({
+      enabled,
+      appName: app.getName(),
+      autostartFile: AUTOSTART_FILE,
+      executablePath: process.execPath,
+      appImagePath: process.env.APPIMAGE,
+      packagedIconPath: APP_ICON,
+      persistentIconPath: join(app.getPath('userData'), 'autostart-icon.png')
+    })
     if (enabled) {
-      const appPath = process.execPath
-      const desktopEntry = [
-        '[Desktop Entry]',
-        'Type=Application',
-        `Name=${app.getName()}`,
-        `Exec="${appPath}"`,
-        'X-GNOME-Autostart-enabled=true',
-        'StartupWMClass=streamdeck-deej',
-        `Icon="${APP_ICON}"`,
-        ''
-      ].join('\n')
-      await mkdir(AUTOSTART_DIR, { recursive: true })
-      await writeFile(AUTOSTART_FILE, desktopEntry)
       loggerService.info(`Autostart enabled: ${AUTOSTART_FILE}`, 'Main')
     } else {
-      await unlink(AUTOSTART_FILE).catch(() => {})
       loggerService.info('Autostart disabled', 'Main')
     }
   } catch (err) {
@@ -128,12 +127,13 @@ app.whenReady().then(async () => {
     }
   })
 
-  mainWindow.on('close', (event) => {
-    if (config.closeToTray) {
-      event.preventDefault()
-      mainWindow.hide()
-    }
-  })
+  mainWindow.on(
+    'close',
+    createWindowCloseHandler(
+      () => configService.getConfig().closeToTray,
+      () => mainWindow.hide()
+    )
+  )
 
   // System tray
   const tray = new Tray(APP_ICON)

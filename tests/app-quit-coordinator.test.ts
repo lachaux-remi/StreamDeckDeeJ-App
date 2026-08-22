@@ -1,5 +1,9 @@
-import { expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 import { AppQuitCoordinator } from '@main/services/app-quit-coordinator'
+
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 function deferred(): {
   promise: Promise<void>
@@ -97,4 +101,45 @@ test('ordinary repeated quit events share one asynchronous shutdown before exit'
   await Promise.resolve()
   await Promise.resolve()
   expect(calls).toEqual(['shutdown', 'exit'])
+})
+
+test('continues update installation after a bounded shutdown deadline without double quit', async () => {
+  vi.useFakeTimers()
+  const calls: string[] = []
+  const coordinator = new AppQuitCoordinator({
+    shutdown: () => {
+      calls.push('shutdown')
+      return new Promise(() => {})
+    },
+    exit: () => calls.push('exit'),
+    shutdownTimeoutMs: 2_000,
+    onShutdownTimeout: () => calls.push('shutdown-timeout')
+  })
+
+  const install = coordinator.installUpdate(() => calls.push('quit-and-install'))
+  await vi.advanceTimersByTimeAsync(1_999)
+  expect(calls).toEqual(['shutdown'])
+  await vi.advanceTimersByTimeAsync(1)
+  await install
+  expect(calls).toEqual(['shutdown', 'shutdown-timeout', 'quit-and-install'])
+
+  coordinator.handleBeforeQuit({ preventDefault: () => calls.push('prevented') })
+  expect(calls).toEqual(['shutdown', 'shutdown-timeout', 'quit-and-install'])
+})
+
+test('continues ordinary quit after a bounded shutdown deadline and exits only once', async () => {
+  vi.useFakeTimers()
+  const calls: string[] = []
+  const coordinator = new AppQuitCoordinator({
+    shutdown: () => new Promise(() => {}),
+    exit: () => calls.push('exit'),
+    shutdownTimeoutMs: 2_000,
+    onShutdownTimeout: () => calls.push('shutdown-timeout')
+  })
+  const event = { preventDefault: () => calls.push('prevented') }
+
+  coordinator.handleBeforeQuit(event)
+  coordinator.handleBeforeQuit(event)
+  await vi.advanceTimersByTimeAsync(2_000)
+  expect(calls).toEqual(['prevented', 'prevented', 'shutdown-timeout', 'exit'])
 })

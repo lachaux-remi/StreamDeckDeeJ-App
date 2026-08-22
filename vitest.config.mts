@@ -20,6 +20,7 @@ export default defineConfig({
         'src/main/services/audio-subscription.ts',
         'src/main/services/config-transfer.ts',
         'src/main/services/hardware-permissions-core.ts',
+        'src/main/services/linux-autostart.ts',
         'src/main/services/linux-update-controller.ts',
         'src/main/services/linux-update-policy.ts',
         'src/main/services/renderer-settings.ts',
@@ -28,6 +29,7 @@ export default defineConfig({
         'src/main/services/serial-protocol.ts',
         'src/main/services/settings-defaults.ts',
         'src/main/services/update-command.ts',
+        'src/main/services/window-close-handler.ts',
         'src/main/types/update.types.ts',
         'src/renderer/src/stores/settings.defaults.ts'
       ],
@@ -37,12 +39,13 @@ export default defineConfig({
         functions: 92.85,
         lines: 95.12,
         statements: 91.38,
-        '{scripts/linux-permissions.mjs,src/main/handlers/{hardware-permissions.contract,trusted-ipc-core}.ts,src/main/services/{audio-command,config-transfer,hardware-permissions-core,renderer-settings,secret-storage,serial-port-discovery,serial-protocol,settings-defaults}.ts,src/renderer/src/stores/settings.defaults.ts}': {
-          branches: 90.1,
-          functions: 97.05,
-          lines: 98,
-          statements: 95.03
-        },
+        '{scripts/linux-permissions.mjs,src/main/handlers/{hardware-permissions.contract,trusted-ipc-core}.ts,src/main/services/{audio-command,config-transfer,hardware-permissions-core,renderer-settings,secret-storage,serial-port-discovery,serial-protocol,settings-defaults}.ts,src/renderer/src/stores/settings.defaults.ts}':
+          {
+            branches: 90.1,
+            functions: 97.05,
+            lines: 98,
+            statements: 95.03
+          },
         'scripts/linux-permissions.mjs': {
           branches: 100,
           functions: 100,
