@@ -13,6 +13,7 @@ export default defineConfig({
       provider: 'v8',
       include: [
         'src/main/services/audio-command.ts',
+        'src/main/services/config-transfer.ts',
         'src/main/services/renderer-settings.ts',
         'src/main/services/secret-storage.ts',
         'src/main/services/serial-protocol.ts'
@@ -40,6 +41,12 @@ export default defineConfig({
           functions: 91.66,
           lines: 91.42,
           statements: 87.8
+        },
+        'src/main/services/config-transfer.ts': {
+          branches: 95.74,
+          functions: 100,
+          lines: 98.75,
+          statements: 97.67
         },
         'src/main/services/renderer-settings.ts': {
           branches: 50,

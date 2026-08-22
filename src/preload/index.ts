@@ -3,7 +3,9 @@ import { contextBridge, ipcRenderer } from 'electron'
 const api = {
   settings: {
     hydrate: (): Promise<unknown> => ipcRenderer.invoke('settings:hydrate'),
-    update: (config: unknown): Promise<void> => ipcRenderer.invoke('settings:update', config)
+    update: (config: unknown): Promise<void> => ipcRenderer.invoke('settings:update', config),
+    export: (): Promise<ConfigTransferResult> => ipcRenderer.invoke('settings:export'),
+    import: (): Promise<ConfigTransferResult> => ipcRenderer.invoke('settings:import')
   },
   serial: {
     list: (): Promise<{ path: string; displayName: string }[]> =>
@@ -87,6 +89,11 @@ const api = {
       return () => ipcRenderer.removeListener('electron:log', handler)
     }
   }
+}
+
+interface ConfigTransferResult {
+  status: 'success' | 'cancelled' | 'error'
+  message: string
 }
 
 export type StreamDeckDeeJAPI = typeof api
