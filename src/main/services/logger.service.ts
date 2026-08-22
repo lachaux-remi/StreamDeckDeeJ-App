@@ -8,8 +8,12 @@ export interface LogEntry {
   msg: string
 }
 
+const MAX_LOG_ENTRIES = 1_000
+
 class LoggerService extends EventEmitter {
-  private logs: LogEntry[] = []
+  private readonly logs: (LogEntry | undefined)[] = new Array(MAX_LOG_ENTRIES)
+  private logStart = 0
+  private logCount = 0
 
   public addLog(level: string, msg: string, service?: string): void {
     const entry: LogEntry = {
@@ -18,12 +22,24 @@ class LoggerService extends EventEmitter {
       service,
       msg
     }
-    this.logs.push(entry)
+
+    const index = (this.logStart + this.logCount) % MAX_LOG_ENTRIES
+    this.logs[index] = entry
+
+    if (this.logCount === MAX_LOG_ENTRIES) {
+      this.logStart = (this.logStart + 1) % MAX_LOG_ENTRIES
+    } else {
+      this.logCount += 1
+    }
+
     this.emit('log', entry)
   }
 
   public getLogs(): LogEntry[] {
-    return this.logs
+    return Array.from(
+      { length: this.logCount },
+      (_, index) => this.logs[(this.logStart + index) % MAX_LOG_ENTRIES]!
+    )
   }
 
   public info(msg: string, service?: string): void {
