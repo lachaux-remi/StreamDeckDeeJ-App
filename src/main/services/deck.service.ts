@@ -1,11 +1,16 @@
 import { EventEmitter } from 'node:events'
 import HomeAssistantAPI from '@main/libs/home-assistant/HomeAssistantAPI'
 import { KeyUsageEnum, ModuleEnum } from '@main/types/enums'
-import type { AppSettings, StreamdeckInputConfig, StreamdeckInputKey } from '@main/types/settings.types'
+import type {
+  AppSettings,
+  StreamdeckInputConfig,
+  StreamdeckInputKey
+} from '@main/types/settings.types'
 import { configService } from './config.service'
 import { ledService } from './led.service'
 import { loggerService } from './logger.service'
 import { serialService } from './serial.service'
+import type { DeckSerialMessage } from './serial-protocol'
 
 const SERVICE = 'DeckService'
 
@@ -26,24 +31,24 @@ class DeckService extends EventEmitter {
     if (!homeAssistant?.url || !homeAssistant?.token) return
     const api = new HomeAssistantAPI(homeAssistant.url, homeAssistant.token)
     for (const [key, btnCfg] of Object.entries(streamdeck ?? {})) {
-      const entityId = btnCfg.pressed?.module === ModuleEnum.HomeAssistant
-        ? btnCfg.pressed.params[1]
-        : btnCfg.hold?.module === ModuleEnum.HomeAssistant
-          ? btnCfg.hold.params[1]
-          : undefined
+      const entityId =
+        btnCfg.pressed?.module === ModuleEnum.HomeAssistant
+          ? btnCfg.pressed.params[1]
+          : btnCfg.hold?.module === ModuleEnum.HomeAssistant
+            ? btnCfg.hold.params[1]
+            : undefined
       const hasHACondition = btnCfg.ledConditions?.some(
         (c) => c.type === 'ha-on' || c.type === 'ha-off'
       )
       if (!entityId || !hasHACondition) continue
-      api.getState(entityId)
+      api
+        .getState(entityId)
         .then(({ state }) => ledService.setHAButtonState(key, state))
         .catch(() => {})
     }
   }
 
-  public onUpdated(
-    listener: (deckKey: string, value: Record<string, unknown>) => void
-  ): void {
+  public onUpdated(listener: (deckKey: string, value: Record<string, unknown>) => void): void {
     this.on('deck:updated', listener)
   }
 
@@ -62,7 +67,7 @@ class DeckService extends EventEmitter {
     return info
   }
 
-  private deckEventHandler(data: { state: KeyUsageEnum; value: string }): void {
+  private deckEventHandler(data: Omit<DeckSerialMessage, 'type'>): void {
     const deckKey = data.value.toString().toLowerCase()
 
     if (data.state === KeyUsageEnum.Released) {
@@ -110,12 +115,10 @@ class DeckService extends EventEmitter {
             if (entityState) ledService.setHAButtonState(deckKey, entityState)
             this.emit('deck:updated', deckKey, result)
           })
-          .catch((err) =>
-            loggerService.error(`Error calling Home Assistant: ${err}`, SERVICE)
-          )
+          .catch((err) => loggerService.error(`Error calling Home Assistant: ${err}`, SERVICE))
       }
     } else {
-      this.keyState[deckKey] = data.state as KeyUsageEnum.Hold | KeyUsageEnum.Pressed
+      this.keyState[deckKey] = data.state === 'pressed' ? KeyUsageEnum.Pressed : KeyUsageEnum.Hold
     }
   }
 }
