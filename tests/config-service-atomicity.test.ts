@@ -22,6 +22,8 @@ test('restores the persisted Home Assistant token when an update listener reject
   service.setConfig({
     homeAssistant: { url: 'https://old.example', token: 'stored-token' }
   })
+  const observedEndpoints: string[] = []
+  service.onUpdated((settings) => observedEndpoints.push(settings.homeAssistant.url))
   service.onUpdated((settings) => {
     if (settings.homeAssistant.url === 'https://new.example') {
       throw new Error('simulated listener failure')
@@ -46,6 +48,7 @@ test('restores the persisted Home Assistant token when an update listener reject
     url: 'https://old.example',
     token: 'stored-token'
   })
+  expect(observedEndpoints).toEqual(['https://new.example', 'https://old.example'])
   const reloaded = new ConfigService()
   reloaded.init()
   expect(reloaded.getConfig().homeAssistant).toEqual({

@@ -135,6 +135,11 @@ export class ConfigService extends EventEmitter {
     } catch (error) {
       this.data = previousData
       this.save(previousData)
+      try {
+        this.emit('config:updated', this.data)
+      } catch {
+        // Preserve the original update failure after best-effort listener rollback.
+      }
       throw error
     }
     loggerService.debug('Config updated', SERVICE)
