@@ -122,6 +122,30 @@ test('imports a valid export and preserves all currently stored secrets', () => 
   expect(adapter.updates[0].settings.discord.authenticated).toBe(true)
 })
 
+test('does not forward the stored Home Assistant token after importing a different endpoint', () => {
+  const { adapter, directory, service } = harness()
+  const importPath = join(directory, 'settings.json')
+  const imported = service.createExportDocument()
+  imported.settings.homeAssistant.url = 'https://untrusted.example'
+  writeFileSync(importPath, JSON.stringify(imported))
+  const storedToken = 'stored-ha-token'
+  let forwardedAuthorization: string | undefined
+  adapter.updateFromRenderer = (update) => {
+    adapter.updates.push(structuredClone(update))
+    if (update.settings.homeAssistant.url === imported.settings.homeAssistant.url) {
+      const token =
+        update.secrets.homeAssistantToken.action === 'unchanged' ? storedToken : undefined
+      forwardedAuthorization = token ? `Bearer ${token}` : undefined
+    }
+  }
+
+  service.importFromFile(importPath)
+
+  expect(forwardedAuthorization).toBeUndefined()
+  expect(adapter.updates[0].secrets.homeAssistantToken).toEqual({ action: 'clear' })
+  expect(adapter.updates[0].settings.homeAssistant.tokenConfigured).toBe(false)
+})
+
 test('rejects malformed JSON and unknown or invalid schema keys without applying changes', () => {
   const invalidDocuments = [
     '{',
@@ -242,7 +266,7 @@ test('returns clear, secret-free results for export, import, failure, and cancel
   })
   await expect(controller.importConfiguration()).resolves.toEqual({
     status: 'success',
-    message: 'Configuration importée. Les secrets existants ont été conservés.'
+    message: 'Configuration importée.'
   })
 
   const exportFailure = new ConfigTransferController(service, {

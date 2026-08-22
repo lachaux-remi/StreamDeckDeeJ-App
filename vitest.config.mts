@@ -20,6 +20,7 @@ export default defineConfig({
         'src/main/services/audio-subscription.ts',
         'src/main/services/config-transfer.ts',
         'src/main/services/hardware-permissions-core.ts',
+        'src/main/services/home-assistant-state-sync.ts',
         'src/main/services/linux-autostart.ts',
         'src/main/services/linux-update-controller.ts',
         'src/main/services/linux-update-policy.ts',
@@ -93,6 +94,12 @@ export default defineConfig({
           functions: 100,
           lines: 98.75,
           statements: 97.67
+        },
+        'src/main/services/home-assistant-state-sync.ts': {
+          branches: 90,
+          functions: 100,
+          lines: 100,
+          statements: 100
         },
         'src/main/services/hardware-permissions-core.ts': {
           branches: 95.74,

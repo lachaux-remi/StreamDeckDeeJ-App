@@ -40,6 +40,7 @@ const APP_ICON = isDev
   : join(process.resourcesPath, 'logo.png')
 const appQuitCoordinator = new AppQuitCoordinator({
   shutdown: async () => {
+    deckService.shutdown()
     await Promise.all([ledService.shutdown(), serialService.shutdown()])
   },
   exit: () => app.exit(),
