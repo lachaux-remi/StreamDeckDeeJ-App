@@ -2,13 +2,25 @@ appId: fr.remi-lachaux.streamdeck-deej
 productName: streamdeck-deej
 directories:
   buildResources: build
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
 files:
   - '!**/.vscode/*'
   - '!src/*'
+  - '!scripts/*'
   - '!dist/*'
   - '!electron.vite.config.*'
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.json,tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!**/*.map'
+  - '!**/node_modules/node-hid/{hidapi,src}/**/*'
+  - '!**/node_modules/node-hid/prebuilds/{HID-darwin-*,HID-win32-*,HID-linux-arm,HID-linux-arm64,HID-linux-x64-musl,HID_hidraw-linux-arm,HID_hidraw-linux-arm64,HID_hidraw-linux-x64-musl}/**/*'
+  - '!**/node_modules/@serialport/bindings-cpp/src/**/*'
+  - '!**/node_modules/@serialport/bindings-cpp/prebuilds/{android-*,darwin-*,linux-arm,linux-arm64,win32-*}/**/*'
 asarUnpack:
   - resources/**
 extraResources:
@@ -27,3 +39,22 @@ appImage:
 pacman:
   artifactName: ${name}-${version}.pkg.tar.xz
   compression: xz
+  depends:
+    - c-ares
+    - ffmpeg
+    - gtk3
+    - http-parser
+    - libevent
+    - libvpx
+    - libxslt
+    - libxss
+    - minizip
+    - nss
+    - re2
+    - snappy
+    - libnotify
+    - libappindicator-gtk3
+    - dbus
+    - libpulse
+    - pipewire
+    - wireplumber
