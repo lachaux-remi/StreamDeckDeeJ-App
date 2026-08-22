@@ -6,9 +6,7 @@ import {
   parseSerialFrame
 } from './serial-protocol.ts'
 
-// JavaScript keeps this harness outside the application's TypeScript build.
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-const frame = (value) => Buffer.from(`${JSON.stringify(value)}\r\n`)
+const frame = (value: unknown): Buffer => Buffer.from(`${JSON.stringify(value)}\r\n`)
 
 test('decodes valid Arduino frames split across chunks', () => {
   const decoder = new BoundedSerialFrameDecoder()
