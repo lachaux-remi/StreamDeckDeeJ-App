@@ -127,6 +127,7 @@ class ConfigService extends EventEmitter {
 
   public setConfig(config: Partial<AppSettings>): void {
     const nextData = { ...this.data, ...config }
+    if (!isAppSettings(nextData)) throw new TypeError('Invalid config update')
     this.save(nextData)
     this.data = nextData
     loggerService.debug('Config updated', SERVICE)

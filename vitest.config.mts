@@ -13,11 +13,14 @@ export default defineConfig({
       provider: 'v8',
       include: [
         'scripts/linux-permissions.mjs',
+        'src/shared/input-limits.ts',
         'src/main/handlers/hardware-permissions.contract.ts',
+        'src/main/handlers/streamdeck.handlers.ts',
         'src/main/handlers/trusted-ipc-core.ts',
         'src/main/services/app-quit-coordinator.ts',
         'src/main/services/audio-command.ts',
         'src/main/services/config-transfer.ts',
+        'src/main/services/discord-rpc-codec.ts',
         'src/main/services/hardware-permissions-core.ts',
         'src/main/services/linux-autostart.ts',
         'src/main/services/linux-update-controller.ts',
@@ -30,6 +33,7 @@ export default defineConfig({
         'src/main/services/update-command.ts',
         'src/main/services/window-close-handler.ts',
         'src/main/types/update.types.ts',
+        'src/renderer/src/lib/icon-file.ts',
         'src/renderer/src/stores/settings.defaults.ts'
       ],
       reporter: ['text', 'html'],

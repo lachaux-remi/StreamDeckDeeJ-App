@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, Eye, EyeOff, GripVertical, ImagePlus, Plus, Trash2, WifiOff, X } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
+import { ICON_FILE_ACCEPT, readIconFile } from '@renderer/lib/icon-file'
 import { useSettingsStore } from '@renderer/stores/settings.store'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
 import ColorPicker from '@renderer/components/ui/ColorPicker'
@@ -103,7 +104,7 @@ function IconUpload({
       <div className="flex flex-col gap-1.5">
         <label className="cursor-pointer rounded-lg bg-surface-3 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-surface-4">
           Choisir un fichier
-          <input type="file" accept="image/*" onChange={onUpload} className="hidden" />
+          <input type="file" accept={ICON_FILE_ACCEPT} onChange={onUpload} className="hidden" />
         </label>
         {icon && (
           <button
@@ -225,23 +226,21 @@ export default function StreamdeckConfigDialog({
   const handleMainIconUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => setMainIcon(reader.result as string)
-    reader.readAsDataURL(file)
+    void readIconFile(file).then((iconData) => {
+      if (iconData) setMainIcon(iconData)
+    })
   }, [])
 
   const handleActionIconUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (!file) return
-      const reader = new FileReader()
-      reader.onload = () => {
-        const iconData = reader.result as string
+      void readIconFile(file).then((iconData) => {
+        if (!iconData) return
         setCurrentAction((prev) =>
           prev ? { ...prev, icon: iconData } : { module: '', params: [''], icon: iconData }
         )
-      }
-      reader.readAsDataURL(file)
+      })
     },
     [setCurrentAction]
   )
