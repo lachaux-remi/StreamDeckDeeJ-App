@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+export PATH="$HOME/.local/bin:$PATH"
+
+node_major="$(node -p "process.versions.node.split('.')[0]" 2>/dev/null || true)"
+if [[ "$node_major" != '24' ]]; then
+  echo "[resume] Node.js 24 is unavailable; rerun .agents/setup" >&2
+  exit 1
+fi
+
+expected_pnpm="$(node -p "require('./package.json').packageManager.split('@').at(-1)")"
+if [[ "$(pnpm --version 2>/dev/null || true)" != "$expected_pnpm" ]]; then
+  echo "[resume] pnpm $expected_pnpm is unavailable; rerun .agents/setup" >&2
+  exit 1
+fi
+
+if [[ ! -x node_modules/.bin/electron ]]; then
+  echo "[resume] Project dependencies are unavailable; rerun .agents/setup" >&2
+  exit 1
+fi
+
+echo "[resume] Toolchain and dependencies are ready"
