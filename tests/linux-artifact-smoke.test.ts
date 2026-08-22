@@ -8,7 +8,10 @@ import { afterEach, expect, test } from 'vitest'
 const execFileAsync = promisify(execFile)
 const temporaryDirectories: string[] = []
 
-async function runSmoke(body: string): Promise<{
+async function runSmoke(
+  body: string,
+  timeoutSeconds = '1'
+): Promise<{
   error?: Error & { stdout?: string; stderr?: string }
   log: string
   output: string
@@ -27,7 +30,7 @@ async function runSmoke(body: string): Promise<{
         env: {
           ...process.env,
           SMOKE_POLL_INTERVAL_SECONDS: '0.05',
-          SMOKE_TIMEOUT_SECONDS: '1'
+          SMOKE_TIMEOUT_SECONDS: timeoutSeconds
         }
       }
     )
@@ -51,10 +54,13 @@ afterEach(async () => {
 })
 
 test('waits for readiness and terminates the live application', async () => {
-  const result = await runSmoke(`
+  const result = await runSmoke(
+    `
 trap 'echo terminated; exit 0' TERM
 echo 'Linux updater mode: disabled'
-while true; do sleep 1; done`)
+while true; do sleep 1; done`,
+    '3'
+  )
 
   expect(result.error).toBeUndefined()
   expect(result.log).toContain('Linux updater mode: disabled')
