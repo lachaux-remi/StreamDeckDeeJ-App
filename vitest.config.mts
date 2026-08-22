@@ -12,16 +12,35 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: [
+        'src/main/services/audio-command.ts',
         'src/main/services/renderer-settings.ts',
         'src/main/services/secret-storage.ts',
         'src/main/services/serial-protocol.ts'
       ],
       reporter: ['text', 'html'],
       thresholds: {
-        branches: 87.12,
-        functions: 96.42,
-        lines: 97.24,
-        statements: 93.33,
+        branches: 85.47,
+        functions: 95,
+        lines: 95.83,
+        statements: 91.92,
+        'src/main/services/{audio-command,serial-protocol}.ts': {
+          branches: 87.95,
+          functions: 95.83,
+          lines: 95.09,
+          statements: 91.22
+        },
+        'src/main/services/{renderer-settings,secret-storage,serial-protocol}.ts': {
+          branches: 87.12,
+          functions: 96.42,
+          lines: 97.24,
+          statements: 93.33
+        },
+        'src/main/services/audio-command.ts': {
+          branches: 75,
+          functions: 91.66,
+          lines: 91.42,
+          statements: 87.8
+        },
         'src/main/services/renderer-settings.ts': {
           branches: 50,
           functions: 100,
