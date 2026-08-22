@@ -1,12 +1,11 @@
-import assert from 'node:assert/strict'
-import test from 'node:test'
+import { expect, test } from 'vitest'
 import {
   type Command,
   type CommandRunner,
   LatestValueExecutor,
   commandRunner,
   runCommandWithFallback
-} from './audio-command.ts'
+} from './audio-command'
 
 interface Deferred {
   promise: Promise<void>
@@ -34,8 +33,8 @@ test('runs commands without blocking the event loop', async () => {
 
   await new Promise((resolve) => setImmediate(resolve))
 
-  assert.equal(commandCompleted, false)
-  assert.equal(await command, 'done')
+  expect(commandCompleted).toBe(false)
+  expect(await command).toBe('done')
 })
 
 test('runs the fallback only after the primary command fails', async () => {
@@ -54,11 +53,8 @@ test('runs the fallback only after the primary command fails', async () => {
     { file: 'pactl', args: ['get-sink-volume', '@DEFAULT_SINK@'], timeout: 2_000 }
   )
 
-  assert.equal(output, 'Volume: 42%')
-  assert.deepEqual(
-    calls.map(({ file }) => file),
-    ['wpctl', 'pactl']
-  )
+  expect(output).toBe('Volume: 42%')
+  expect(calls.map(({ file }) => file)).toEqual(['wpctl', 'pactl'])
 })
 
 test('bounds concurrency and applies only the latest pending value per target', async () => {
@@ -79,16 +75,16 @@ test('bounds concurrency and applies only the latest pending value per target', 
   executor.submit('master', 0.9)
 
   await new Promise((resolve) => setImmediate(resolve))
-  assert.deepEqual(applied, [['master', 0.1]])
+  expect(applied).toEqual([['master', 0.1]])
 
   first.resolve()
   await executor.onIdle()
 
-  assert.deepEqual(applied, [
+  expect(applied).toEqual([
     ['master', 0.1],
     ['master', 0.9]
   ])
-  assert.equal(maxActive, 1)
+  expect(maxActive).toBe(1)
 })
 
 test('allows bounded parallelism across independent targets', async () => {
@@ -107,7 +103,7 @@ test('allows bounded parallelism across independent targets', async () => {
   executor.submit('three', 1)
   await new Promise((resolve) => setImmediate(resolve))
 
-  assert.equal(maxActive, 2)
+  expect(maxActive).toBe(2)
   gates[0].resolve()
   gates[1].resolve()
   await executor.onIdle()
