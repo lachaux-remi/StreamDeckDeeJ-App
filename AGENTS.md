@@ -9,4 +9,4 @@
 - Only the repository owner may merge pull requests. Agents must never merge a pull request or enable auto-merge.
 - Agents must not approve or close pull requests.
 - After opening or updating a pull request, stop and wait for the repository owner's review.
-- Never push directly to `linux`.
+- Never push directly to `main`.
