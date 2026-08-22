@@ -3,9 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 const api = {
   settings: {
     hydrate: (): Promise<unknown> => ipcRenderer.invoke('settings:hydrate'),
-    update: (config: unknown): void => {
-      ipcRenderer.send('settings:update', config)
-    }
+    update: (config: unknown): Promise<void> => ipcRenderer.invoke('settings:update', config)
   },
   serial: {
     list: (): Promise<{ path: string; displayName: string }[]> =>

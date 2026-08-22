@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useSettingsStore } from '@renderer/stores/settings.store'
 import { useSerialStore } from '@renderer/stores/serial.store'
-import type { AppSettings } from '@renderer/types/settings.types'
+import { isRendererSettings } from '@renderer/types/settings.types'
 import type { ApplicationVersions, LogEntry } from '@renderer/types/serial.types'
 
 export function useIpcHydration(): void {
@@ -17,7 +17,10 @@ export function useIpcHydration(): void {
   } = useSerialStore()
 
   useEffect(() => {
-    window.api.settings.hydrate().then((config) => hydrate(config as AppSettings))
+    window.api.settings.hydrate().then((config) => {
+      if (!isRendererSettings(config)) throw new TypeError('Invalid settings received from main')
+      hydrate(config)
+    })
     window.api.app.getVersions().then((v) => setVersions(v as ApplicationVersions))
     window.api.deej.getSliders().then(setSliders)
     window.api.deej.getSessions().then(setSessions)
