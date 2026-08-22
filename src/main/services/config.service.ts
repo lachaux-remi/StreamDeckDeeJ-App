@@ -10,38 +10,14 @@ import {
   type SecretChange
 } from '@main/types/settings.types'
 import { loggerService } from './logger.service'
+import { applySettingsDefaults, defaultSettings } from './settings-defaults'
 import { toRendererSettings } from './renderer-settings'
 import { ElectronSafeStorageSecretCodec, SettingsPersistence } from './secret-storage'
 
 const SERVICE = 'ConfigService'
 
-const defaults: AppSettings = {
-  comPort: '/dev/ttyACM0',
-  baudRate: 9600,
-  gridCols: 4,
-  gridRows: 4,
-  sliderCount: 4,
-  streamdeck: {},
-  deej: {},
-  deejNames: {},
-  invertSliders: false,
-  runOnStartup: false,
-  runInBackground: false,
-  closeToTray: true,
-  devTools: false,
-  homeAssistant: { url: '', token: '' },
-  ledProfile: {
-    mode: 'rainbow',
-    speed: 50,
-    brightness: 80,
-    startColor: { r: 0, g: 0, b: 255 },
-    endColor: { r: 255, g: 0, b: 255 },
-    direction: 'horizontal'
-  }
-}
-
 class ConfigService extends EventEmitter {
-  private data: AppSettings = { ...defaults }
+  private data: AppSettings = { ...defaultSettings }
   private configPath: string = ''
   private persistence: SettingsPersistence | undefined
   private persistenceEnabled = true
@@ -79,18 +55,11 @@ class ConfigService extends EventEmitter {
     try {
       if (existsSync(this.configPath)) {
         const parsed = this.persistence?.load() as Partial<AppSettings>
-        const candidate = {
-          ...defaults,
-          ...parsed,
-          homeAssistant: {
-            ...defaults.homeAssistant,
-            ...(parsed.homeAssistant ?? {})
-          }
-        }
+        const candidate = applySettingsDefaults(parsed)
         if (!isAppSettings(candidate)) throw new Error('Invalid config')
         this.data = candidate
       } else {
-        this.data = { ...defaults }
+        this.data = { ...defaultSettings }
         this.save()
       }
     } catch {
@@ -98,7 +67,7 @@ class ConfigService extends EventEmitter {
         'Config is unreadable; using defaults and leaving the existing file unchanged',
         SERVICE
       )
-      this.data = { ...defaults }
+      this.data = { ...defaultSettings }
       this.persistenceEnabled = false
       try {
         this.persistence?.protectFile()

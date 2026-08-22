@@ -3,6 +3,8 @@ export const MAX_SERIAL_FRAMES_PER_SECOND = 200
 
 const MAX_DECK_INDEX = 63
 const MAX_SLIDER_INDEX = 15
+const IR_ECHO_TTL_MS = 5_000
+const MAX_PENDING_IR_ECHOES = 16
 
 export type SerialRejectionReason =
   | 'frame too large'
@@ -27,6 +29,39 @@ export type SerialMessage = DeejSerialMessage | DeckSerialMessage
 interface DecoderResult {
   frames: Buffer[]
   rejections: SerialRejectionReason[]
+}
+
+interface PendingIrEcho {
+  payload: string
+  expiresAt: number
+}
+
+export class ExpectedIrEchoTracker {
+  private pending: PendingIrEcho[] = []
+
+  public recordCommand(command: string, now = Date.now()): void {
+    const normalized = command.replace(/\r?\n$/, '')
+    if (!normalized.startsWith('ir:')) return
+
+    const payload = normalized.slice(3)
+    if (!/^\d+(?:,\d+)*$/.test(payload)) return
+
+    this.pending.push({ payload, expiresAt: now + IR_ECHO_TTL_MS })
+    if (this.pending.length > MAX_PENDING_IR_ECHOES) this.pending.shift()
+  }
+
+  public consume(frame: Buffer, now = Date.now()): boolean {
+    this.pending = this.pending.filter((echo) => echo.expiresAt >= now)
+    const index = this.pending.findIndex((echo) => echo.payload === frame.toString('utf8'))
+    if (index === -1) return false
+
+    this.pending.splice(index, 1)
+    return true
+  }
+
+  public clear(): void {
+    this.pending = []
+  }
 }
 
 export class BoundedSerialFrameDecoder {

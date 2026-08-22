@@ -1,5 +1,10 @@
 import { create } from 'zustand'
-import type { ApplicationVersions, LogEntry, SerialStatus } from '@renderer/types/serial.types'
+import type {
+  ApplicationVersions,
+  LogEntry,
+  SerialPortInfo,
+  SerialStatus
+} from '@renderer/types/serial.types'
 
 const MAX_LOG_ENTRIES = 1_000
 
@@ -46,13 +51,13 @@ interface SerialStore {
   sessions: string[]
   sliders: Record<string, number>
   versions: ApplicationVersions | null
-  serialPorts: { path: string; displayName: string; manufacturer?: string }[]
+  serialPorts: SerialPortInfo[]
   serialStatus: SerialStatus
   logs: LogEntry[]
   setSessions: (sessions: string[]) => void
   setSliders: (sliders: Record<string, number>) => void
   setVersions: (versions: ApplicationVersions) => void
-  setSerialPorts: (ports: { path: string; displayName: string; manufacturer?: string }[]) => void
+  setSerialPorts: (ports: SerialPortInfo[]) => void
   setSerialStatus: (status: SerialStatus) => void
   setLogs: (logs: LogEntry[]) => void
   addLog: (log: LogEntry) => void

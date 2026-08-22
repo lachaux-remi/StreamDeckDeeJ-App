@@ -8,8 +8,9 @@ const api = {
     import: (): Promise<ConfigTransferResult> => ipcRenderer.invoke('settings:import')
   },
   serial: {
-    list: (): Promise<{ path: string; displayName: string }[]> =>
-      ipcRenderer.invoke('serial:list'),
+    list: (): Promise<
+      { path: string; displayName: string; manufacturer?: string; official: boolean }[]
+    > => ipcRenderer.invoke('serial:list'),
     status: (): Promise<{ connected: boolean; port: string }> =>
       ipcRenderer.invoke('serial:status')
   },

@@ -16,14 +16,17 @@ export default defineConfig({
         'src/main/services/config-transfer.ts',
         'src/main/services/renderer-settings.ts',
         'src/main/services/secret-storage.ts',
-        'src/main/services/serial-protocol.ts'
+        'src/main/services/serial-port-discovery.ts',
+        'src/main/services/serial-protocol.ts',
+        'src/main/services/settings-defaults.ts',
+        'src/renderer/src/stores/settings.defaults.ts'
       ],
       reporter: ['text', 'html'],
       thresholds: {
-        branches: 85.47,
-        functions: 95,
-        lines: 95.83,
-        statements: 91.92,
+        branches: 90.1,
+        functions: 97.05,
+        lines: 98,
+        statements: 95.03,
         'src/main/services/{audio-command,serial-protocol}.ts': {
           branches: 87.95,
           functions: 95.83,
@@ -61,10 +64,28 @@ export default defineConfig({
           statements: 93.33
         },
         'src/main/services/serial-protocol.ts': {
-          branches: 91.04,
+          branches: 94.8,
           functions: 100,
-          lines: 97.01,
-          statements: 93.15
+          lines: 100,
+          statements: 96.8
+        },
+        'src/main/services/serial-port-discovery.ts': {
+          branches: 83.33,
+          functions: 100,
+          lines: 100,
+          statements: 90.9
+        },
+        'src/main/services/settings-defaults.ts': {
+          branches: 100,
+          functions: 100,
+          lines: 100,
+          statements: 100
+        },
+        'src/renderer/src/stores/settings.defaults.ts': {
+          branches: 100,
+          functions: 100,
+          lines: 100,
+          statements: 100
         }
       }
     },
