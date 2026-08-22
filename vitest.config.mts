@@ -21,7 +21,25 @@ export default defineConfig({
         branches: 87.12,
         functions: 96.42,
         lines: 97.24,
-        statements: 93.33
+        statements: 93.33,
+        'src/main/services/renderer-settings.ts': {
+          branches: 50,
+          functions: 100,
+          lines: 100,
+          statements: 100
+        },
+        'src/main/services/secret-storage.ts': {
+          branches: 81.25,
+          functions: 93.33,
+          lines: 97.5,
+          statements: 93.33
+        },
+        'src/main/services/serial-protocol.ts': {
+          branches: 91.04,
+          functions: 100,
+          lines: 97.01,
+          statements: 93.15
+        }
       }
     },
     environment: 'node',
