@@ -5,7 +5,7 @@ import { useSettingsStore } from '@renderer/stores/settings.store'
 import { useSerialStore } from '@renderer/stores/serial.store'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
 import ColorPicker from '@renderer/components/ui/ColorPicker'
-import type { LedMode } from '@renderer/types/settings.types'
+import type { LedMode, SecretChange } from '@renderer/types/settings.types'
 
 const LED_MODES: { value: LedMode; label: string; description: string }[] = [
   { value: 'static', label: 'Statique', description: 'Couleur fixe uniforme' },
@@ -50,16 +50,28 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false)
   const [showHAToken, setShowHAToken] = useState(false)
   const [showDiscordSecret, setShowDiscordSecret] = useState(false)
+  const [haTokenChange, setHATokenChange] = useState<SecretChange>({ action: 'unchanged' })
+  const [discordSecretChange, setDiscordSecretChange] = useState<SecretChange>({
+    action: 'unchanged'
+  })
+  const [clearDiscordTokens, setClearDiscordTokens] = useState(false)
 
   const hasChanges = useMemo(
-    () => JSON.stringify(localSettings) !== JSON.stringify(settings),
-    [localSettings, settings]
+    () =>
+      JSON.stringify(localSettings) !== JSON.stringify(settings) ||
+      haTokenChange.action !== 'unchanged' ||
+      discordSecretChange.action !== 'unchanged' ||
+      clearDiscordTokens,
+    [localSettings, settings, haTokenChange.action, discordSecretChange.action, clearDiscordTokens]
   )
 
   useEffect(() => {
     if (isOpen) {
       setLocalSettings(settings)
       setShowDiscardPrompt(false)
+      setHATokenChange({ action: 'unchanged' })
+      setDiscordSecretChange({ action: 'unchanged' })
+      setClearDiscordTokens(false)
     }
   }, [isOpen, settings])
 
@@ -76,6 +88,9 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
   const handleDiscard = useCallback(() => {
     setShowDiscardPrompt(false)
     setLocalSettings(settings)
+    setHATokenChange({ action: 'unchanged' })
+    setDiscordSecretChange({ action: 'unchanged' })
+    setClearDiscordTokens(false)
     onClose()
   }, [settings, onClose])
 
@@ -86,10 +101,38 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
     setTimeout(() => setIsRefreshing(false), 500)
   }, [setSerialPorts])
 
-  const handleSave = useCallback(() => {
-    updateConfig(localSettings)
+  const handleSave = useCallback(async () => {
+    const homeAssistantTokenConfigured = secretConfigured(
+      localSettings.homeAssistant.tokenConfigured,
+      haTokenChange
+    )
+    const discordClientSecretConfigured = secretConfigured(
+      localSettings.discord.clientSecretConfigured,
+      discordSecretChange
+    )
+    const settingsToSave = {
+      ...localSettings,
+      homeAssistant: {
+        ...localSettings.homeAssistant,
+        tokenConfigured: homeAssistantTokenConfigured
+      },
+      discord: {
+        ...localSettings.discord,
+        clientSecretConfigured: discordClientSecretConfigured,
+        authenticated:
+          localSettings.discord.authenticated &&
+          !clearDiscordTokens &&
+          discordSecretChange.action === 'unchanged'
+      }
+    }
+    await updateConfig(settingsToSave, {
+      homeAssistantToken: haTokenChange,
+      discordClientSecret: discordSecretChange,
+      discordTokens:
+        clearDiscordTokens || discordSecretChange.action !== 'unchanged' ? 'clear' : 'unchanged'
+    })
     onClose()
-  }, [localSettings, updateConfig, onClose])
+  }, [localSettings, haTokenChange, discordSecretChange, clearDiscordTokens, updateConfig, onClose])
 
   if (!isOpen) return null
 
@@ -375,23 +418,56 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
                         placeholder="http://homeassistant.local:8123"
                         className={inputGreen}
                       />
+                      {localSettings.homeAssistant.url &&
+                        !localSettings.homeAssistant.url.trim().toLowerCase().startsWith('https://') && (
+                          <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-relaxed text-neon-orange">
+                            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                            Cette URL n&apos;utilise pas HTTPS. Le token peut circuler en clair ; HTTP
+                            reste autorisé pour les installations locales.
+                          </p>
+                        )}
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                        Token (Long-Lived Access Token)
-                      </label>
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <label className="text-xs font-medium text-muted-foreground/70">
+                          Token (Long-Lived Access Token)
+                        </label>
+                        <ConfiguredState
+                          configured={secretConfigured(
+                            localSettings.homeAssistant.tokenConfigured,
+                            haTokenChange
+                          )}
+                        />
+                      </div>
                       <PasswordInput
-                        value={localSettings.homeAssistant.token}
+                        value={secretInputValue(haTokenChange)}
                         onChange={(v) =>
-                          setLocalSettings({
-                            ...localSettings,
-                            homeAssistant: { ...localSettings.homeAssistant, token: v }
-                          })
+                          setHATokenChange(
+                            v ? { action: 'set', value: v } : { action: 'unchanged' }
+                          )
                         }
                         show={showHAToken}
                         onToggle={() => setShowHAToken((s) => !s)}
                         className={`${inputGreen} pr-9`}
                       />
+                      {(localSettings.homeAssistant.tokenConfigured ||
+                        haTokenChange.action !== 'unchanged') && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setHATokenChange(
+                              haTokenChange.action === 'clear'
+                                ? { action: 'unchanged' }
+                                : { action: 'clear' }
+                            )
+                          }
+                          className="mt-1.5 text-[11px] text-neon-red/60 transition-colors hover:text-neon-red"
+                        >
+                          {haTokenChange.action === 'clear'
+                            ? 'Annuler la suppression'
+                            : 'Supprimer le token enregistré'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </section>
@@ -421,13 +497,13 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
                       </label>
                       <input
                         type="text"
-                        value={localSettings.discord?.clientId ?? ''}
+                        value={localSettings.discord.clientId}
                         onChange={(e) =>
                           setLocalSettings({
                             ...localSettings,
                             discord: {
-                              clientId: e.target.value,
-                              clientSecret: localSettings.discord?.clientSecret ?? ''
+                              ...localSettings.discord,
+                              clientId: e.target.value
                             }
                           })
                         }
@@ -436,58 +512,58 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                        Client Secret
-                      </label>
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <label className="text-xs font-medium text-muted-foreground/70">
+                          Client Secret
+                        </label>
+                        <ConfiguredState
+                          configured={secretConfigured(
+                            localSettings.discord.clientSecretConfigured,
+                            discordSecretChange
+                          )}
+                        />
+                      </div>
                       <PasswordInput
-                        value={localSettings.discord?.clientSecret ?? ''}
+                        value={secretInputValue(discordSecretChange)}
                         onChange={(v) =>
-                          setLocalSettings({
-                            ...localSettings,
-                            discord: {
-                              clientId: localSettings.discord?.clientId ?? '',
-                              clientSecret: v
-                            }
-                          })
+                          setDiscordSecretChange(
+                            v ? { action: 'set', value: v } : { action: 'unchanged' }
+                          )
                         }
                         show={showDiscordSecret}
                         onToggle={() => setShowDiscordSecret((s) => !s)}
                         className={`${inputDiscord} pr-9`}
                       />
+                      {(localSettings.discord.clientSecretConfigured ||
+                        discordSecretChange.action !== 'unchanged') && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDiscordSecretChange(
+                              discordSecretChange.action === 'clear'
+                                ? { action: 'unchanged' }
+                                : { action: 'clear' }
+                            )
+                          }
+                          className="mt-1.5 text-[11px] text-neon-red/60 transition-colors hover:text-neon-red"
+                        >
+                          {discordSecretChange.action === 'clear'
+                            ? 'Annuler la suppression'
+                            : 'Supprimer le secret enregistré'}
+                        </button>
+                      )}
                     </div>
                     <div className="flex items-center justify-between">
-                      <span
-                        className={cn(
-                          'text-[11px] font-medium',
-                          localSettings.discord?.accessToken
-                            ? 'text-neon-green'
-                            : localSettings.discord?.clientId && localSettings.discord?.clientSecret
-                              ? 'text-neon-orange'
-                              : 'text-muted-foreground/40'
-                        )}
-                      >
-                        {localSettings.discord?.accessToken
-                          ? '● Token sauvegardé — authentifié'
-                          : localSettings.discord?.clientId && localSettings.discord?.clientSecret
-                            ? '○ Non authentifié — sauvegarde pour lancer le flux'
-                            : '○ Non configuré'}
-                      </span>
-                      {localSettings.discord?.accessToken && (
+                      <ConfiguredState
+                        configured={localSettings.discord.authenticated && !clearDiscordTokens}
+                      />
+                      {localSettings.discord.authenticated && (
                         <button
-                          onClick={() =>
-                            setLocalSettings({
-                              ...localSettings,
-                              discord: {
-                                clientId: localSettings.discord?.clientId ?? '',
-                                clientSecret: localSettings.discord?.clientSecret ?? '',
-                                accessToken: undefined,
-                                refreshToken: undefined
-                              }
-                            })
-                          }
+                          type="button"
+                          onClick={() => setClearDiscordTokens((clear) => !clear)}
                           className="text-[11px] text-neon-red/50 hover:text-neon-red transition-colors"
                         >
-                          Réinitialiser
+                          {clearDiscordTokens ? 'Annuler la réinitialisation' : 'Réinitialiser'}
                         </button>
                       )}
                     </div>
@@ -711,6 +787,29 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
         </div>
       </div>
     </>
+  )
+}
+
+function secretInputValue(change: SecretChange): string {
+  return change.action === 'set' ? change.value : ''
+}
+
+function secretConfigured(currentlyConfigured: boolean, change: SecretChange): boolean {
+  if (change.action === 'set') return true
+  if (change.action === 'clear') return false
+  return currentlyConfigured
+}
+
+function ConfiguredState({ configured }: { configured: boolean }): React.JSX.Element {
+  return (
+    <span
+      className={cn(
+        'text-[11px] font-medium',
+        configured ? 'text-neon-green' : 'text-muted-foreground/40'
+      )}
+    >
+      {configured ? '● Configuré' : '○ Non configuré'}
+    </span>
   )
 }
 
