@@ -69,7 +69,6 @@ app.whenReady().then(async () => {
   await discordService.init()
   conditionService.init(micService, discordService)
   await ledService.init()
-  registerAllHandlers()
 
   const config = configService.getConfig()
 
@@ -86,6 +85,12 @@ app.whenReady().then(async () => {
       sandbox: true
     }
   })
+
+  registerAllHandlers(mainWindow.webContents)
+  mainWindow.webContents.session.setPermissionCheckHandler(() => false)
+  mainWindow.webContents.session.setPermissionRequestHandler(
+    (_webContents, _permission, callback) => callback(false)
+  )
 
   mainWindow.setMenu(null)
 

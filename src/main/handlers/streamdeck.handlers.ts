@@ -1,14 +1,16 @@
-import { ipcMain } from 'electron'
+import type { WebContents } from 'electron'
 import { deckService } from '@main/services/deck.service'
 import { ledService } from '@main/services/led.service'
 import type { LedColor, LedProfile, StreamdeckConfig } from '@main/types/settings.types'
+import { handleIpc } from './trusted-ipc'
 
-export function registerStreamdeckHandlers(): void {
-  ipcMain.handle('streamdeck:keys', (_, deckKey: string) => deckService.getKeyInfo(deckKey))
+export function registerStreamdeckHandlers(trustedSender: WebContents): void {
+  handleIpc(trustedSender, 'streamdeck:keys', (deckKey: string) => deckService.getKeyInfo(deckKey))
 
-  ipcMain.handle(
+  handleIpc(
+    trustedSender,
     'streamdeck:setLedOverride',
-    async (_, streamdeck: StreamdeckConfig, previewKey: string, previewColor: LedColor | null) => {
+    async (streamdeck: StreamdeckConfig, previewKey: string, previewColor: LedColor | null) => {
       const overrides = { ...streamdeck }
       if (previewKey) {
         const existing = overrides[previewKey] ?? {}
@@ -22,7 +24,7 @@ export function registerStreamdeckHandlers(): void {
     }
   )
 
-  ipcMain.handle('led:setProfile', async (_, profile: LedProfile) => {
+  handleIpc(trustedSender, 'led:setProfile', async (profile: LedProfile) => {
     ledService.updateProfile(profile)
     await ledService.flush()
     return { success: true }
