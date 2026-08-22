@@ -41,12 +41,12 @@ const APP_ICON = isDev
 const appQuitCoordinator = new AppQuitCoordinator({
   shutdown: async () => {
     deckService.shutdown()
-    await ledService.shutdown()
+    await Promise.all([ledService.shutdown(), serialService.shutdown()])
   },
   exit: () => app.exit(),
   shutdownTimeoutMs: 3_000,
   onShutdownTimeout: () =>
-    loggerService.warn('LED shutdown deadline exceeded; continuing application quit', 'Main')
+    loggerService.warn('Shutdown deadline exceeded; continuing application quit', 'Main')
 })
 
 function isSafeExternalUrl(url: string): boolean {

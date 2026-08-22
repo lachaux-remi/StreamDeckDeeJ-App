@@ -17,6 +17,7 @@ export default defineConfig({
         'src/main/handlers/trusted-ipc-core.ts',
         'src/main/services/app-quit-coordinator.ts',
         'src/main/services/audio-command.ts',
+        'src/main/services/audio-subscription.ts',
         'src/main/services/config-transfer.ts',
         'src/main/services/hardware-permissions-core.ts',
         'src/main/services/home-assistant-state-sync.ts',
@@ -75,6 +76,12 @@ export default defineConfig({
           functions: 91.66,
           lines: 91.42,
           statements: 87.8
+        },
+        'src/main/services/audio-subscription.ts': {
+          branches: 100,
+          functions: 100,
+          lines: 100,
+          statements: 100
         },
         'src/main/services/app-quit-coordinator.ts': {
           branches: 100,
