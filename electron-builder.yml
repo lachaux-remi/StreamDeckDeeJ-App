@@ -18,6 +18,7 @@ files:
   - '!src/*'
   - '!tests/**/*'
   - '!**/{test,tests,__tests__}/**/*'
+  - '!coverage/**/*'
   - '!scripts/*'
   - '!dist/*'
   - '!electron.vite.config.*'
