@@ -1,5 +1,6 @@
 import * as net from 'node:net'
 import { EventEmitter } from 'node:events'
+import { lstat } from 'node:fs/promises'
 import { configService } from './config.service'
 import { loggerService } from './logger.service'
 
@@ -51,13 +52,26 @@ class DiscordService extends EventEmitter {
   isConnected(): boolean { return this._connected }
 
   private socketPaths(index: number): string[] {
-    const paths = [`/tmp/discord-ipc-${index}`]
+    const paths: string[] = []
     const xdg = process.env['XDG_RUNTIME_DIR']
     if (xdg) {
       paths.push(`${xdg}/discord-ipc-${index}`)
       paths.push(`${xdg}/app/com.discordapp.Discord/discord-ipc-${index}`)
     }
+    paths.push(`/tmp/discord-ipc-${index}`)
     return paths
+  }
+
+  private async isTrustedSocket(path: string): Promise<boolean> {
+    const uid = process.getuid?.()
+    if (uid === undefined) return false
+
+    try {
+      const socket = await lstat(path)
+      return socket.isSocket() && socket.uid === uid && (socket.mode & 0o022) === 0
+    } catch {
+      return false
+    }
   }
 
   private async connect(): Promise<void> {
@@ -69,6 +83,8 @@ class DiscordService extends EventEmitter {
 
     for (let i = 0; i < 10; i++) {
       for (const path of this.socketPaths(i)) {
+        if (!(await this.isTrustedSocket(path))) continue
+
         try {
           await this.tryConnect(path, clientId)
           return
