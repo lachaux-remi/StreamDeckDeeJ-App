@@ -151,6 +151,24 @@ function hasSerializedSizeAtMost(value: unknown, maxBytes: number): boolean {
   }
 }
 
+function isHomeAssistantUrl(value: unknown): value is string {
+  if (value === '') return true
+  if (typeof value !== 'string' || value !== value.trim()) return false
+  try {
+    const url = new URL(value)
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      Boolean(url.hostname) &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash
+    )
+  } catch {
+    return false
+  }
+}
+
 function isLedColor(value: unknown): value is LedColor {
   return (
     isRecord(value) &&
@@ -287,6 +305,7 @@ export function isRendererSettings(value: unknown): value is RendererSettings {
     !isRecord(value.homeAssistant) ||
     !hasOnlyKeys(value.homeAssistant, ['url', 'tokenConfigured']) ||
     !isStringAtMost(value.homeAssistant.url, MAX_URL_LENGTH) ||
+    !isHomeAssistantUrl(value.homeAssistant.url) ||
     typeof value.homeAssistant.tokenConfigured !== 'boolean'
   ) {
     return false

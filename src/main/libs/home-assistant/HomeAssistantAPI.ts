@@ -4,9 +4,13 @@ class HomeAssistantAPI {
     private readonly token: string
   ) {}
 
-  public async getState(entityId: string): Promise<{ state: string; attributes: Record<string, unknown> }> {
+  public async getState(
+    entityId: string,
+    signal?: AbortSignal
+  ): Promise<{ state: string; attributes: Record<string, unknown> }> {
     const response = await fetch(`${this.url}/api/states/${encodeURIComponent(entityId)}`, {
-      headers: { Authorization: `Bearer ${this.token}` }
+      headers: { Authorization: `Bearer ${this.token}` },
+      signal
     })
     if (!response.ok) {
       throw new Error(`Home Assistant state error: ${response.status} ${response.statusText}`)

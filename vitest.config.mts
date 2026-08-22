@@ -19,9 +19,11 @@ export default defineConfig({
         'src/main/handlers/trusted-ipc-core.ts',
         'src/main/services/app-quit-coordinator.ts',
         'src/main/services/audio-command.ts',
+        'src/main/services/audio-subscription.ts',
         'src/main/services/config-transfer.ts',
         'src/main/services/discord-rpc-codec.ts',
         'src/main/services/hardware-permissions-core.ts',
+        'src/main/services/home-assistant-state-sync.ts',
         'src/main/services/linux-autostart.ts',
         'src/main/services/linux-update-controller.ts',
         'src/main/services/linux-update-policy.ts',
@@ -32,8 +34,10 @@ export default defineConfig({
         'src/main/services/settings-defaults.ts',
         'src/main/services/update-command.ts',
         'src/main/services/window-close-handler.ts',
+        'src/main/types/settings.types.ts',
         'src/main/types/update.types.ts',
         'src/renderer/src/lib/icon-file.ts',
+        'src/renderer/src/types/settings.types.ts',
         'src/renderer/src/stores/settings.defaults.ts'
       ],
       reporter: ['text', 'html'],
@@ -79,6 +83,12 @@ export default defineConfig({
           lines: 91.42,
           statements: 87.8
         },
+        'src/main/services/audio-subscription.ts': {
+          branches: 100,
+          functions: 100,
+          lines: 100,
+          statements: 100
+        },
         'src/main/services/app-quit-coordinator.ts': {
           branches: 100,
           functions: 100,
@@ -90,6 +100,12 @@ export default defineConfig({
           functions: 100,
           lines: 98.75,
           statements: 97.67
+        },
+        'src/main/services/home-assistant-state-sync.ts': {
+          branches: 90,
+          functions: 100,
+          lines: 100,
+          statements: 100
         },
         'src/main/services/hardware-permissions-core.ts': {
           branches: 95.74,

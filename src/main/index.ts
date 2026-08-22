@@ -39,11 +39,14 @@ const APP_ICON = isDev
   ? join(__dirname, '../../resources/logo.png')
   : join(process.resourcesPath, 'logo.png')
 const appQuitCoordinator = new AppQuitCoordinator({
-  shutdown: () => ledService.shutdown(),
+  shutdown: async () => {
+    deckService.shutdown()
+    await Promise.all([ledService.shutdown(), serialService.shutdown()])
+  },
   exit: () => app.exit(),
   shutdownTimeoutMs: 3_000,
   onShutdownTimeout: () =>
-    loggerService.warn('LED shutdown deadline exceeded; continuing application quit', 'Main')
+    loggerService.warn('Shutdown deadline exceeded; continuing application quit', 'Main')
 })
 
 function isSafeExternalUrl(url: string): boolean {

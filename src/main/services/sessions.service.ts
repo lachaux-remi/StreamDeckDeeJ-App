@@ -1,9 +1,9 @@
-import { spawn, type ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { configService } from './config.service'
 import { loggerService } from './logger.service'
 import { sliderService } from './slider.service'
 import { commandRunner, LatestValueExecutor, runCommandWithFallback } from './audio-command'
+import { PactlSubscription } from './audio-subscription'
 
 const SERVICE = 'SessionsService'
 const MIN_REFRESH_TIME = 5 * 1000
@@ -40,7 +40,6 @@ class SessionsService extends EventEmitter {
   private sessions: AudioSession[] = []
   private mprisPlayers: string[] = []
   private mprisLastRefresh: number = 0
-  private subscribeProcess: ChildProcess | null = null
   private reapplyTimers: NodeJS.Timeout[] = []
   private recentlySet: boolean = false
   private activeVolumeSets: number = 0
@@ -51,6 +50,11 @@ class SessionsService extends EventEmitter {
     4,
     (sessionName, value) => this.setSessionVolume(sessionName, value)
   )
+  private readonly subscription = new PactlSubscription({
+    onData: (chunk) => this.handleSubscriptionData(chunk),
+    onUnavailable: (error) =>
+      loggerService.error(`Failed to start pactl subscribe: ${String(error)}`, SERVICE)
+  })
 
   constructor() {
     super()
@@ -59,7 +63,7 @@ class SessionsService extends EventEmitter {
     void this.refreshSessions()
     this.runIsStaleTask()
     this.runIsFreshTask()
-    this.startSubscribe()
+    this.subscription.start()
 
     sliderService.on('sliders:batch', (sliders: Record<string, number>) => {
       for (const [sliderKey, value] of Object.entries(sliders)) {
@@ -258,26 +262,13 @@ class SessionsService extends EventEmitter {
     this.isFreshTask = setTimeout(() => (this.isFresh = false), MIN_REFRESH_TIME)
   }
 
-  private startSubscribe(): void {
-    try {
-      this.subscribeProcess = spawn('pactl', ['subscribe'], { stdio: ['ignore', 'pipe', 'ignore'] })
-
-      this.subscribeProcess.stdout?.on('data', (chunk: Buffer) => {
-        const lines = chunk.toString().split('\n')
-        for (const line of lines) {
-          if (!line.includes('sink-input')) continue
-          if (line.includes("'new'") || (line.includes("'change'") && !this.recentlySet)) {
-            this.scheduleReapply()
-          }
-        }
-      })
-
-      this.subscribeProcess.on('close', () => {
-        this.subscribeProcess = null
-        setTimeout(() => this.startSubscribe(), 5000)
-      })
-    } catch (error) {
-      loggerService.error(`Failed to start pactl subscribe: ${error}`, SERVICE)
+  private handleSubscriptionData(chunk: Buffer): void {
+    const lines = chunk.toString().split('\n')
+    for (const line of lines) {
+      if (!line.includes('sink-input')) continue
+      if (line.includes("'new'") || (line.includes("'change'") && !this.recentlySet)) {
+        this.scheduleReapply()
+      }
     }
   }
 

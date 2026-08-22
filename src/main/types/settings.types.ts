@@ -185,6 +185,24 @@ function hasSerializedSizeAtMost(value: unknown, maxBytes: number): boolean {
   }
 }
 
+function isHomeAssistantUrl(value: unknown): value is string {
+  if (value === '') return true
+  if (typeof value !== 'string' || value !== value.trim()) return false
+  try {
+    const url = new URL(value)
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      Boolean(url.hostname) &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash
+    )
+  } catch {
+    return false
+  }
+}
+
 export function isLedColor(value: unknown): value is LedColor {
   return (
     isRecord(value) &&
@@ -303,6 +321,7 @@ export function isAppSettings(value: unknown): value is AppSettings {
   if (
     !hasOnlyKeys(value.homeAssistant, ['url', 'token']) ||
     !isStringAtMost(value.homeAssistant.url, MAX_URL_LENGTH) ||
+    !isHomeAssistantUrl(value.homeAssistant.url) ||
     !isStringAtMost(value.homeAssistant.token, MAX_SECRET_LENGTH)
   ) {
     return false
@@ -364,6 +383,7 @@ export function isRendererSettingsUpdate(value: unknown): value is RendererSetti
     !isRecord(settings.homeAssistant) ||
     !hasOnlyKeys(settings.homeAssistant, ['url', 'tokenConfigured']) ||
     !isStringAtMost(settings.homeAssistant.url, MAX_URL_LENGTH) ||
+    !isHomeAssistantUrl(settings.homeAssistant.url) ||
     typeof settings.homeAssistant.tokenConfigured !== 'boolean'
   ) {
     return false

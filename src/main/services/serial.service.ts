@@ -19,6 +19,12 @@ class SerialService extends EventEmitter {
   private serialPort: SerialPort | null = null
   private comPort: string | undefined
   private baudRate: number | undefined
+  private configEpoch = 0
+  private reloadRequested = false
+  private reloadPromise: Promise<void> | null = null
+  private reconnectTimer: NodeJS.Timeout | null = null
+  private readyTimer: NodeJS.Timeout | null = null
+  private isShuttingDown = false
   private lastRejectionLogAt = 0
   private suppressedRejections = 0
   private readonly expectedIrEchoes = new ExpectedIrEchoTracker()
@@ -85,27 +91,53 @@ class SerialService extends EventEmitter {
     if (this.comPort !== config.comPort || this.baudRate !== config.baudRate) {
       this.comPort = config.comPort
       this.baudRate = config.baudRate
-      this.reloadConnection().catch((error) =>
-        loggerService.error(`Error reloading connection: ${error}`, SERVICE)
-      )
+      this.configEpoch += 1
+      this.clearConnectionTimers()
+      this.requestReload()
     }
   }
 
-  private async reloadConnection(): Promise<void> {
-    if (this.serialPort) {
-      loggerService.info('Reloading connection', SERVICE)
-      this.expectedIrEchoes.clear()
-      await new Promise<void>((resolve) => this.serialPort?.close(() => resolve()))
-      this.serialPort = null
-      return
-    }
+  private requestReload(): void {
+    if (this.isShuttingDown) return
+    this.reloadRequested = true
+    if (this.reloadPromise) return
 
+    this.reloadPromise = this.reloadConnection()
+      .catch((error) => loggerService.error(`Error reloading connection: ${error}`, SERVICE))
+      .finally(() => {
+        this.reloadPromise = null
+        if (this.reloadRequested) this.requestReload()
+      })
+  }
+
+  private async reloadConnection(): Promise<void> {
+    while (this.reloadRequested && !this.isShuttingDown) {
+      this.reloadRequested = false
+      const epoch = this.configEpoch
+      await this.closeCurrentPort()
+
+      if (epoch !== this.configEpoch || this.isShuttingDown) continue
+      this.openConnection(epoch)
+    }
+  }
+
+  private async closeCurrentPort(): Promise<void> {
+    const port = this.serialPort
+    if (!port) return
+
+    loggerService.info('Reloading connection', SERVICE)
+    this.serialPort = null
+    this.expectedIrEchoes.clear()
+    await new Promise<void>((resolve) => port.close(() => resolve()))
+  }
+
+  private openConnection(epoch: number): void {
     if (!this.comPort || !this.baudRate) {
       loggerService.warn('No comPort or baudRate defined', SERVICE)
       return
     }
 
-    this.serialPort = new SerialPort({
+    const port = new SerialPort({
       path: this.comPort,
       baudRate: this.baudRate,
       dataBits: 8,
@@ -113,19 +145,37 @@ class SerialService extends EventEmitter {
       stopBits: 1,
       autoOpen: false
     })
+    this.serialPort = port
+    let ended = false
 
-    this.serialPort
-      .on('close', () => {
+    const finish = (error?: Error): void => {
+      if (ended || epoch !== this.configEpoch || this.serialPort !== port) return
+      ended = true
+      this.serialPort = null
+      this.expectedIrEchoes.clear()
+      if (this.readyTimer) clearTimeout(this.readyTimer)
+      this.readyTimer = null
+      if (error) {
+        loggerService.error(`Connection failed: ${error.message}`, SERVICE)
+      } else {
         loggerService.info('Connection closed', SERVICE)
-        this.reconnect()
-      })
+      }
+      this.emit('status', this.getStatus())
+      if (error && port.isOpen) {
+        port.close(() => this.scheduleReconnect(epoch))
+      } else {
+        this.scheduleReconnect(epoch)
+      }
+    }
+
+    port
+      .on('error', finish)
+      .on('close', () => finish())
       .open((err) => {
-        if (!this.serialPort) return
+        if (epoch !== this.configEpoch || this.serialPort !== port) return
 
         if (err) {
-          const msg = (err as Error)?.message
-          loggerService.error(`Connection failed: ${msg}`, SERVICE)
-          this.reconnect()
+          finish(err)
           return
         }
 
@@ -137,10 +187,16 @@ class SerialService extends EventEmitter {
 
         // Tell Arduino we're ready, it will respond with current slider values
         // Small delay to let Arduino finish USB initialization before sending
-        setTimeout(() => this.serialPort?.write('app:ready\r\n'), 500)
+        this.readyTimer = setTimeout(() => {
+          this.readyTimer = null
+          if (epoch === this.configEpoch && this.serialPort === port && port.isOpen) {
+            port.write('app:ready\r\n')
+          }
+        }, 500)
 
         const decoder = new BoundedSerialFrameDecoder()
-        this.serialPort.on('data', (chunk: Buffer) => {
+        port.on('data', (chunk: Buffer) => {
+          if (epoch !== this.configEpoch || this.serialPort !== port) return
           const decoded = decoder.write(chunk)
           for (const rejection of decoded.rejections) {
             this.logRejectedInput(rejection)
@@ -165,6 +221,22 @@ class SerialService extends EventEmitter {
       })
   }
 
+  public async shutdown(): Promise<void> {
+    this.isShuttingDown = true
+    this.configEpoch += 1
+    this.reloadRequested = false
+    this.clearConnectionTimers()
+    await this.reloadPromise
+    await this.closeCurrentPort()
+  }
+
+  private clearConnectionTimers(): void {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
+    if (this.readyTimer) clearTimeout(this.readyTimer)
+    this.reconnectTimer = null
+    this.readyTimer = null
+  }
+
   private logRejectedInput(reason: SerialRejectionReason): void {
     const now = Date.now()
     if (now - this.lastRejectionLogAt < REJECTION_LOG_INTERVAL_MS) {
@@ -180,11 +252,12 @@ class SerialService extends EventEmitter {
     this.suppressedRejections = 0
   }
 
-  private reconnect(): void {
-    this.serialPort = null
-    this.expectedIrEchoes.clear()
-    this.emit('status', this.getStatus())
-    setTimeout(() => this.reloadConnection(), 1000)
+  private scheduleReconnect(epoch: number): void {
+    if (this.reconnectTimer || this.isShuttingDown || epoch !== this.configEpoch) return
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null
+      if (epoch === this.configEpoch) this.requestReload()
+    }, 1000)
   }
 }
 
