@@ -153,6 +153,6 @@ export default defineConfig({
       }
     },
     environment: 'node',
-    include: ['src/**/*.test.ts']
+    include: ['tests/**/*.test.ts']
   }
 })

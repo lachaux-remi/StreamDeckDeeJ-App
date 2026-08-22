@@ -5,7 +5,7 @@ import {
   LatestValueExecutor,
   commandRunner,
   runCommandWithFallback
-} from './audio-command'
+} from '@main/services/audio-command'
 
 interface Deferred {
   promise: Promise<void>

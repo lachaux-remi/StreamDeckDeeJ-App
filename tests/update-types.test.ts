@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { isLinuxUpdateCommand, isLinuxUpdateState } from '../types/update.types'
+import { isLinuxUpdateCommand, isLinuxUpdateState } from '@main/types/update.types'
 
 test('accepts only the fixed updater command vocabulary', () => {
   for (const command of ['check', 'download', 'install', 'open-release']) {

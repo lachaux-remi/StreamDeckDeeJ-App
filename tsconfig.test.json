@@ -1,6 +1,6 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
-  "include": ["src/**/*.test.ts", "vitest.config.mts"],
+  "include": ["src/**/*", "tests/**/*.ts", "vitest.config.mts"],
   "compilerOptions": {
     "noEmit": true,
     "module": "ESNext",

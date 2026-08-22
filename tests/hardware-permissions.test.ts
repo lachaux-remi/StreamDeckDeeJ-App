@@ -2,14 +2,14 @@ import { expect, test } from 'vitest'
 import {
   HARDWARE_PERMISSIONS_CHANNELS,
   assertHardwarePermissionsRequest
-} from '../handlers/hardware-permissions.contract'
+} from '@main/handlers/hardware-permissions.contract'
 import {
   buildManualInstallCommand,
   buildHardwarePermissionsDiagnostic,
   isReadOnlyAppImageMount,
   runPermissionInstaller
-} from './hardware-permissions-core'
-import { isTrustedSender } from '../handlers/trusted-ipc-core'
+} from '@main/services/hardware-permissions-core'
+import { isTrustedSender } from '@main/handlers/trusted-ipc-core'
 
 const EXPECTED_RULE = [
   'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="5239", ATTRS{idProduct}=="0001", TAG+="uaccess"',

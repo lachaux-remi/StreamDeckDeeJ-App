@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
-import type { AppSettings } from '../types/settings.types'
-import { toRendererSettings } from './renderer-settings'
+import { toRendererSettings } from '@main/services/renderer-settings'
+import type { AppSettings } from '@main/types/settings.types'
 
 test('renderer settings expose secret state but never secret values', () => {
   const fixtureSecret = 'synthetic-fixture-value'

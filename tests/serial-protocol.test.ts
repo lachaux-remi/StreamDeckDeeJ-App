@@ -4,7 +4,7 @@ import {
   ExpectedIrEchoTracker,
   MAX_SERIAL_FRAME_BYTES,
   parseSerialFrame
-} from './serial-protocol'
+} from '@main/services/serial-protocol'
 
 const frame = (value: unknown): Buffer => Buffer.from(`${JSON.stringify(value)}\r\n`)
 

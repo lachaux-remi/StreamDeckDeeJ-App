@@ -16,10 +16,12 @@ electronFuses:
 files:
   - '!**/.vscode/*'
   - '!src/*'
+  - '!tests/**/*'
+  - '!**/{test,tests,__tests__}/**/*'
   - '!scripts/*'
   - '!dist/*'
   - '!electron.vite.config.*'
-  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.json,tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.json,tsconfig.json,tsconfig.node.json,tsconfig.web.json,tsconfig.test.json,vitest.config.mts}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!**/*.map'
   - '!**/node_modules/node-hid/{hidapi,src}/**/*'

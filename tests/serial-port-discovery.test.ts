@@ -1,5 +1,8 @@
 import { expect, test } from 'vitest'
-import { isOfficialFirmwarePort, preferOfficialFirmwarePorts } from './serial-port-discovery'
+import {
+  isOfficialFirmwarePort,
+  preferOfficialFirmwarePorts
+} from '@main/services/serial-port-discovery'
 
 test('recognizes the official firmware exact USB VID/PID', () => {
   expect(isOfficialFirmwarePort({ vendorId: '5239', productId: '0001' })).toBe(true)

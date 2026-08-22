@@ -1,5 +1,8 @@
 import { expect, test } from 'vitest'
-import { LinuxUpdateController, detectLinuxUpdateMode } from './linux-update-controller'
+import {
+  LinuxUpdateController,
+  detectLinuxUpdateMode
+} from '@main/services/linux-update-controller'
 
 const update = {
   version: '4.1.0',
