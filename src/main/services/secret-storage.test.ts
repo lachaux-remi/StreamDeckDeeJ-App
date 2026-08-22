@@ -7,19 +7,35 @@ import { ElectronSafeStorageSecretCodec, SettingsPersistence } from './secret-st
 
 const fixtureSecret = 'synthetic-fixture-value'
 
-// JavaScript keeps this harness outside the application's TypeScript build.
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-function safeStorage(backend = 'gnome_libsecret') {
-  return {
-    isEncryptionAvailable: () => true,
-    getSelectedStorageBackend: () => backend,
-    encryptString: (value) => Buffer.from(`protected:${value}`),
-    decryptString: (value) => value.toString().replace(/^protected:/, '')
+type Backend = 'basic_text' | 'gnome_libsecret'
+
+interface FakeSafeStorage {
+  isEncryptionAvailable(): boolean
+  getSelectedStorageBackend(): Backend
+  encryptString(value: string): Buffer
+  decryptString(value: Buffer): string
+}
+
+interface FixtureSettings {
+  homeAssistant: { url: string; token: string }
+  discord: {
+    clientId: string
+    clientSecret: string
+    accessToken: string
+    refreshToken: string
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-function settings(secret = fixtureSecret) {
+function safeStorage(backend: Backend = 'gnome_libsecret'): FakeSafeStorage {
+  return {
+    isEncryptionAvailable: () => true,
+    getSelectedStorageBackend: () => backend,
+    encryptString: (value: string) => Buffer.from(`protected:${value}`),
+    decryptString: (value: Buffer) => value.toString().replace(/^protected:/, '')
+  }
+}
+
+function settings(secret = fixtureSecret): FixtureSettings {
   return {
     homeAssistant: { url: 'https://example.invalid', token: secret },
     discord: {

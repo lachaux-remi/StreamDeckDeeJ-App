@@ -6,14 +6,12 @@ import {
   parseSerialFrame
 } from './serial-protocol.ts'
 
-// JavaScript keeps this harness outside the application's TypeScript build.
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-const frame = (value) => Buffer.from(`${JSON.stringify(value)}\r\n`)
+const frame = (value: unknown): Buffer => Buffer.from(`${JSON.stringify(value)}\r\n`)
 
-test('decodes valid Arduino frames split across chunks', () => {
+test('decodes official firmware frames split across CRLF chunks', () => {
   const decoder = new BoundedSerialFrameDecoder()
-  const deej = frame({ type: 'deej', value: { 0: 0, 1: 512, 15: 1023 } })
-  const deck = frame({ type: 'deck', state: 'released', value: 63 })
+  const deej = frame({ type: 'deej', value: { 0: 0, 1: 256, 2: 512, 3: 768, 4: 1023 } })
+  const deck = frame({ type: 'deck', state: 'hold', value: 15 })
 
   const first = decoder.write(deej.subarray(0, 12), 100)
   const second = decoder.write(Buffer.concat([deej.subarray(12), deck]), 100)
@@ -21,10 +19,25 @@ test('decodes valid Arduino frames split across chunks', () => {
   assert.deepEqual(first, { frames: [], rejections: [] })
   assert.equal(second.frames.length, 2)
   assert.deepEqual(parseSerialFrame(second.frames[0]), {
-    message: { type: 'deej', value: { 0: 0, 1: 512, 15: 1023 } }
+    message: { type: 'deej', value: { 0: 0, 1: 256, 2: 512, 3: 768, 4: 1023 } }
   })
   assert.deepEqual(parseSerialFrame(second.frames[1]), {
+    message: { type: 'deck', state: 'hold', value: 15 }
+  })
+})
+
+test('accepts the application contract for extensible compatible controllers', () => {
+  assert.deepEqual(parseSerialFrame(Buffer.from('{"type":"deck","state":"released","value":63}')), {
     message: { type: 'deck', state: 'released', value: 63 }
+  })
+  assert.deepEqual(parseSerialFrame(Buffer.from('{"type":"deej","value":{"15":1023}}')), {
+    message: { type: 'deej', value: { 15: 1023 } }
+  })
+})
+
+test('rejects the official firmware IR echo because it is not JSON', () => {
+  assert.deepEqual(parseSerialFrame(Buffer.from('9000,4500,560,560')), {
+    rejection: 'invalid JSON'
   })
 })
 
