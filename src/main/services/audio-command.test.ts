@@ -1,16 +1,24 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { LatestValueExecutor, commandRunner, runCommandWithFallback } from './audio-command.ts'
+import {
+  type Command,
+  type CommandRunner,
+  LatestValueExecutor,
+  commandRunner,
+  runCommandWithFallback
+} from './audio-command.ts'
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-const deferred = () => {
-  let resolve
-  let reject
-  const promise = new Promise((resolvePromise, rejectPromise) => {
+interface Deferred {
+  promise: Promise<void>
+  resolve: () => void
+}
+
+const deferred = (): Deferred => {
+  let resolve!: () => void
+  const promise = new Promise<void>((resolvePromise) => {
     resolve = resolvePromise
-    reject = rejectPromise
   })
-  return { promise, resolve, reject }
+  return { promise, resolve }
 }
 
 test('runs commands without blocking the event loop', async () => {
@@ -20,7 +28,9 @@ test('runs commands without blocking the event loop', async () => {
     ['-e', 'setTimeout(() => process.stdout.write("done"), 50)'],
     1_000
   )
-  void command.then(() => (commandCompleted = true))
+  void command.then(() => {
+    commandCompleted = true
+  })
 
   await new Promise((resolve) => setImmediate(resolve))
 
@@ -29,9 +39,9 @@ test('runs commands without blocking the event loop', async () => {
 })
 
 test('runs the fallback only after the primary command fails', async () => {
-  const calls = []
-  const fakeRunner = {
-    async run(file, args, timeout) {
+  const calls: Command[] = []
+  const fakeRunner: CommandRunner = {
+    async run(file, args, timeout): Promise<string> {
       calls.push({ file, args, timeout })
       if (file === 'wpctl') throw new Error('unavailable')
       return 'Volume: 42%'
@@ -53,10 +63,10 @@ test('runs the fallback only after the primary command fails', async () => {
 
 test('bounds concurrency and applies only the latest pending value per target', async () => {
   const first = deferred()
-  const applied = []
+  const applied: Array<[string, number]> = []
   let active = 0
   let maxActive = 0
-  const executor = new LatestValueExecutor(4, async (target, value) => {
+  const executor = new LatestValueExecutor<string, number>(4, async (target, value) => {
     active += 1
     maxActive = Math.max(maxActive, active)
     applied.push([target, value])
@@ -85,7 +95,7 @@ test('allows bounded parallelism across independent targets', async () => {
   const gates = [deferred(), deferred()]
   let active = 0
   let maxActive = 0
-  const executor = new LatestValueExecutor(2, async (_target, index) => {
+  const executor = new LatestValueExecutor<string, number>(2, async (_target, index) => {
     active += 1
     maxActive = Math.max(maxActive, active)
     await gates[index].promise
