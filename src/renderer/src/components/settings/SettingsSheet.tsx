@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Cpu, Eye, EyeOff, Grid3X3, Headphones, Home, Monitor, RefreshCw, Settings, Sparkles, X } from 'lucide-react'
+import { AlertTriangle, Cpu, Download, Eye, EyeOff, Grid3X3, Headphones, Home, Monitor, RefreshCw, Settings, Sparkles, Upload, X } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import { useSettingsStore } from '@renderer/stores/settings.store'
 import { useSerialStore } from '@renderer/stores/serial.store'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
 import ColorPicker from '@renderer/components/ui/ColorPicker'
-import type { LedMode, SecretChange } from '@renderer/types/settings.types'
+import { isRendererSettings, type LedMode, type SecretChange } from '@renderer/types/settings.types'
 
 const LED_MODES: { value: LedMode; label: string; description: string }[] = [
   { value: 'static', label: 'Statique', description: 'Couleur fixe uniforme' },
@@ -37,6 +37,7 @@ interface SettingsSheetProps {
 
 export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): React.JSX.Element | null {
   const settings = useSettingsStore((s) => s.settings)
+  const hydrate = useSettingsStore((s) => s.hydrate)
   const updateConfig = useSettingsStore((s) => s.updateConfig)
   const serialPorts = useSerialStore((s) => s.serialPorts)
   const setSerialPorts = useSerialStore((s) => s.setSerialPorts)
@@ -55,6 +56,11 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
     action: 'unchanged'
   })
   const [clearDiscordTokens, setClearDiscordTokens] = useState(false)
+  const [isTransferring, setIsTransferring] = useState(false)
+  const [transferMessage, setTransferMessage] = useState<{
+    status: 'success' | 'cancelled' | 'error'
+    message: string
+  } | null>(null)
 
   const hasChanges = useMemo(
     () =>
@@ -72,6 +78,7 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
       setHATokenChange({ action: 'unchanged' })
       setDiscordSecretChange({ action: 'unchanged' })
       setClearDiscordTokens(false)
+      setTransferMessage(null)
     }
   }, [isOpen, settings])
 
@@ -133,6 +140,44 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
     })
     onClose()
   }, [localSettings, haTokenChange, discordSecretChange, clearDiscordTokens, updateConfig, onClose])
+
+  const handleExport = useCallback(async () => {
+    setIsTransferring(true)
+    try {
+      setTransferMessage(await window.api.settings.export())
+    } catch {
+      setTransferMessage({ status: 'error', message: 'Export impossible.' })
+    } finally {
+      setIsTransferring(false)
+    }
+  }, [])
+
+  const handleImport = useCallback(async () => {
+    setIsTransferring(true)
+    try {
+      const result = await window.api.settings.import()
+      if (result.status === 'success') {
+        const importedSettings = await window.api.settings.hydrate()
+        if (!isRendererSettings(importedSettings)) {
+          setTransferMessage({
+            status: 'error',
+            message: 'Import appliqué, mais l’affichage n’a pas pu être actualisé.'
+          })
+          return
+        }
+        hydrate(importedSettings)
+        setLocalSettings(importedSettings)
+        setHATokenChange({ action: 'unchanged' })
+        setDiscordSecretChange({ action: 'unchanged' })
+        setClearDiscordTokens(false)
+      }
+      setTransferMessage(result)
+    } catch {
+      setTransferMessage({ status: 'error', message: 'Import impossible.' })
+    } finally {
+      setIsTransferring(false)
+    }
+  }, [hydrate])
 
   if (!isOpen) return null
 
@@ -376,6 +421,53 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
                         color="neon-cyan"
                       />
                     ))}
+                  </div>
+                </section>
+
+                <section>
+                  <SectionTitle
+                    icon={<Download className="h-3.5 w-3.5 text-neon-green" />}
+                    label="Configuration"
+                    color="text-neon-green"
+                  />
+                  <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground/50">
+                    L’export JSON exclut les tokens et secrets. L’import conserve les secrets déjà
+                    enregistrés et crée une sauvegarde avant application.
+                  </p>
+                  {transferMessage && (
+                    <p
+                      role="status"
+                      className={cn(
+                        'mb-2.5 text-[11px] leading-relaxed',
+                        transferMessage.status === 'error'
+                          ? 'text-neon-red'
+                          : transferMessage.status === 'success'
+                            ? 'text-neon-green'
+                            : 'text-muted-foreground/60'
+                      )}
+                    >
+                      {transferMessage.message}
+                    </p>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={handleExport}
+                      disabled={isTransferring}
+                      className="flex items-center justify-center gap-2 rounded-lg border border-neon-green/30 bg-neon-green/10 py-2.5 text-xs font-semibold text-neon-green transition-all hover:bg-neon-green/20 disabled:cursor-wait disabled:opacity-50"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Exporter
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleImport}
+                      disabled={isTransferring}
+                      className="flex items-center justify-center gap-2 rounded-lg border border-neon-blue/30 bg-neon-blue/10 py-2.5 text-xs font-semibold text-neon-blue transition-all hover:bg-neon-blue/20 disabled:cursor-wait disabled:opacity-50"
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      Importer
+                    </button>
                   </div>
                 </section>
               </>
