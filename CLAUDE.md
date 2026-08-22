@@ -8,10 +8,10 @@ StreamDeck DeeJ is an Electron desktop app for Linux that controls Stream Deck h
 
 ## Tech Stack
 
-- **Runtime**: Electron 33 + Node.js 24 + TypeScript 5.9
-- **Build**: electron-vite 5, Vite 6, electron-builder 25
+- **Runtime**: Electron 43 + Node.js 24 + TypeScript 5.9
+- **Build**: electron-vite 5, Vite 6, electron-builder 26
 - **Frontend**: React 19, Zustand (state), Tailwind CSS 4, shadcn/ui (new-york style)
-- **Backend**: serialport (Arduino serial), electron-store (config persistence), pino (logging)
+- **Backend**: serialport (Arduino serial), JSON config persistence, pino (logging)
 - **Package manager**: pnpm
 
 ## Commands
@@ -38,7 +38,7 @@ pnpm typecheck      # TypeScript check (node + web)
 
 Services are singletons exported from their files:
 
-- `services/config.service.ts` - electron-store wrapper, emits `config:updated`
+- `services/config.service.ts` - JSON config persistence, emits `config:updated`
 - `services/serial.service.ts` - SerialPort + ReadlineParser, auto-reconnect, emits `serial:deck` / `serial:deej`
 - `services/deck.service.ts` - Maps button presses to module actions (HA, IR, Macro)
 - `services/slider.service.ts` - ADC→0-1 conversion, threshold filtering
@@ -61,17 +61,17 @@ State management: two Zustand stores (`settings.store.ts` for config, `serial.st
 
 ### IPC Channels
 
-| Channel | Direction | Purpose |
-|---------|-----------|---------|
-| `settings:hydrate` | renderer→main | Load full config |
-| `settings:update` | renderer→main | Save config changes |
-| `serial:list` | renderer→main | List serial ports |
-| `serial:status` | main→renderer | Connection status updates |
-| `deej:slider` | main→renderer | Real-time slider values |
-| `streamdeck:update` | main→renderer | Button state changes |
-| `electron:log` | main→renderer | Log entries |
+| Channel             | Direction     | Purpose                   |
+| ------------------- | ------------- | ------------------------- |
+| `settings:hydrate`  | renderer→main | Load full config          |
+| `settings:update`   | renderer→main | Save config changes       |
+| `serial:list`       | renderer→main | List serial ports         |
+| `serial:status`     | main→renderer | Connection status updates |
+| `deej:sliders`      | main→renderer | Real-time slider values   |
+| `streamdeck:update` | main→renderer | Button state changes      |
+| `electron:log`      | main→renderer | Log entries               |
 
-### Config Schema (`electron-store`)
+### Config Schema
 
 Key settings: `comPort`, `baudRate`, `gridCols`, `gridRows`, `sliderCount`, `streamdeck` (button configs), `deej` (slider→session mappings), `homeAssistant.url`.
 

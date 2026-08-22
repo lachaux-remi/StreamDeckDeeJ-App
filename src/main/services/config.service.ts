@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { EventEmitter } from 'node:events'
 import type { AppSettings } from '@main/types/settings.types'
@@ -78,7 +78,11 @@ class ConfigService extends EventEmitter {
 
   private save(): void {
     try {
-      writeFileSync(this.configPath, JSON.stringify(this.data, null, 2), 'utf-8')
+      writeFileSync(this.configPath, JSON.stringify(this.data, null, 2), {
+        encoding: 'utf-8',
+        mode: 0o600
+      })
+      chmodSync(this.configPath, 0o600)
     } catch (err) {
       loggerService.error(`Failed to save config: ${err}`, SERVICE)
     }

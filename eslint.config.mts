@@ -4,9 +4,9 @@ import reactPlugin from 'eslint-plugin-react'
 import reactHooksPlugin from 'eslint-plugin-react-hooks'
 import reactRefreshPlugin from 'eslint-plugin-react-refresh'
 
-export default [
+export default tsConfig.config(
+  tsConfig.configs.recommended,
   { ignores: ['**/node_modules', '**/dist', '**/out'] },
-  ...tsConfig,
   {
     files: ['src/renderer/src/**/*.{ts,tsx}'],
     plugins: {
@@ -26,4 +26,4 @@ export default [
     }
   },
   prettierConfig
-]
+)

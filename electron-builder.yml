@@ -21,8 +21,7 @@ linux:
   maintainer: contact@remi-lachaux.fr
   category: Utility
   icon: resources/logo.png
-  desktop:
-    StartupWMClass: streamdeck-deej
+  syncDesktopName: true
 appImage:
   artifactName: ${name}-${version}.${ext}
 pacman:
