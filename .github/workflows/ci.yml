@@ -29,8 +29,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --strict-peer-dependencies
 
-      - name: Test
-        run: pnpm test
+      - name: Typecheck tests
+        run: pnpm typecheck:test
+
+      - name: Test with coverage
+        run: pnpm test:coverage
 
       - name: Lint
         run: pnpm lint
