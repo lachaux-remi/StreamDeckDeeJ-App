@@ -1,30 +1,42 @@
-import assert from 'node:assert/strict'
-import test from 'node:test'
+import { expect, test } from 'vitest'
 import {
   BoundedSerialFrameDecoder,
   MAX_SERIAL_FRAME_BYTES,
   parseSerialFrame
-} from './serial-protocol.ts'
+} from './serial-protocol'
 
-// JavaScript keeps this harness outside the application's TypeScript build.
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-const frame = (value) => Buffer.from(`${JSON.stringify(value)}\r\n`)
+const frame = (value: unknown): Buffer => Buffer.from(`${JSON.stringify(value)}\r\n`)
 
-test('decodes valid Arduino frames split across chunks', () => {
+test('decodes official firmware frames split across CRLF chunks', () => {
   const decoder = new BoundedSerialFrameDecoder()
-  const deej = frame({ type: 'deej', value: { 0: 0, 1: 512, 15: 1023 } })
-  const deck = frame({ type: 'deck', state: 'released', value: 63 })
+  const deej = frame({ type: 'deej', value: { 0: 0, 1: 256, 2: 512, 3: 768, 4: 1023 } })
+  const deck = frame({ type: 'deck', state: 'hold', value: 15 })
 
   const first = decoder.write(deej.subarray(0, 12), 100)
   const second = decoder.write(Buffer.concat([deej.subarray(12), deck]), 100)
 
-  assert.deepEqual(first, { frames: [], rejections: [] })
-  assert.equal(second.frames.length, 2)
-  assert.deepEqual(parseSerialFrame(second.frames[0]), {
-    message: { type: 'deej', value: { 0: 0, 1: 512, 15: 1023 } }
+  expect(first).toEqual({ frames: [], rejections: [] })
+  expect(second.frames).toHaveLength(2)
+  expect(parseSerialFrame(second.frames[0])).toEqual({
+    message: { type: 'deej', value: { 0: 0, 1: 256, 2: 512, 3: 768, 4: 1023 } }
   })
-  assert.deepEqual(parseSerialFrame(second.frames[1]), {
+  expect(parseSerialFrame(second.frames[1])).toEqual({
+    message: { type: 'deck', state: 'hold', value: 15 }
+  })
+})
+
+test('accepts the application contract for extensible compatible controllers', () => {
+  expect(parseSerialFrame(Buffer.from('{"type":"deck","state":"released","value":63}'))).toEqual({
     message: { type: 'deck', state: 'released', value: 63 }
+  })
+  expect(parseSerialFrame(Buffer.from('{"type":"deej","value":{"15":1023}}'))).toEqual({
+    message: { type: 'deej', value: { 15: 1023 } }
+  })
+})
+
+test('rejects the official firmware IR echo because it is not JSON', () => {
+  expect(parseSerialFrame(Buffer.from('9000,4500,560,560'))).toEqual({
+    rejection: 'invalid JSON'
   })
 })
 
@@ -43,7 +55,7 @@ test('rejects malformed, unknown, and non-strict messages', () => {
   ]
 
   for (const invalidFrame of invalidFrames) {
-    assert.ok('rejection' in parseSerialFrame(invalidFrame))
+    expect(parseSerialFrame(invalidFrame)).toHaveProperty('rejection')
   }
 })
 
@@ -51,8 +63,8 @@ test('bounds an unterminated frame and recovers at the next delimiter', () => {
   const decoder = new BoundedSerialFrameDecoder()
   const oversized = decoder.write(Buffer.alloc(MAX_SERIAL_FRAME_BYTES * 4, 0x61), 100)
 
-  assert.deepEqual(oversized.rejections, ['frame too large'])
-  assert.ok(decoder.bufferedByteLength <= MAX_SERIAL_FRAME_BYTES)
+  expect(oversized.rejections).toEqual(['frame too large'])
+  expect(decoder.bufferedByteLength).toBeLessThanOrEqual(MAX_SERIAL_FRAME_BYTES)
 
   const recovery = decoder.write(
     Buffer.concat([
@@ -65,8 +77,8 @@ test('bounds an unterminated frame and recovers at the next delimiter', () => {
     ]),
     100
   )
-  assert.equal(recovery.frames.length, 1)
-  assert.deepEqual(parseSerialFrame(recovery.frames[0]), {
+  expect(recovery.frames).toHaveLength(1)
+  expect(parseSerialFrame(recovery.frames[0])).toEqual({
     message: { type: 'deck', state: 'pressed', value: 0 }
   })
 })
@@ -80,10 +92,10 @@ test('limits complete frame processing frequency', () => {
   ])
 
   const limited = decoder.write(threeFrames, 100)
-  assert.equal(limited.frames.length, 2)
-  assert.deepEqual(limited.rejections, ['frame rate exceeded'])
+  expect(limited.frames).toHaveLength(2)
+  expect(limited.rejections).toEqual(['frame rate exceeded'])
 
   const nextWindow = decoder.write(frame({ type: 'deej', value: { 0: 100 } }), 1_100)
-  assert.equal(nextWindow.frames.length, 1)
-  assert.deepEqual(nextWindow.rejections, [])
+  expect(nextWindow.frames).toHaveLength(1)
+  expect(nextWindow.rejections).toEqual([])
 })
