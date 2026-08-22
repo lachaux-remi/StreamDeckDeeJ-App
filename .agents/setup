@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+start_time=$SECONDS
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+echo "[setup] Checking Debian packages"
+packages=(
+  build-essential
+  ca-certificates
+  curl
+  dbus-x11
+  libarchive-tools
+  libasound2
+  libgbm1
+  libgtk-3-0
+  libnotify4
+  libnss3
+  libudev-dev
+  libusb-1.0-0-dev
+  libxss1
+  libxtst6
+  pipewire-bin
+  pkg-config
+  pulseaudio-utils
+  python3
+  udev
+  wireplumber
+  xdg-utils
+  xz-utils
+  xvfb
+)
+missing_packages=()
+for package in "${packages[@]}"; do
+  if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -Fq 'install ok installed'; then
+    missing_packages+=("$package")
+  fi
+done
+
+if ((${#missing_packages[@]})); then
+  echo "[setup] Installing missing packages: ${missing_packages[*]}"
+  sudo apt-get update -qq
+  sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${missing_packages[@]}"
+else
+  echo "[setup] Debian packages already installed"
+fi
+
+echo "[setup] Ensuring Node.js 24"
+node_arch=''
+case "$(uname -m)" in
+  x86_64) node_arch='x64' ;;
+  aarch64 | arm64) node_arch='arm64' ;;
+  *)
+    echo "[setup] Unsupported architecture: $(uname -m)" >&2
+    exit 1
+    ;;
+esac
+
+node_version="$({ curl -fsSL https://nodejs.org/dist/index.json; } | python3 -c '
+import json, sys
+for release in json.load(sys.stdin):
+    if release["version"].startswith("v24."):
+        print(release["version"])
+        break
+else:
+    raise SystemExit("No Node.js 24 release found")
+')"
+node_dir="$HOME/.local/share/nodejs/$node_version"
+
+if [[ ! -x "$node_dir/bin/node" ]]; then
+  tmp_dir="$(mktemp -d)"
+  trap 'rm -rf "$tmp_dir"' EXIT
+  archive="node-${node_version}-linux-${node_arch}.tar.xz"
+  curl -fsSL "https://nodejs.org/dist/${node_version}/${archive}" -o "$tmp_dir/$archive"
+  curl -fsSL "https://nodejs.org/dist/${node_version}/SHASUMS256.txt" -o "$tmp_dir/SHASUMS256.txt"
+  (
+    cd "$tmp_dir"
+    grep -F "  $archive" SHASUMS256.txt | sha256sum --check --strict -
+  )
+  mkdir -p "$node_dir"
+  tar -xJf "$tmp_dir/$archive" --strip-components=1 -C "$node_dir"
+fi
+
+mkdir -p "$HOME/.local/bin"
+for binary in node npm npx corepack; do
+  if [[ -e "$node_dir/bin/$binary" ]]; then
+    ln -sfn "$node_dir/bin/$binary" "$HOME/.local/bin/$binary"
+  fi
+done
+export PATH="$HOME/.local/bin:$PATH"
+hash -r
+
+profile_marker='# streamdeck-deej orb toolchain'
+if ! grep -Fqx "$profile_marker" "$HOME/.bash_profile" 2>/dev/null; then
+  cat >> "$HOME/.bash_profile" <<'EOF'
+
+# streamdeck-deej orb toolchain
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*) ;;
+  *) export PATH="$HOME/.local/bin:$PATH" ;;
+esac
+EOF
+fi
+
+pnpm_version="$(node -p "require('./package.json').packageManager.split('@').at(-1)")"
+if [[ "$(command -v pnpm 2>/dev/null || true)" != "$HOME/.local/bin/pnpm" ]] ||
+  [[ "$(pnpm --version 2>/dev/null || true)" != "$pnpm_version" ]]; then
+  echo "[setup] Installing pnpm $pnpm_version"
+  npm install --global --prefix "$HOME/.local" "pnpm@$pnpm_version"
+  hash -r
+fi
+
+echo "[setup] Installing project dependencies"
+pnpm install --frozen-lockfile
+
+echo "[setup] Ready in $((SECONDS - start_time))s (Node $(node --version), pnpm $(pnpm --version))"

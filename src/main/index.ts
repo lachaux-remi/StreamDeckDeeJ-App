@@ -27,6 +27,15 @@ const APP_ICON = isDev
   ? join(__dirname, '../../resources/logo.png')
   : join(process.resourcesPath, 'logo.png')
 
+function isSafeExternalUrl(url: string): boolean {
+  try {
+    const protocol = new URL(url).protocol
+    return protocol === 'https:' || protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+
 async function setAutostart(enabled: boolean): Promise<void> {
   if (isDev) return
   try {
@@ -72,7 +81,9 @@ app.whenReady().then(async () => {
     icon: APP_ICON,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
     }
   })
 
@@ -157,9 +168,12 @@ app.whenReady().then(async () => {
 
   // External links
   webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    if (isSafeExternalUrl(url)) {
+      void shell.openExternal(url)
+    }
     return { action: 'deny' }
   })
+  webContents.on('will-navigate', (event) => event.preventDefault())
 
   // Open devTools on launch if enabled
   if (config.devTools) {

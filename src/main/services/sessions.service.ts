@@ -1,4 +1,4 @@
-import { execSync, spawn, type ChildProcess } from 'node:child_process'
+import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { configService } from './config.service'
 import { loggerService } from './logger.service'
@@ -70,7 +70,10 @@ class SessionsService extends EventEmitter {
       this.sessions = this.parsePwDump()
     } catch {
       try {
-        const output = execSync('pactl list sink-inputs', { encoding: 'utf-8', timeout: 5000 })
+        const output = execFileSync('pactl', ['list', 'sink-inputs'], {
+          encoding: 'utf-8',
+          timeout: 5000
+        })
         this.sessions = this.parsePactlOutput(output)
       } catch (error) {
         loggerService.error(`Failed to list audio sessions: ${error}`, SERVICE)
@@ -108,14 +111,14 @@ class SessionsService extends EventEmitter {
     try {
       if (sessionName === 'master') {
         try {
-          const output = execSync('wpctl get-volume @DEFAULT_AUDIO_SINK@', {
+          const output = execFileSync('wpctl', ['get-volume', '@DEFAULT_AUDIO_SINK@'], {
             encoding: 'utf-8',
             timeout: 2000
           })
           const match = output.match(/Volume:\s+([\d.]+)/)
           return match ? parseFloat(match[1]) : null
         } catch {
-          const output = execSync('pactl get-sink-volume @DEFAULT_SINK@', {
+          const output = execFileSync('pactl', ['get-sink-volume', '@DEFAULT_SINK@'], {
             encoding: 'utf-8',
             timeout: 2000
           })
@@ -124,9 +127,7 @@ class SessionsService extends EventEmitter {
         }
       }
 
-      const matching = this.sessions.find(
-        (s) => s.name.toLowerCase() === sessionName.toLowerCase()
-      )
+      const matching = this.sessions.find((s) => s.name.toLowerCase() === sessionName.toLowerCase())
       return matching ? matching.volume : null
     } catch {
       return null
@@ -169,7 +170,7 @@ class SessionsService extends EventEmitter {
    * node does NOT carry application.name itself.
    */
   private parsePwDump(): AudioSession[] {
-    const raw = execSync('pw-dump --no-colors', { encoding: 'utf-8', timeout: 5000 })
+    const raw = execFileSync('pw-dump', ['--no-colors'], { encoding: 'utf-8', timeout: 5000 })
     const objects: PwDumpObject[] = JSON.parse(raw)
 
     const clientMap = new Map<number, Record<string, unknown>>()
@@ -293,8 +294,16 @@ class SessionsService extends EventEmitter {
 
   private refreshMprisPlayers(): void {
     try {
-      const output = execSync(
-        'dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames',
+      const output = execFileSync(
+        'dbus-send',
+        [
+          '--session',
+          '--dest=org.freedesktop.DBus',
+          '--type=method_call',
+          '--print-reply',
+          '/org/freedesktop/DBus',
+          'org.freedesktop.DBus.ListNames'
+        ],
         { encoding: 'utf-8', timeout: 2000 }
       )
       this.mprisPlayers = []
@@ -328,8 +337,18 @@ class SessionsService extends EventEmitter {
 
   private setMprisVolume(busName: string, value: number): void {
     try {
-      execSync(
-        `dbus-send --session --print-reply --dest=${busName} /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Set string:org.mpris.MediaPlayer2.Player string:Volume variant:double:${value}`,
+      execFileSync(
+        'dbus-send',
+        [
+          '--session',
+          '--print-reply',
+          `--dest=${busName}`,
+          '/org/mpris/MediaPlayer2',
+          'org.freedesktop.DBus.Properties.Set',
+          'string:org.mpris.MediaPlayer2.Player',
+          'string:Volume',
+          `variant:double:${value}`
+        ],
         { timeout: 2000, stdio: 'ignore' }
       )
     } catch {
@@ -346,9 +365,13 @@ class SessionsService extends EventEmitter {
 
       if (sessionName === 'master') {
         try {
-          execSync(`wpctl set-volume @DEFAULT_AUDIO_SINK@ ${percent}%`, { timeout: 2000 })
+          execFileSync('wpctl', ['set-volume', '@DEFAULT_AUDIO_SINK@', `${percent}%`], {
+            timeout: 2000
+          })
         } catch {
-          execSync(`pactl set-sink-volume @DEFAULT_SINK@ ${percent}%`, { timeout: 2000 })
+          execFileSync('pactl', ['set-sink-volume', '@DEFAULT_SINK@', `${percent}%`], {
+            timeout: 2000
+          })
         }
       } else {
         const matching = this.sessions.filter(
@@ -357,14 +380,18 @@ class SessionsService extends EventEmitter {
         if (matching.length > 0) {
           for (const session of matching) {
             try {
-              execSync(`wpctl set-volume ${session.pwNodeId} ${percent}%`, { timeout: 2000 })
+              execFileSync('wpctl', ['set-volume', String(session.pwNodeId), `${percent}%`], {
+                timeout: 2000
+              })
             } catch {
               this.refreshSessions()
               const fresh = this.sessions.find(
                 (s) => s.name.toLowerCase() === sessionName.toLowerCase()
               )
               if (fresh) {
-                execSync(`wpctl set-volume ${fresh.pwNodeId} ${percent}%`, { timeout: 2000 })
+                execFileSync('wpctl', ['set-volume', String(fresh.pwNodeId), `${percent}%`], {
+                  timeout: 2000
+                })
               }
             }
           }

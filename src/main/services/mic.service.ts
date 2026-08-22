@@ -1,4 +1,4 @@
-import { execSync, spawn, type ChildProcess } from 'node:child_process'
+import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { loggerService } from './logger.service'
 
@@ -20,7 +20,7 @@ class MicService extends EventEmitter {
 
   private queryMuteState(): void {
     try {
-      const out = execSync('pactl get-source-mute @DEFAULT_SOURCE@', {
+      const out = execFileSync('pactl', ['get-source-mute', '@DEFAULT_SOURCE@'], {
         encoding: 'utf-8',
         timeout: 2000
       })
