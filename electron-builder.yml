@@ -31,6 +31,10 @@ asarUnpack:
 extraResources:
   - from: resources/logo.png
     to: logo.png
+  - from: build/linux/70-streamdeck-deej.rules
+    to: linux/70-streamdeck-deej.rules
+  - from: build/linux/install-udev-rule
+    to: linux/install-udev-rule
 linux:
   target:
     - AppImage
@@ -44,6 +48,8 @@ appImage:
 pacman:
   artifactName: ${name}-${version}.pkg.tar.xz
   compression: xz
+  afterInstall: build/linux/after-install.tpl
+  afterRemove: build/linux/after-remove.tpl
   depends:
     - c-ares
     - ffmpeg

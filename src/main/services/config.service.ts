@@ -1,5 +1,5 @@
-import { app } from 'electron'
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { app, safeStorage } from 'electron'
+import { existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { EventEmitter } from 'node:events'
 import {
@@ -10,37 +10,17 @@ import {
   type SecretChange
 } from '@main/types/settings.types'
 import { loggerService } from './logger.service'
+import { applySettingsDefaults, defaultSettings } from './settings-defaults'
+import { toRendererSettings } from './renderer-settings'
+import { ElectronSafeStorageSecretCodec, SettingsPersistence } from './secret-storage'
 
 const SERVICE = 'ConfigService'
 
-const defaults: AppSettings = {
-  comPort: '/dev/ttyACM0',
-  baudRate: 9600,
-  gridCols: 4,
-  gridRows: 4,
-  sliderCount: 4,
-  streamdeck: {},
-  deej: {},
-  deejNames: {},
-  invertSliders: false,
-  runOnStartup: false,
-  runInBackground: false,
-  closeToTray: true,
-  devTools: false,
-  homeAssistant: { url: '', token: '' },
-  ledProfile: {
-    mode: 'rainbow',
-    speed: 50,
-    brightness: 80,
-    startColor: { r: 0, g: 0, b: 255 },
-    endColor: { r: 255, g: 0, b: 255 },
-    direction: 'horizontal'
-  }
-}
-
 class ConfigService extends EventEmitter {
-  private data: AppSettings = { ...defaults }
+  private data: AppSettings = { ...defaultSettings }
   private configPath: string = ''
+  private persistence: SettingsPersistence | undefined
+  private persistenceEnabled = true
 
   constructor() {
     super()
@@ -52,6 +32,19 @@ class ConfigService extends EventEmitter {
       mkdirSync(userDataPath, { recursive: true })
     }
     this.configPath = join(userDataPath, 'config.json')
+    const secretCodec = new ElectronSafeStorageSecretCodec(safeStorage, () =>
+      loggerService.warn(
+        'Keyring encryption failed; secrets are stored in the mode 0600 config file',
+        SERVICE
+      )
+    )
+    if (!secretCodec.usesSecureBackend()) {
+      loggerService.warn(
+        'Secure keyring unavailable; secrets are stored in the mode 0600 config file',
+        SERVICE
+      )
+    }
+    this.persistence = new SettingsPersistence(this.configPath, secretCodec)
     this.load()
     loggerService.debug('INIT', SERVICE)
     // Notify services so they re-init with actual config (not defaults)
@@ -61,38 +54,36 @@ class ConfigService extends EventEmitter {
   private load(): void {
     try {
       if (existsSync(this.configPath)) {
-        const raw = readFileSync(this.configPath, 'utf-8')
-        const parsed = JSON.parse(raw) as Partial<AppSettings>
-        const candidate = {
-          ...defaults,
-          ...parsed,
-          homeAssistant: {
-            ...defaults.homeAssistant,
-            ...(parsed.homeAssistant ?? {})
-          }
-        }
+        const parsed = this.persistence?.load() as Partial<AppSettings>
+        const candidate = applySettingsDefaults(parsed)
         if (!isAppSettings(candidate)) throw new Error('Invalid config')
         this.data = candidate
       } else {
-        this.data = { ...defaults }
+        this.data = { ...defaultSettings }
         this.save()
       }
     } catch {
-      loggerService.warn('Failed to load config, using defaults', SERVICE)
-      this.data = { ...defaults }
-      this.save()
+      loggerService.warn(
+        'Config is unreadable; using defaults and leaving the existing file unchanged',
+        SERVICE
+      )
+      this.data = { ...defaultSettings }
+      this.persistenceEnabled = false
+      try {
+        this.persistence?.protectFile()
+      } catch {
+        loggerService.error('Failed to enforce config file permissions', SERVICE)
+      }
     }
   }
 
-  private save(): void {
+  private save(data: AppSettings = this.data): void {
+    if (!this.persistenceEnabled) throw new Error('Config persistence is unavailable')
     try {
-      writeFileSync(this.configPath, JSON.stringify(this.data, null, 2), {
-        encoding: 'utf-8',
-        mode: 0o600
-      })
-      chmodSync(this.configPath, 0o600)
-    } catch (err) {
-      loggerService.error(`Failed to save config: ${err}`, SERVICE)
+      this.persistence?.save(data)
+    } catch {
+      loggerService.error('Failed to save config', SERVICE)
+      throw new Error('Config persistence failed')
     }
   }
 
@@ -101,19 +92,7 @@ class ConfigService extends EventEmitter {
   }
 
   public getRendererConfig(): RendererSettings {
-    const { homeAssistant, discord, ...settings } = this.data
-    return {
-      ...settings,
-      homeAssistant: {
-        url: homeAssistant.url,
-        tokenConfigured: homeAssistant.token.length > 0
-      },
-      discord: {
-        clientId: discord?.clientId ?? '',
-        clientSecretConfigured: Boolean(discord?.clientSecret),
-        authenticated: Boolean(discord?.accessToken)
-      }
-    }
+    return toRendererSettings(this.data)
   }
 
   public updateFromRenderer(update: RendererSettingsUpdate): void {
@@ -147,8 +126,9 @@ class ConfigService extends EventEmitter {
   }
 
   public setConfig(config: Partial<AppSettings>): void {
-    this.data = { ...this.data, ...config }
-    this.save()
+    const nextData = { ...this.data, ...config }
+    this.save(nextData)
+    this.data = nextData
     loggerService.debug('Config updated', SERVICE)
     this.emit('config:updated', this.data)
   }

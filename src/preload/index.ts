@@ -3,13 +3,35 @@ import { contextBridge, ipcRenderer } from 'electron'
 const api = {
   settings: {
     hydrate: (): Promise<unknown> => ipcRenderer.invoke('settings:hydrate'),
-    update: (config: unknown): Promise<void> => ipcRenderer.invoke('settings:update', config)
+    update: (config: unknown): Promise<void> => ipcRenderer.invoke('settings:update', config),
+    export: (): Promise<ConfigTransferResult> => ipcRenderer.invoke('settings:export'),
+    import: (): Promise<ConfigTransferResult> => ipcRenderer.invoke('settings:import')
   },
   serial: {
-    list: (): Promise<{ path: string; displayName: string }[]> =>
-      ipcRenderer.invoke('serial:list'),
+    list: (): Promise<
+      { path: string; displayName: string; manufacturer?: string; official: boolean }[]
+    > => ipcRenderer.invoke('serial:list'),
     status: (): Promise<{ connected: boolean; port: string }> =>
       ipcRenderer.invoke('serial:status')
+  },
+  hardwarePermissions: {
+    diagnose: (): Promise<{
+      hid: 'accessible' | 'permission-denied' | 'not-detected'
+      serial: 'accessible' | 'permission-denied' | 'not-detected'
+      rule: 'installed' | 'missing' | 'different'
+      installAction: 'available' | 'unavailable'
+      manualCommand?: string
+    }> => ipcRenderer.invoke('hardware-permissions:diagnose'),
+    install: (): Promise<{
+      result: 'installed' | 'cancelled' | 'failed'
+      diagnostic: {
+        hid: 'accessible' | 'permission-denied' | 'not-detected'
+        serial: 'accessible' | 'permission-denied' | 'not-detected'
+        rule: 'installed' | 'missing' | 'different'
+        installAction: 'available' | 'unavailable'
+        manualCommand?: string
+      }
+    }> => ipcRenderer.invoke('hardware-permissions:install')
   },
   streamdeck: {
     getKeys: (key: string): Promise<unknown> => ipcRenderer.invoke('streamdeck:keys', key),
@@ -49,13 +71,15 @@ const api = {
       discordConnected: boolean
     }> => ipcRenderer.invoke('conditions:state'),
     onChange: (
-      callback: (state: Partial<{
-        micMuted: boolean
-        discordMuted: boolean
-        discordDeafened: boolean
-        discordStreaming: boolean
-        discordConnected: boolean
-      }>) => void
+      callback: (
+        state: Partial<{
+          micMuted: boolean
+          discordMuted: boolean
+          discordDeafened: boolean
+          discordStreaming: boolean
+          discordConnected: boolean
+        }>
+      ) => void
     ): (() => void) => {
       const handler = (
         _: unknown,
@@ -96,6 +120,11 @@ const api = {
       return () => ipcRenderer.removeListener('electron:log', handler)
     }
   }
+}
+
+interface ConfigTransferResult {
+  status: 'success' | 'cancelled' | 'error'
+  message: string
 }
 
 export type StreamDeckDeeJAPI = typeof api

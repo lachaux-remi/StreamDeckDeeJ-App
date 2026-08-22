@@ -6,9 +6,11 @@ import { configService } from './config.service'
 import { loggerService } from './logger.service'
 import {
   BoundedSerialFrameDecoder,
+  ExpectedIrEchoTracker,
   parseSerialFrame,
   type SerialRejectionReason
 } from './serial-protocol'
+import { isOfficialFirmwarePort, preferOfficialFirmwarePorts } from './serial-port-discovery'
 
 const SERVICE = 'SerialService'
 const REJECTION_LOG_INTERVAL_MS = 5_000
@@ -19,6 +21,7 @@ class SerialService extends EventEmitter {
   private baudRate: number | undefined
   private lastRejectionLogAt = 0
   private suppressedRejections = 0
+  private readonly expectedIrEchoes = new ExpectedIrEchoTracker()
 
   constructor() {
     super()
@@ -28,21 +31,20 @@ class SerialService extends EventEmitter {
   }
 
   public async listPorts(): Promise<
-    { path: string; displayName: string; manufacturer?: string }[]
+    { path: string; displayName: string; manufacturer?: string; official: boolean }[]
   > {
     const ports = await SerialPort.list()
     return Promise.all(
-      ports
-        .filter((port) => port.manufacturer || (port as Record<string, unknown>).friendlyName)
-        .map(async (port) => {
-          const product = await this.getUsbProduct(port.path)
-          const name = product || port.manufacturer
-          return {
-            path: port.path,
-            displayName: name ? `${name} (${port.path})` : port.path,
-            manufacturer: port.manufacturer || undefined
-          }
-        })
+      preferOfficialFirmwarePorts(ports).map(async (port) => {
+        const product = await this.getUsbProduct(port.path)
+        const name = product || port.manufacturer
+        return {
+          path: port.path,
+          displayName: name ? `${name} (${port.path})` : port.path,
+          manufacturer: port.manufacturer || undefined,
+          official: isOfficialFirmwarePort(port)
+        }
+      })
     )
   }
 
@@ -68,7 +70,12 @@ class SerialService extends EventEmitter {
   public send(data: string): void {
     if (this.serialPort && this.serialPort.isOpen) {
       loggerService.debug(`Sending data: ${data}`, SERVICE)
-      this.serialPort.write(data)
+      const port = this.serialPort
+      port.write(data, (error) => {
+        if (!error && this.serialPort === port && port.isOpen) {
+          this.expectedIrEchoes.recordCommand(data)
+        }
+      })
     } else {
       loggerService.warn(`Serial port not open, cannot send data: ${data}`, SERVICE)
     }
@@ -87,6 +94,7 @@ class SerialService extends EventEmitter {
   private async reloadConnection(): Promise<void> {
     if (this.serialPort) {
       loggerService.info('Reloading connection', SERVICE)
+      this.expectedIrEchoes.clear()
       await new Promise<void>((resolve) => this.serialPort?.close(() => resolve()))
       this.serialPort = null
       return
@@ -139,6 +147,8 @@ class SerialService extends EventEmitter {
           }
 
           for (const frame of decoded.frames) {
+            if (this.expectedIrEchoes.consume(frame)) continue
+
             const parsed = parseSerialFrame(frame)
             if ('rejection' in parsed) {
               this.logRejectedInput(parsed.rejection)
@@ -172,6 +182,7 @@ class SerialService extends EventEmitter {
 
   private reconnect(): void {
     this.serialPort = null
+    this.expectedIrEchoes.clear()
     this.emit('status', this.getStatus())
     setTimeout(() => this.reloadConnection(), 1000)
   }
