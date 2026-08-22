@@ -9,7 +9,7 @@ StreamDeck DeeJ is an Electron desktop app for Linux that controls Stream Deck h
 ## Tech Stack
 
 - **Runtime**: Electron 43 + Node.js 24 + TypeScript 5.9
-- **Build**: electron-vite 5, Vite 6, electron-builder 26
+- **Build**: electron-vite 5, Vite 7, electron-builder 26
 - **Frontend**: React 19, Zustand (state), Tailwind CSS 4, shadcn/ui (new-york style)
 - **Backend**: serialport (Arduino serial), JSON config persistence, pino (logging)
 - **Package manager**: pnpm
