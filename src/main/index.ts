@@ -1,8 +1,9 @@
-import { BrowserWindow, Menu, Tray, app, shell } from 'electron'
+import { BrowserWindow, Menu, Tray, app, protocol, shell } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
 import { mkdir, unlink, writeFile } from 'fs/promises'
 import { registerAllHandlers } from '@main/handlers'
+import { RENDERER_URL, registerRendererProtocol } from '@main/renderer-protocol'
 import { conditionService } from '@main/services/condition.service'
 import { configService } from '@main/services/config.service'
 import { deckService } from '@main/services/deck.service'
@@ -14,12 +15,20 @@ import { serialService } from '@main/services/serial.service'
 import { sliderService } from '@main/services/slider.service'
 import '@main/services/sessions.service'
 
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'streamdeck-deej',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, codeCache: true }
+  }
+])
+
 if (!app.requestSingleInstanceLock()) {
   app.quit()
   process.exit(0)
 }
 
 const isDev = !app.isPackaged
+const devRendererUrl = isDev ? process.env['ELECTRON_RENDERER_URL'] : undefined
 
 const AUTOSTART_DIR = join(homedir(), '.config', 'autostart')
 const AUTOSTART_FILE = join(AUTOSTART_DIR, 'streamdeck-deej.desktop')
@@ -29,8 +38,14 @@ const APP_ICON = isDev
 
 function isSafeExternalUrl(url: string): boolean {
   try {
-    const protocol = new URL(url).protocol
-    return protocol === 'https:' || protocol === 'http:'
+    const parsedUrl = new URL(url)
+    return (
+      parsedUrl.protocol === 'https:' &&
+      !parsedUrl.username &&
+      !parsedUrl.password &&
+      !parsedUrl.port &&
+      ['github.com', 'www.remi-lachaux.fr'].includes(parsedUrl.hostname)
+    )
   } catch {
     return false
   }
@@ -64,6 +79,10 @@ async function setAutostart(enabled: boolean): Promise<void> {
 }
 
 app.whenReady().then(async () => {
+  if (!devRendererUrl) {
+    registerRendererProtocol(join(__dirname, '../renderer'))
+  }
+
   configService.init()
   await micService.init()
   await discordService.init()
@@ -208,10 +227,10 @@ app.whenReady().then(async () => {
   })
 
   // Load renderer
-  if (isDev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  if (devRendererUrl) {
+    mainWindow.loadURL(devRendererUrl)
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    mainWindow.loadURL(RENDERER_URL)
   }
 
   loggerService.info('Application started', 'Main')
