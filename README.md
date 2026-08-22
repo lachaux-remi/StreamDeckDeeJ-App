@@ -41,11 +41,17 @@ SUBSYSTEM=="hidraw", ATTRS{idVendor}=="5239", ATTRS{idProduct}=="0001", TAG+="ua
 SUBSYSTEM=="tty", ATTRS{idVendor}=="5239", ATTRS{idProduct}=="0001", MODE="0660", TAG+="uaccess"
 ```
 
-Le paquet pacman installe et recharge automatiquement cette règle, puis la retire à la
-désinstallation. L’AppImage affiche un diagnostic dans **Paramètres › Système** et peut proposer une
-installation explicite : après confirmation, `pkexec` affiche la demande d’authentification
-administrateur et exécute uniquement le script immuable embarqué, qui vérifie le hash de la règle.
-Sans `pkexec`, aucune élévation n’est tentée.
+Le paquet pacman installe et recharge automatiquement cette règle. À l’installation, sa copie par
+hook remplace de façon déterministe tout fichier déjà présent au chemin fixe ci-dessus ; ce mécanisme
+de copie ne dispose pas d’une base de propriété des fichiers. À la désinstallation, le hook recalcule
+le hash du fichier installé : il le supprime uniquement si son contenu est encore la règle canonique,
+sinon il le conserve et affiche un avertissement.
+
+L’AppImage affiche un diagnostic dans **Paramètres › Système** et peut proposer une installation
+explicite : après confirmation, `pkexec` affiche la demande d’authentification administrateur et
+exécute uniquement le script immuable embarqué, qui vérifie le hash de sa règle source. Cette action
+explicite remplace elle aussi tout fichier déjà présent au chemin fixe. Sans `pkexec`, aucune élévation
+n’est tentée.
 
 Pour installer la règle manuellement depuis une copie vérifiée de ce dépôt :
 

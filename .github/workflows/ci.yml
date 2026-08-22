@@ -89,7 +89,10 @@ jobs:
           cmp build/linux/70-streamdeck-deej.rules "$package_root/opt/streamdeck-deej/resources/linux/70-streamdeck-deej.rules"
           test -x "$package_root/opt/streamdeck-deej/resources/linux/install-udev-rule"
           grep -F "install-udev-rule' install" "$package_root/.INSTALL"
+          rule_hash="$(sha256sum build/linux/70-streamdeck-deej.rules | cut -d ' ' -f 1)"
+          grep -F "if [ \"\$installed_hash\" = '$rule_hash' ]; then" "$package_root/.INSTALL"
           grep -F "rm -f '/etc/udev/rules.d/70-streamdeck-deej.rules'" "$package_root/.INSTALL"
+          grep -F 'Warning: preserving modified StreamDeck DeeJ udev rule during package removal.' "$package_root/.INSTALL"
           grep -F 'udevadm control --reload-rules' "$package_root/opt/streamdeck-deej/resources/linux/install-udev-rule"
           grep -F 'udevadm trigger --subsystem-match=hidraw' "$package_root/opt/streamdeck-deej/resources/linux/install-udev-rule"
           grep -F 'udevadm trigger --subsystem-match=tty' "$package_root/opt/streamdeck-deej/resources/linux/install-udev-rule"
@@ -100,6 +103,23 @@ jobs:
             echo 'Unsafe udev permission found in generated assets or pacman hooks'
             exit 1
           fi
+
+          removal_rule="$(mktemp)"
+          removal_script="$(mktemp)"
+          sed -n '/# BEGIN STREAMDECK DEEJ UDEV OWNERSHIP/,/# END STREAMDECK DEEJ UDEV OWNERSHIP/p' "$package_root/.INSTALL" \
+            | sed "s|/etc/udev/rules.d/70-streamdeck-deej.rules|$removal_rule|g; s|if command -v udevadm >/dev/null 2>\&1; then|if false; then|" \
+            > "$removal_script"
+          chmod 700 "$removal_script"
+          cp build/linux/70-streamdeck-deej.rules "$removal_rule"
+          "$removal_script"
+          test ! -e "$removal_rule"
+          cat build/linux/70-streamdeck-deej.rules > "$removal_rule"
+          printf '# retained administrator change\n' >> "$removal_rule"
+          cp "$removal_rule" "$removal_rule.expected"
+          removal_warning="$("$removal_script" 2>&1)"
+          grep -F 'Warning: preserving modified StreamDeck DeeJ udev rule during package removal.' <<<"$removal_warning"
+          cmp "$removal_rule.expected" "$removal_rule"
+          rm -f "$removal_rule" "$removal_rule.expected" "$removal_script"
           rm -rf "$package_root"
 
           if command -v udevadm >/dev/null 2>&1 && udevadm help | grep -q 'verify'; then

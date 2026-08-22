@@ -65,9 +65,18 @@ ${reloadRulesScript()}
 `
   const afterRemove = `${defaultAfterRemove.trimEnd()}
 
-# Remove only the rule owned by this package, then refresh udev's rules.
-rm -f '${RULE_DESTINATION}'
+# Remove the package rule only while its contents remain unchanged.
+# BEGIN STREAMDECK DEEJ UDEV OWNERSHIP
+if [ -f '${RULE_DESTINATION}' ]; then
+  installed_hash="$(sha256sum '${RULE_DESTINATION}' | cut -d ' ' -f 1)"
+  if [ "$installed_hash" = '${ruleHash}' ]; then
+    rm -f '${RULE_DESTINATION}'
+  else
+    echo 'Warning: preserving modified StreamDeck DeeJ udev rule during package removal.' >&2
+  fi
+fi
 ${reloadRulesScript()}
+# END STREAMDECK DEEJ UDEV OWNERSHIP
 `
 
   await mkdir(outputDirectory, { recursive: true })
