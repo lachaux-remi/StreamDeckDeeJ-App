@@ -3,6 +3,13 @@ export interface SerialStatus {
   port: string
 }
 
+export interface SerialPortInfo {
+  path: string
+  displayName: string
+  manufacturer?: string
+  official: boolean
+}
+
 export interface ApplicationVersions {
   app: string
   electron: string

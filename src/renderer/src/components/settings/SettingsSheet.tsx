@@ -222,7 +222,7 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
                             ...serialPorts.map((port) => ({
                               value: port.path,
                               label: port.displayName.replace(/\s*\(.*\)$/, ''),
-                              description: [port.manufacturer, port.path]
+                              description: [port.official ? 'Module officiel' : port.manufacturer, port.path]
                                 .filter(Boolean)
                                 .join(' — ')
                             })),

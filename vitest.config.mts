@@ -11,13 +11,18 @@ export default defineConfig({
   test: {
     coverage: {
       provider: 'v8',
-      include: ['src/main/services/serial-protocol.ts'],
+      include: [
+        'src/main/services/serial-port-discovery.ts',
+        'src/main/services/serial-protocol.ts',
+        'src/main/services/settings-defaults.ts',
+        'src/renderer/src/stores/settings.defaults.ts'
+      ],
       reporter: ['text', 'html'],
       thresholds: {
-        branches: 91.04,
+        branches: 94.11,
         functions: 100,
-        lines: 97.01,
-        statements: 93.15
+        lines: 100,
+        statements: 96.29
       }
     },
     environment: 'node',

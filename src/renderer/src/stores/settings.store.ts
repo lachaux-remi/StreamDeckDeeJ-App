@@ -4,32 +4,7 @@ import type {
   RendererSettingsUpdate,
   StreamdeckInputConfig
 } from '@renderer/types/settings.types'
-
-const defaultSettings: RendererSettings = {
-  comPort: '/dev/ttyACM0',
-  baudRate: 9600,
-  gridCols: 4,
-  gridRows: 4,
-  sliderCount: 4,
-  streamdeck: {},
-  deej: {},
-  deejNames: {},
-  invertSliders: false,
-  runOnStartup: false,
-  runInBackground: false,
-  closeToTray: true,
-  devTools: false,
-  homeAssistant: { url: '', tokenConfigured: false },
-  ledProfile: {
-    mode: 'rainbow',
-    speed: 50,
-    brightness: 80,
-    startColor: { r: 0, g: 0, b: 255 },
-    endColor: { r: 255, g: 0, b: 255 },
-    direction: 'horizontal'
-  },
-  discord: { clientId: '', clientSecretConfigured: false, authenticated: false }
-}
+import { defaultSettings } from './settings.defaults'
 
 interface SettingsStore {
   settings: RendererSettings
