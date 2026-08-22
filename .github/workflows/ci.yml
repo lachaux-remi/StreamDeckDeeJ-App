@@ -38,8 +38,22 @@ jobs:
           ref: ${{ inputs.checkout_ref || github.sha }}
           persist-credentials: false
 
-      - name: Install native build and smoke dependencies
-        run: sudo apt-get update && sudo apt-get install -y dbus-bin libarchive-tools libusb-1.0-0-dev libudev-dev pipewire-bin pulseaudio-utils wireplumber xvfb
+      - name: Select validation scope
+        id: validation-scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          IS_RELEASE_PR: "${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release-please--') && contains(github.event.pull_request.labels.*.name, 'autorelease: pending') }}"
+          REQUESTED_PACKAGE: ${{ inputs.package_linux }}
+        run: |
+          package_linux="$(scripts/select-linux-validation-scope.sh "$EVENT_NAME" "$REQUESTED_PACKAGE" "$IS_RELEASE_PR")"
+          echo "package_linux=$package_linux" >> "$GITHUB_OUTPUT"
+
+      - name: Install native build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev
+
+      - name: Install package inspection and smoke dependencies
+        if: ${{ steps.validation-scope.outputs.package_linux == 'true' }}
+        run: sudo apt-get install -y dbus-bin libarchive-tools pipewire-bin pulseaudio-utils wireplumber xvfb
 
       - name: Install pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
@@ -73,7 +87,10 @@ jobs:
           /tmp/actionlint -color
 
       - name: Check formatting
-        run: pnpm exec prettier --check .github/workflows/*.yml electron-builder.yml package.json scripts tests
+        run: pnpm exec prettier --check .github/workflows/*.yml electron-builder.yml package.json scripts/*.mjs tests/*.ts
+
+      - name: Validate shell scripts
+        run: bash -n scripts/*.sh
 
       - name: Typecheck tests
         run: pnpm typecheck:test
@@ -87,11 +104,14 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Build application bundles
+        run: pnpm build
+
       - name: Audit dependencies
         run: pnpm audit --audit-level low
 
       - name: Package Linux
-        if: ${{ github.event_name == 'pull_request' || inputs.package_linux }}
+        if: ${{ steps.validation-scope.outputs.package_linux == 'true' }}
         env:
           EXPECTED_TAG: ${{ inputs.expected_tag }}
           EXPECTED_VERSION: ${{ inputs.expected_version }}
@@ -106,11 +126,11 @@ jobs:
           pnpm package:linux
 
       - name: Verify Linux update metadata
-        if: ${{ github.event_name == 'pull_request' || inputs.package_linux }}
+        if: ${{ steps.validation-scope.outputs.package_linux == 'true' }}
         run: pnpm verify:update-metadata
 
       - name: Verify Electron fuses
-        if: ${{ github.event_name == 'pull_request' || inputs.package_linux }}
+        if: ${{ steps.validation-scope.outputs.package_linux == 'true' }}
         run: |
           fuses="$(pnpm exec electron-fuses read --app dist/linux-unpacked/streamdeck-deej)"
           printf '%s\n' "$fuses"
@@ -121,7 +141,7 @@ jobs:
           grep -F 'OnlyLoadAppFromAsar is Enabled' <<<"$fuses"
 
       - name: Verify package contents
-        if: ${{ github.event_name == 'pull_request' || inputs.package_linux }}
+        if: ${{ steps.validation-scope.outputs.package_linux == 'true' }}
         run: |
           pnpm exec asar list dist/linux-unpacked/resources/app.asar > /tmp/asar-files.txt
 
@@ -191,36 +211,13 @@ jobs:
           fi
 
       - name: Smoke unpacked binary and extracted AppImage
-        if: ${{ github.event_name == 'pull_request' || inputs.package_linux }}
+        if: ${{ steps.validation-scope.outputs.package_linux == 'true' }}
         run: |
           test "$(id -u)" -ne 0
           for runtime_command in pactl pw-dump wpctl dbus-send; do
             command -v "$runtime_command"
           done
-
-          smoke() {
-            local executable="$1"
-            local config_dir
-            config_dir="$(mktemp -d)"
-            set +e
-            XDG_CONFIG_HOME="$config_dir" timeout 10s xvfb-run -a "$executable" --no-sandbox > /tmp/smoke.log 2>&1
-            local status=$?
-            set -e
-            rm -rf "$config_dir"
-            if grep -F 'A JavaScript error occurred in the main process' /tmp/smoke.log; then
-              cat /tmp/smoke.log
-              echo "Smoke detected a main-process exception in $executable"
-              exit 1
-            fi
-            grep -F 'Linux updater mode: disabled' /tmp/smoke.log
-            if [ "$status" -ne 124 ]; then
-              cat /tmp/smoke.log
-              echo "Smoke failed for $executable with status $status"
-              exit 1
-            fi
-          }
-
-          smoke dist/linux-unpacked/streamdeck-deej
+          scripts/smoke-linux-artifact.sh dist/linux-unpacked/streamdeck-deej /tmp/smoke-unpacked.log
 
           appimage="$(find dist -maxdepth 1 -name '*.AppImage' -print -quit)"
           test -n "$appimage"
@@ -229,7 +226,7 @@ jobs:
           (cd "$extract_dir" && "$appimage" --appimage-extract > /dev/null)
           cmp build/linux/70-streamdeck-deej.rules "$extract_dir/squashfs-root/resources/linux/70-streamdeck-deej.rules"
           test -x "$extract_dir/squashfs-root/resources/linux/install-udev-rule"
-          smoke "$extract_dir/squashfs-root/AppRun"
+          scripts/smoke-linux-artifact.sh "$extract_dir/squashfs-root/AppRun" /tmp/smoke-appimage.log
           rm -rf "$extract_dir"
 
       - name: Stage verified release artifacts
