@@ -17,6 +17,8 @@ import type { LinuxReleaseInfo, LinuxUpdateState } from '@main/types/update.type
 
 const MAX_RELEASE_NOTES_LENGTH = 20_000
 
+type InstallUpdate = (quitAndInstall: () => void) => Promise<void>
+
 function packageType(): string | undefined {
   try {
     return readFileSync(join(process.resourcesPath, 'package-type'), 'utf8').trim()
@@ -45,23 +47,25 @@ function updateInfo(info: UpdateInfo): LinuxReleaseInfo {
   }
 }
 
-const appImageUpdater: AppImageUpdateAdapter = {
-  configure(): void {
-    configureSecureAppImageUpdater(autoUpdater)
-  },
-  on(event, listener): void {
-    if (event === 'available')
-      autoUpdater.on('update-available', (info) => listener(updateInfo(info)))
-    else if (event === 'not-available') autoUpdater.on('update-not-available', () => listener())
-    else if (event === 'download-progress') {
-      autoUpdater.on('download-progress', (progress: ProgressInfo) => listener(progress))
-    } else if (event === 'downloaded') {
-      autoUpdater.on('update-downloaded', (info) => listener(updateInfo(info)))
-    } else autoUpdater.on('error', () => listener())
-  },
-  check: () => autoUpdater.checkForUpdates(),
-  download: () => autoUpdater.downloadUpdate(),
-  install: () => autoUpdater.quitAndInstall(false, true)
+function createAppImageUpdater(installUpdate: InstallUpdate): AppImageUpdateAdapter {
+  return {
+    configure(): void {
+      configureSecureAppImageUpdater(autoUpdater)
+    },
+    on(event, listener): void {
+      if (event === 'available')
+        autoUpdater.on('update-available', (info) => listener(updateInfo(info)))
+      else if (event === 'not-available') autoUpdater.on('update-not-available', () => listener())
+      else if (event === 'download-progress') {
+        autoUpdater.on('download-progress', (progress: ProgressInfo) => listener(progress))
+      } else if (event === 'downloaded') {
+        autoUpdater.on('update-downloaded', (info) => listener(updateInfo(info)))
+      } else autoUpdater.on('error', () => listener())
+    },
+    check: () => autoUpdater.checkForUpdates(),
+    download: () => autoUpdater.downloadUpdate(),
+    install: () => installUpdate(() => autoUpdater.quitAndInstall(false, true))
+  }
 }
 
 function isGitHubRelease(value: unknown): value is {
@@ -100,7 +104,7 @@ async function checkOfficialRelease(): Promise<LinuxReleaseInfo> {
 class LinuxUpdateService {
   private controller: LinuxUpdateController | undefined
 
-  init(): void {
+  init(installUpdate: InstallUpdate): void {
     if (this.controller) return
     const mode = detectLinuxUpdateMode({
       packaged: app.isPackaged,
@@ -112,7 +116,7 @@ class LinuxUpdateService {
     this.controller = new LinuxUpdateController({
       mode,
       currentVersion: app.getVersion(),
-      updater: mode === 'appimage' ? appImageUpdater : undefined,
+      updater: mode === 'appimage' ? createAppImageUpdater(installUpdate) : undefined,
       releaseChecker: mode === 'package-manager' ? checkOfficialRelease : undefined,
       openOfficialRelease:
         mode === 'package-manager'
@@ -140,8 +144,8 @@ class LinuxUpdateService {
     await this.requireController().download()
   }
 
-  install(): void {
-    this.requireController().install()
+  async install(): Promise<void> {
+    await this.requireController().install()
   }
 
   async openRelease(): Promise<void> {

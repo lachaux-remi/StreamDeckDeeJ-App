@@ -5,7 +5,7 @@ export type UpdateConsent = 'download' | 'install'
 export interface LinuxUpdateActions {
   check(): Promise<void>
   download(): Promise<void>
-  install(): void
+  install(): Promise<void>
   openRelease(): Promise<void>
 }
 
@@ -27,5 +27,5 @@ export async function executeLinuxUpdateCommand(
   if (command === 'open-release') return actions.openRelease()
   if (!(await confirm(command))) return
   if (command === 'download') return actions.download()
-  actions.install()
+  await actions.install()
 }

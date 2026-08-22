@@ -14,7 +14,7 @@ function createUpdater(): {
     on: (event: string, listener: (value?: unknown) => void) => void
     check: () => Promise<void>
     download: () => Promise<void>
-    install: () => void
+    install: () => Promise<void>
   }
   emit: (event: string, value?: unknown) => void
 } {
@@ -31,7 +31,7 @@ function createUpdater(): {
       download: async () => {
         calls.push('download')
       },
-      install: () => calls.push('install')
+      install: async () => void calls.push('install')
     },
     emit: (event, value) => listeners.get(event)?.(value)
   }
@@ -79,7 +79,7 @@ test('AppImage never downloads or installs before separate explicit commands', a
   fake.emit('downloaded', update)
   expect(controller.getState().status).toBe('downloaded')
 
-  controller.install()
+  await controller.install()
   expect(fake.calls).toEqual(['configure', 'check', 'download', 'install'])
 })
 
@@ -95,7 +95,7 @@ test('rejects downgrade metadata and invalid transitions', async () => {
   await controller.check()
   fake.emit('available', { ...update, version: '4.0.5' })
   expect(controller.getState().status).toBe('error')
-  expect(() => controller.install()).toThrow(/not downloaded/)
+  await expect(controller.install()).rejects.toThrow(/not downloaded/)
 })
 
 test('package-manager mode only checks and opens the fixed official release page', async () => {
@@ -112,7 +112,7 @@ test('package-manager mode only checks and opens the fixed official release page
   await controller.check()
   expect(controller.getState().status).toBe('available')
   await expect(controller.download()).rejects.toThrow(/AppImage/)
-  expect(() => controller.install()).toThrow(/AppImage/)
+  await expect(controller.install()).rejects.toThrow(/AppImage/)
   await controller.openRelease()
   expect(calls).toEqual(['open'])
 })

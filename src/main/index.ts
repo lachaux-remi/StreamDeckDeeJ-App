@@ -5,6 +5,7 @@ import { mkdir, unlink, writeFile } from 'fs/promises'
 import { registerAllHandlers } from '@main/handlers'
 import { RENDERER_URL, registerRendererProtocol } from '@main/renderer-protocol'
 import { conditionService } from '@main/services/condition.service'
+import { AppQuitCoordinator } from '@main/services/app-quit-coordinator'
 import { configService } from '@main/services/config.service'
 import { deckService } from '@main/services/deck.service'
 import { discordService } from '@main/services/discord.service'
@@ -36,6 +37,10 @@ const AUTOSTART_FILE = join(AUTOSTART_DIR, 'streamdeck-deej.desktop')
 const APP_ICON = isDev
   ? join(__dirname, '../../resources/logo.png')
   : join(process.resourcesPath, 'logo.png')
+const appQuitCoordinator = new AppQuitCoordinator({
+  shutdown: () => ledService.shutdown(),
+  exit: () => app.exit()
+})
 
 function isSafeExternalUrl(url: string): boolean {
   try {
@@ -89,7 +94,7 @@ app.whenReady().then(async () => {
   await discordService.init()
   conditionService.init(micService, discordService)
   await ledService.init()
-  linuxUpdateService.init()
+  linuxUpdateService.init((quitAndInstall) => appQuitCoordinator.installUpdate(quitAndInstall))
 
   const config = configService.getConfig()
 
@@ -149,7 +154,7 @@ app.whenReady().then(async () => {
         type: 'normal',
         label: 'Quitter',
         click: (): void => {
-          app.exit()
+          app.quit()
         }
       }
     ])
@@ -241,11 +246,7 @@ app.whenReady().then(async () => {
 })
 
 app.on('before-quit', (event) => {
-  event.preventDefault()
-  ledService
-    .shutdown()
-    .catch(() => {})
-    .finally(() => app.exit())
+  appQuitCoordinator.handleBeforeQuit(event)
 })
 
 app.on('window-all-closed', () => {

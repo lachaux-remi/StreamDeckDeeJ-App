@@ -9,7 +9,7 @@ export interface AppImageUpdateAdapter {
   on(event: UpdaterEvent, listener: (value?: unknown) => void): void
   check(): Promise<unknown>
   download(): Promise<unknown>
-  install(): void
+  install(): Promise<void>
 }
 
 interface LinuxUpdateControllerOptions {
@@ -112,11 +112,11 @@ export class LinuxUpdateController {
     }
   }
 
-  install(): void {
+  async install(): Promise<void> {
     if (this.options.mode !== 'appimage')
       throw new Error('Installation is only available for AppImage')
     if (this.state.status !== 'downloaded') throw new Error('Update is not downloaded')
-    this.options.updater?.install()
+    await this.options.updater?.install()
   }
 
   async openRelease(): Promise<void> {

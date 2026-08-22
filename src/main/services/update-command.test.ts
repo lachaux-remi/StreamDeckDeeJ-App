@@ -9,7 +9,7 @@ function actions(calls: string[]): LinuxUpdateActions {
   return {
     check: async () => void calls.push('check'),
     download: async () => void calls.push('download'),
-    install: () => void calls.push('install'),
+    install: async () => void calls.push('install'),
     openRelease: async () => void calls.push('open-release')
   }
 }
