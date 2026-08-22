@@ -1,16 +1,24 @@
 import { EventEmitter } from 'node:events'
 import { readFile, realpath } from 'node:fs/promises'
-import { ReadlineParser, SerialPort } from 'serialport'
+import { SerialPort } from 'serialport'
 import type { AppSettings } from '@main/types/settings.types'
 import { configService } from './config.service'
 import { loggerService } from './logger.service'
+import {
+  BoundedSerialFrameDecoder,
+  parseSerialFrame,
+  type SerialRejectionReason
+} from './serial-protocol'
 
 const SERVICE = 'SerialService'
+const REJECTION_LOG_INTERVAL_MS = 5_000
 
 class SerialService extends EventEmitter {
   private serialPort: SerialPort | null = null
   private comPort: string | undefined
   private baudRate: number | undefined
+  private lastRejectionLogAt = 0
+  private suppressedRejections = 0
 
   constructor() {
     super()
@@ -123,22 +131,43 @@ class SerialService extends EventEmitter {
         // Small delay to let Arduino finish USB initialization before sending
         setTimeout(() => this.serialPort?.write('app:ready\r\n'), 500)
 
-        this.serialPort.pipe(new ReadlineParser({ delimiter: '\r\n' })).on('data', (data) => {
-          try {
-            const json = JSON.parse(data)
-            if (json.type) {
-              const type = json.type
-              if (type !== 'deej') {
-                loggerService.debug(`Received data: ${data}`, SERVICE)
-              }
-              delete json.type
-              this.emit(`serial:${type}`, json)
+        const decoder = new BoundedSerialFrameDecoder()
+        this.serialPort.on('data', (chunk: Buffer) => {
+          const decoded = decoder.write(chunk)
+          for (const rejection of decoded.rejections) {
+            this.logRejectedInput(rejection)
+          }
+
+          for (const frame of decoded.frames) {
+            const parsed = parseSerialFrame(frame)
+            if ('rejection' in parsed) {
+              this.logRejectedInput(parsed.rejection)
+              continue
             }
-          } catch (error) {
-            loggerService.error(`Error parsing data: ${error}`, SERVICE)
+
+            const { type, ...data } = parsed.message
+            if (type === 'deck') {
+              loggerService.debug('Received validated deck event', SERVICE)
+            }
+            this.emit(`serial:${type}`, data)
           }
         })
       })
+  }
+
+  private logRejectedInput(reason: SerialRejectionReason): void {
+    const now = Date.now()
+    if (now - this.lastRejectionLogAt < REJECTION_LOG_INTERVAL_MS) {
+      this.suppressedRejections += 1
+      return
+    }
+
+    const suppressed = this.suppressedRejections
+      ? `; ${this.suppressedRejections} additional rejections suppressed`
+      : ''
+    loggerService.warn(`Rejected serial input: ${reason}${suppressed}`, SERVICE)
+    this.lastRejectionLogAt = now
+    this.suppressedRejections = 0
   }
 
   private reconnect(): void {

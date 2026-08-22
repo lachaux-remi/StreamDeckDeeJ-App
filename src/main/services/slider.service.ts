@@ -3,6 +3,7 @@ import type { AppSettings } from '@main/types/settings.types'
 import { configService } from './config.service'
 import { loggerService } from './logger.service'
 import { serialService } from './serial.service'
+import type { DeejSerialMessage } from './serial-protocol'
 
 const SERVICE = 'SliderService'
 
@@ -38,7 +39,7 @@ class SliderService extends EventEmitter {
     }
   }
 
-  private deejEventHandler(data: { value: Record<string, number> }): void {
+  private deejEventHandler(data: Omit<DeejSerialMessage, 'type'>): void {
     let changed = false
     for (const [sliderKey, sliderValue] of Object.entries(data.value)) {
       let value = sliderValue / 2 ** 10
