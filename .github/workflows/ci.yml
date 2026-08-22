@@ -3,6 +3,27 @@ name: CI
 on:
   pull_request:
   workflow_call:
+    inputs:
+      package_linux:
+        description: Build and inspect Linux distribution artifacts
+        type: boolean
+        default: true
+      checkout_ref:
+        description: Immutable ref to check out
+        type: string
+        default: ''
+      expected_tag:
+        description: Exact release tag expected at checkout
+        type: string
+        default: ''
+      expected_version:
+        description: Package version expected for a release build
+        type: string
+        default: ''
+      artifact_name:
+        description: Name used to transfer verified release artifacts
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -13,6 +34,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.checkout_ref || github.sha }}
+          persist-credentials: false
 
       - name: Install native build and smoke dependencies
         run: sudo apt-get update && sudo apt-get install -y dbus-bin libarchive-tools libusb-1.0-0-dev libudev-dev pipewire-bin pulseaudio-utils wireplumber xvfb
@@ -37,6 +61,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --strict-peer-dependencies
 
+      - name: Validate workflows
+        run: |
+          actionlint_version=1.7.12
+          actionlint_archive="actionlint_${actionlint_version}_linux_amd64.tar.gz"
+          curl --fail --silent --show-error --location --output /tmp/actionlint.tar.gz \
+            "https://github.com/rhysd/actionlint/releases/download/v${actionlint_version}/${actionlint_archive}"
+          echo '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  /tmp/actionlint.tar.gz' \
+            | sha256sum --check --strict
+          tar --extract --gzip --file /tmp/actionlint.tar.gz --directory /tmp actionlint
+          /tmp/actionlint -color
+
+      - name: Check formatting
+        run: pnpm exec prettier --check .github/workflows/*.yml electron-builder.yml package.json scripts tests
+
       - name: Typecheck tests
         run: pnpm typecheck:test
 
@@ -53,14 +91,26 @@ jobs:
         run: pnpm audit --audit-level low
 
       - name: Package Linux
-        run: pnpm package:linux
+        if: ${{ github.event_name == 'pull_request' || inputs.package_linux }}
         env:
+          EXPECTED_TAG: ${{ inputs.expected_tag }}
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
           XZ_DEFAULTS: -T2
+        run: |
+          if [[ -n "$EXPECTED_TAG" ]]; then
+            test "$(git tag --points-at HEAD)" = "$EXPECTED_TAG"
+            test "$(node --print 'require("./package.json").version')" = "$EXPECTED_VERSION"
+          fi
+
+          rm -rf build coverage dist out
+          pnpm package:linux
 
       - name: Verify Linux update metadata
+        if: ${{ github.event_name == 'pull_request' || inputs.package_linux }}
         run: pnpm verify:update-metadata
 
       - name: Verify Electron fuses
+        if: ${{ github.event_name == 'pull_request' || inputs.package_linux }}
         run: |
           fuses="$(pnpm exec electron-fuses read --app dist/linux-unpacked/streamdeck-deej)"
           printf '%s\n' "$fuses"
@@ -71,11 +121,12 @@ jobs:
           grep -F 'OnlyLoadAppFromAsar is Enabled' <<<"$fuses"
 
       - name: Verify package contents
+        if: ${{ github.event_name == 'pull_request' || inputs.package_linux }}
         run: |
           pnpm exec asar list dist/linux-unpacked/resources/app.asar > /tmp/asar-files.txt
 
-          if grep -E '\.map$|/node_modules/pino-pretty/|/node_modules/(node-hid|@serialport/bindings-cpp)/src/|/node_modules/node-hid/hidapi/' /tmp/asar-files.txt; then
-            echo 'Unexpected source, source map, or development dependency in app.asar'
+          if grep -E '\.map$|(^|/)(coverage|tests?|__tests__)(/|$)|(^|/)(electron\.vite\.config\.[^/]+|vitest\.config\.[^/]+|tsconfig\.test\.json)$|/node_modules/pino-pretty/|/node_modules/(node-hid|@serialport/bindings-cpp)/src/|/node_modules/node-hid/hidapi/' /tmp/asar-files.txt; then
+            echo 'Unexpected test, coverage, config, source map, source, or development dependency in app.asar'
             exit 1
           fi
           if grep -E '/node_modules/node-hid/prebuilds/(HID-darwin-|HID-win32-|HID(_hidraw)?-linux-(arm|arm64|x64-musl))|/node_modules/@serialport/bindings-cpp/prebuilds/(android-|darwin-|linux-(arm|arm64)|win32-)' /tmp/asar-files.txt; then
@@ -140,6 +191,7 @@ jobs:
           fi
 
       - name: Smoke unpacked binary and extracted AppImage
+        if: ${{ github.event_name == 'pull_request' || inputs.package_linux }}
         run: |
           test "$(id -u)" -ne 0
           for runtime_command in pactl pw-dump wpctl dbus-send; do
@@ -179,3 +231,48 @@ jobs:
           test -x "$extract_dir/squashfs-root/resources/linux/install-udev-rule"
           smoke "$extract_dir/squashfs-root/AppRun"
           rm -rf "$extract_dir"
+
+      - name: Stage verified release artifacts
+        if: ${{ inputs.artifact_name != '' }}
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        run: |
+          set -euo pipefail
+          version="${EXPECTED_VERSION:-$(node --print 'require("./package.json").version')}"
+          artifact_base="streamdeck-deej-$version"
+          expected=(
+            "dist/$artifact_base.AppImage"
+            "dist/$artifact_base.pkg.tar.xz"
+            "dist/latest-linux.yml"
+          )
+          blockmap="dist/$artifact_base.AppImage.blockmap"
+          if [[ -e "$blockmap" ]]; then
+            expected+=("$blockmap")
+          fi
+
+          mapfile -t actual < <(find dist -maxdepth 1 -type f \( -name '*.AppImage' -o -name '*.pkg.tar.xz' -o -name 'latest-linux.yml' -o -name '*.blockmap' \) | LC_ALL=C sort)
+          mapfile -t expected_sorted < <(printf '%s\n' "${expected[@]}" | LC_ALL=C sort)
+          [[ "${actual[*]}" = "${expected_sorted[*]}" ]]
+
+          mkdir release-artifacts
+          cp -- "${expected[@]}" release-artifacts/
+          printf '%s\n' "$version" > release-artifacts/RELEASE_VERSION
+          (
+            cd release-artifacts
+            for file in "$artifact_base.AppImage" "$artifact_base.pkg.tar.xz" latest-linux.yml RELEASE_VERSION; do
+              sha256sum "$file"
+            done
+            if [[ -f "$artifact_base.AppImage.blockmap" ]]; then
+              sha256sum "$artifact_base.AppImage.blockmap"
+            fi
+          ) > release-artifacts/SHA256SUMS
+
+      - name: Transfer verified release artifacts
+        if: ${{ inputs.artifact_name != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: release-artifacts/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
