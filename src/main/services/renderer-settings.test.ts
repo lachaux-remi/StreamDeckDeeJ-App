@@ -1,7 +1,6 @@
-import assert from 'node:assert/strict'
-import test from 'node:test'
-import type { AppSettings } from '../types/settings.types.ts'
-import { toRendererSettings } from './renderer-settings.ts'
+import { expect, test } from 'vitest'
+import type { AppSettings } from '../types/settings.types'
+import { toRendererSettings } from './renderer-settings'
 
 test('renderer settings expose secret state but never secret values', () => {
   const fixtureSecret = 'synthetic-fixture-value'
@@ -38,14 +37,14 @@ test('renderer settings expose secret state but never secret values', () => {
 
   const rendererSettings = toRendererSettings(settings)
 
-  assert.deepEqual(rendererSettings.homeAssistant, {
+  expect(rendererSettings.homeAssistant).toEqual({
     url: 'https://example.invalid',
     tokenConfigured: true
   })
-  assert.deepEqual(rendererSettings.discord, {
+  expect(rendererSettings.discord).toEqual({
     clientId: 'fixture-client',
     clientSecretConfigured: true,
     authenticated: true
   })
-  assert.doesNotMatch(JSON.stringify(rendererSettings), new RegExp(fixtureSecret))
+  expect(JSON.stringify(rendererSettings)).not.toMatch(new RegExp(fixtureSecret))
 })
