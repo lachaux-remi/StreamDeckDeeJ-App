@@ -1,0 +1,14 @@
+{
+  "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
+  "include": ["src/**/*.test.ts", "vitest.config.mts"],
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@main/*": ["src/main/*"],
+      "@renderer/*": ["src/renderer/src/*"]
+    }
+  }
+}

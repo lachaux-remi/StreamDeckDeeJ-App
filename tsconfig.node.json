@@ -10,7 +10,6 @@
     "noEmit": false,
     "outDir": "./dist",
     "moduleResolution": "bundler",
-    "rewriteRelativeImportExtensions": true,
     "baseUrl": ".",
     "paths": {
       "@main/*": ["src/main/*"]
