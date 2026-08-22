@@ -10,6 +10,7 @@ import { deckService } from '@main/services/deck.service'
 import { discordService } from '@main/services/discord.service'
 import { ledService } from '@main/services/led.service'
 import { loggerService } from '@main/services/logger.service'
+import { linuxUpdateService } from '@main/services/linux-update.service'
 import { micService } from '@main/services/mic.service'
 import { serialService } from '@main/services/serial.service'
 import { sliderService } from '@main/services/slider.service'
@@ -88,6 +89,7 @@ app.whenReady().then(async () => {
   await discordService.init()
   conditionService.init(micService, discordService)
   await ledService.init()
+  linuxUpdateService.init()
 
   const config = configService.getConfig()
 
@@ -177,6 +179,7 @@ app.whenReady().then(async () => {
 
   serialService.on('status', (status) => webContents.send('serial:status', status))
   loggerService.on('log', (log) => webContents.send('electron:log', log))
+  linuxUpdateService.onStateChanged((state) => webContents.send('update:state', state))
 
   micService.on('change', () =>
     webContents.send('conditions:change', { micMuted: micService.isMuted() })
@@ -234,6 +237,7 @@ app.whenReady().then(async () => {
   }
 
   loggerService.info('Application started', 'Main')
+  void linuxUpdateService.check()
 })
 
 app.on('before-quit', (event) => {

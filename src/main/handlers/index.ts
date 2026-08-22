@@ -4,6 +4,7 @@ import { registerDeejHandlers } from './deej.handlers'
 import { registerSerialHandlers } from './serial.handlers'
 import { registerSettingsHandlers } from './settings.handlers'
 import { registerStreamdeckHandlers } from './streamdeck.handlers'
+import { registerUpdateHandlers } from './update.handlers'
 import type { WebContents } from 'electron'
 
 export function registerAllHandlers(trustedSender: WebContents): void {
@@ -13,4 +14,5 @@ export function registerAllHandlers(trustedSender: WebContents): void {
   registerDeejHandlers(trustedSender)
   registerAppHandlers(trustedSender)
   registerConditionsHandlers(trustedSender)
+  registerUpdateHandlers(trustedSender)
 }

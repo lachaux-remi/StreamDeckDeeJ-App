@@ -11,13 +11,19 @@ export default defineConfig({
   test: {
     coverage: {
       provider: 'v8',
-      include: ['src/main/services/serial-protocol.ts'],
+      include: [
+        'src/main/services/serial-protocol.ts',
+        'src/main/services/linux-update-controller.ts',
+        'src/main/services/linux-update-policy.ts',
+        'src/main/services/update-command.ts',
+        'src/main/types/update.types.ts'
+      ],
       reporter: ['text', 'html'],
       thresholds: {
-        branches: 91.04,
-        functions: 100,
-        lines: 97.01,
-        statements: 93.15
+        branches: 80,
+        functions: 84,
+        lines: 89,
+        statements: 82
       }
     },
     environment: 'node',

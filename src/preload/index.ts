@@ -31,6 +31,15 @@ const api = {
     getLogs: (): Promise<unknown[]> => ipcRenderer.invoke('electron:logs'),
     toggleDevTools: (): void => ipcRenderer.send('app:toggle-devtools')
   },
+  update: {
+    getState: (): Promise<unknown> => ipcRenderer.invoke('update:state'),
+    command: (command: unknown): Promise<unknown> => ipcRenderer.invoke('update:command', command),
+    onStateChanged: (callback: (state: unknown) => void): (() => void) => {
+      const handler = (_: unknown, state: unknown): void => callback(state)
+      ipcRenderer.on('update:state', handler)
+      return () => ipcRenderer.removeListener('update:state', handler)
+    }
+  },
   conditions: {
     getState: (): Promise<{
       micMuted: boolean

@@ -47,6 +47,9 @@ jobs:
       - name: Package Linux
         run: pnpm package:linux
 
+      - name: Verify Linux update metadata
+        run: pnpm verify:update-metadata
+
       - name: Verify Electron fuses
         run: |
           fuses="$(pnpm exec electron-fuses read --app dist/linux-unpacked/streamdeck-deej)"
@@ -104,6 +107,7 @@ jobs:
               echo "Smoke detected a main-process exception in $executable"
               exit 1
             fi
+            grep -F 'Linux updater mode: disabled' /tmp/smoke.log
             if [ "$status" -ne 124 ]; then
               cat /tmp/smoke.log
               echo "Smoke failed for $executable with status $status"
