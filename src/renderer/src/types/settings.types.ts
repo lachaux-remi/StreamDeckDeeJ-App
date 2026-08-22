@@ -130,6 +130,24 @@ function isIntegerBetween(value: unknown, min: number, max: number): value is nu
   return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max
 }
 
+function isHomeAssistantUrl(value: unknown): value is string {
+  if (value === '') return true
+  if (typeof value !== 'string' || value !== value.trim()) return false
+  try {
+    const url = new URL(value)
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      Boolean(url.hostname) &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash
+    )
+  } catch {
+    return false
+  }
+}
+
 function isLedColor(value: unknown): value is LedColor {
   return (
     isRecord(value) &&
@@ -244,7 +262,7 @@ export function isRendererSettings(value: unknown): value is RendererSettings {
   if (
     !isRecord(value.homeAssistant) ||
     !hasOnlyKeys(value.homeAssistant, ['url', 'tokenConfigured']) ||
-    typeof value.homeAssistant.url !== 'string' ||
+    !isHomeAssistantUrl(value.homeAssistant.url) ||
     typeof value.homeAssistant.tokenConfigured !== 'boolean'
   ) {
     return false

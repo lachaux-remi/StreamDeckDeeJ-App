@@ -143,6 +143,24 @@ function isIntegerBetween(value: unknown, min: number, max: number): value is nu
   return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max
 }
 
+function isHomeAssistantUrl(value: unknown): value is string {
+  if (value === '') return true
+  if (typeof value !== 'string' || value !== value.trim()) return false
+  try {
+    const url = new URL(value)
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      Boolean(url.hostname) &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash
+    )
+  } catch {
+    return false
+  }
+}
+
 function isLedColor(value: unknown): value is LedColor {
   return (
     isRecord(value) &&
@@ -240,7 +258,7 @@ export function isAppSettings(value: unknown): value is AppSettings {
   if (!isRecord(value.homeAssistant)) return false
   if (
     !hasOnlyKeys(value.homeAssistant, ['url', 'token']) ||
-    typeof value.homeAssistant.url !== 'string' ||
+    !isHomeAssistantUrl(value.homeAssistant.url) ||
     typeof value.homeAssistant.token !== 'string'
   ) {
     return false
@@ -298,7 +316,7 @@ export function isRendererSettingsUpdate(value: unknown): value is RendererSetti
   if (
     !isRecord(settings.homeAssistant) ||
     !hasOnlyKeys(settings.homeAssistant, ['url', 'tokenConfigured']) ||
-    typeof settings.homeAssistant.url !== 'string' ||
+    !isHomeAssistantUrl(settings.homeAssistant.url) ||
     typeof settings.homeAssistant.tokenConfigured !== 'boolean'
   ) {
     return false

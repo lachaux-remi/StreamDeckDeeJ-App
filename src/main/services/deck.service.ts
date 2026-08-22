@@ -1,12 +1,9 @@
 import { EventEmitter } from 'node:events'
 import HomeAssistantAPI from '@main/libs/home-assistant/HomeAssistantAPI'
 import { KeyUsageEnum, ModuleEnum } from '@main/types/enums'
-import type {
-  AppSettings,
-  StreamdeckInputConfig,
-  StreamdeckInputKey
-} from '@main/types/settings.types'
+import type { StreamdeckInputConfig, StreamdeckInputKey } from '@main/types/settings.types'
 import { configService } from './config.service'
+import { HomeAssistantStateSync } from './home-assistant-state-sync'
 import { ledService } from './led.service'
 import { loggerService } from './logger.service'
 import { serialService } from './serial.service'
@@ -17,35 +14,20 @@ const SERVICE = 'DeckService'
 class DeckService extends EventEmitter {
   private keyState: Record<string, KeyUsageEnum.Hold | KeyUsageEnum.Pressed> = {}
   private brightnessState: Record<string, number> = {}
+  private readonly homeAssistantStateSync = new HomeAssistantStateSync({
+    setButtonState: (key, state) => ledService.setHAButtonState(key, state)
+  })
 
   constructor() {
     super()
     loggerService.debug('INIT', SERVICE)
     serialService.on('serial:deck', (data) => this.deckEventHandler(data))
-    configService.onUpdated((config) => this.syncHAStates(config))
-    setInterval(() => this.syncHAStates(configService.getConfig()), 10_000)
+    configService.onUpdated((config) => this.homeAssistantStateSync.update(config))
+    this.homeAssistantStateSync.start(configService.getConfig())
   }
 
-  private syncHAStates(config: AppSettings): void {
-    const { homeAssistant, streamdeck } = config
-    if (!homeAssistant?.url || !homeAssistant?.token) return
-    const api = new HomeAssistantAPI(homeAssistant.url, homeAssistant.token)
-    for (const [key, btnCfg] of Object.entries(streamdeck ?? {})) {
-      const entityId =
-        btnCfg.pressed?.module === ModuleEnum.HomeAssistant
-          ? btnCfg.pressed.params[1]
-          : btnCfg.hold?.module === ModuleEnum.HomeAssistant
-            ? btnCfg.hold.params[1]
-            : undefined
-      const hasHACondition = btnCfg.ledConditions?.some(
-        (c) => c.type === 'ha-on' || c.type === 'ha-off'
-      )
-      if (!entityId || !hasHACondition) continue
-      api
-        .getState(entityId)
-        .then(({ state }) => ledService.setHAButtonState(key, state))
-        .catch(() => {})
-    }
+  public shutdown(): void {
+    this.homeAssistantStateSync.shutdown()
   }
 
   public onUpdated(listener: (deckKey: string, value: Record<string, unknown>) => void): void {
