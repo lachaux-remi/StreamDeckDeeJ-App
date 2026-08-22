@@ -76,6 +76,8 @@ jobs:
           pacman_package="$(find dist -maxdepth 1 -name '*.pkg.tar.xz' -print -quit)"
           test -n "$pacman_package"
           bsdtar -xOf "$pacman_package" .PKGINFO > /tmp/PKGINFO
+          package_root="$(mktemp -d)"
+          bsdtar -xf "$pacman_package" -C "$package_root"
           cat /tmp/PKGINFO
           for dependency in c-ares ffmpeg gtk3 http-parser libevent libvpx libxslt libxss minizip nss re2 snappy libnotify libappindicator-gtk3; do
             grep -Fx "depend = $dependency" /tmp/PKGINFO
@@ -84,8 +86,29 @@ jobs:
             grep -Fx "depend = $dependency" /tmp/PKGINFO
           done
 
+          cmp build/linux/70-streamdeck-deej.rules "$package_root/opt/streamdeck-deej/resources/linux/70-streamdeck-deej.rules"
+          test -x "$package_root/opt/streamdeck-deej/resources/linux/install-udev-rule"
+          grep -F "install-udev-rule' install" "$package_root/.INSTALL"
+          grep -F "rm -f '/etc/udev/rules.d/70-streamdeck-deej.rules'" "$package_root/.INSTALL"
+          grep -F 'udevadm control --reload-rules' "$package_root/opt/streamdeck-deej/resources/linux/install-udev-rule"
+          grep -F 'udevadm trigger --subsystem-match=hidraw' "$package_root/opt/streamdeck-deej/resources/linux/install-udev-rule"
+          grep -F 'udevadm trigger --subsystem-match=tty' "$package_root/opt/streamdeck-deej/resources/linux/install-udev-rule"
+          grep -F 'udevadm control --reload-rules' "$package_root/.INSTALL"
+          grep -F 'udevadm trigger --subsystem-match=hidraw' "$package_root/.INSTALL"
+          grep -F 'udevadm trigger --subsystem-match=tty' "$package_root/.INSTALL"
+          if grep -R -E 'MODE="?0666"?|GROUP=' build/linux "$package_root/.INSTALL"; then
+            echo 'Unsafe udev permission found in generated assets or pacman hooks'
+            exit 1
+          fi
+          rm -rf "$package_root"
+
+          if command -v udevadm >/dev/null 2>&1 && udevadm help | grep -q 'verify'; then
+            udevadm verify build/linux/70-streamdeck-deej.rules
+          fi
+
       - name: Smoke unpacked binary and extracted AppImage
         run: |
+          test "$(id -u)" -ne 0
           for runtime_command in pactl pw-dump wpctl dbus-send; do
             command -v "$runtime_command"
           done
@@ -118,5 +141,7 @@ jobs:
           appimage="$(realpath "$appimage")"
           extract_dir="$(mktemp -d)"
           (cd "$extract_dir" && "$appimage" --appimage-extract > /dev/null)
+          cmp build/linux/70-streamdeck-deej.rules "$extract_dir/squashfs-root/resources/linux/70-streamdeck-deej.rules"
+          test -x "$extract_dir/squashfs-root/resources/linux/install-udev-rule"
           smoke "$extract_dir/squashfs-root/AppRun"
           rm -rf "$extract_dir"

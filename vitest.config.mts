@@ -11,13 +11,19 @@ export default defineConfig({
   test: {
     coverage: {
       provider: 'v8',
-      include: ['src/main/services/serial-protocol.ts'],
+      include: [
+        'scripts/linux-permissions.mjs',
+        'src/main/handlers/hardware-permissions.contract.ts',
+        'src/main/handlers/trusted-ipc-core.ts',
+        'src/main/services/hardware-permissions-core.ts',
+        'src/main/services/serial-protocol.ts'
+      ],
       reporter: ['text', 'html'],
       thresholds: {
-        branches: 91.04,
+        branches: 83.05,
         functions: 100,
-        lines: 97.01,
-        statements: 93.15
+        lines: 95.96,
+        statements: 91.91
       }
     },
     environment: 'node',

@@ -6,10 +6,27 @@ const api = {
     update: (config: unknown): Promise<void> => ipcRenderer.invoke('settings:update', config)
   },
   serial: {
-    list: (): Promise<{ path: string; displayName: string }[]> =>
-      ipcRenderer.invoke('serial:list'),
-    status: (): Promise<{ connected: boolean; port: string }> =>
-      ipcRenderer.invoke('serial:status')
+    list: (): Promise<{ path: string; displayName: string }[]> => ipcRenderer.invoke('serial:list'),
+    status: (): Promise<{ connected: boolean; port: string }> => ipcRenderer.invoke('serial:status')
+  },
+  hardwarePermissions: {
+    diagnose: (): Promise<{
+      hid: 'accessible' | 'permission-denied' | 'not-detected'
+      serial: 'accessible' | 'permission-denied' | 'not-detected'
+      rule: 'installed' | 'missing' | 'different'
+      installAction: 'available' | 'unavailable'
+      manualCommand?: string
+    }> => ipcRenderer.invoke('hardware-permissions:diagnose'),
+    install: (): Promise<{
+      result: 'installed' | 'cancelled' | 'failed'
+      diagnostic: {
+        hid: 'accessible' | 'permission-denied' | 'not-detected'
+        serial: 'accessible' | 'permission-denied' | 'not-detected'
+        rule: 'installed' | 'missing' | 'different'
+        installAction: 'available' | 'unavailable'
+        manualCommand?: string
+      }
+    }> => ipcRenderer.invoke('hardware-permissions:install')
   },
   streamdeck: {
     getKeys: (key: string): Promise<unknown> => ipcRenderer.invoke('streamdeck:keys', key),
@@ -40,13 +57,15 @@ const api = {
       discordConnected: boolean
     }> => ipcRenderer.invoke('conditions:state'),
     onChange: (
-      callback: (state: Partial<{
-        micMuted: boolean
-        discordMuted: boolean
-        discordDeafened: boolean
-        discordStreaming: boolean
-        discordConnected: boolean
-      }>) => void
+      callback: (
+        state: Partial<{
+          micMuted: boolean
+          discordMuted: boolean
+          discordDeafened: boolean
+          discordStreaming: boolean
+          discordConnected: boolean
+        }>
+      ) => void
     ): (() => void) => {
       const handler = (
         _: unknown,
