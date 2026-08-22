@@ -5,6 +5,8 @@ interface BeforeQuitEvent {
 interface AppQuitCoordinatorOptions {
   shutdown(): Promise<void>
   exit(): void
+  shutdownTimeoutMs?: number
+  onShutdownTimeout?(): void
 }
 
 export class AppQuitCoordinator {
@@ -41,7 +43,25 @@ export class AppQuitCoordinator {
   }
 
   private shutdownOnce(): Promise<void> {
-    this.shutdownPromise ??= this.options.shutdown()
+    this.shutdownPromise ??= this.shutdownWithDeadline()
     return this.shutdownPromise
+  }
+
+  private shutdownWithDeadline(): Promise<void> {
+    const shutdown = this.options.shutdown()
+    const timeoutMs = this.options.shutdownTimeoutMs
+    if (timeoutMs === undefined) return shutdown
+
+    let timer: ReturnType<typeof setTimeout>
+    const deadline = new Promise<void>((resolve) => {
+      timer = setTimeout(() => {
+        try {
+          this.options.onShutdownTimeout?.()
+        } finally {
+          resolve()
+        }
+      }, timeoutMs)
+    })
+    return Promise.race([shutdown, deadline]).finally(() => clearTimeout(timer))
   }
 }
