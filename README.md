@@ -53,6 +53,12 @@ pnpm build:linux
 
 `pnpm build:linux` produit un AppImage et un paquet Arch Linux dans `dist/`.
 
+## Releases
+
+Les commits fusionnés dans `main` doivent suivre la convention Conventional Commits. Après validation par la CI, Release Please ouvre ou met à jour une pull request de release. Seul le propriétaire du dépôt relit et fusionne cette pull request. Sa fusion crée le tag immuable `vX.Y.Z` et la GitHub Release, puis reconstruit depuis ce tag et joint l’AppImage et le paquet pacman à la release.
+
+Le workflow utilise le secret Actions `RELEASE_PLEASE_TOKEN`, configuré avec un personal access token du propriétaire autorisé à écrire le contenu, les issues et les pull requests du dépôt. Ce token permet aux pull requests créées par Release Please de déclencher normalement la CI.
+
 ## Configuration
 
 La configuration se fait depuis l’interface : port série, grille, boutons, sessions audio, LEDs et intégrations. Les identifiants Home Assistant et Discord sont enregistrés dans le fichier de configuration local de l’application avec des permissions limitées à l’utilisateur. Ils ne doivent jamais être ajoutés au dépôt ni copiés dans un rapport de bug.

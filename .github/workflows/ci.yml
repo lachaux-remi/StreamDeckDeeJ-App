@@ -2,9 +2,7 @@ name: CI
 
 on:
   pull_request:
-  push:
-    branches:
-      - main
+  workflow_call:
 
 permissions:
   contents: read
@@ -41,7 +39,7 @@ jobs:
         run: pnpm audit --audit-level low
 
       - name: Package Linux
-        run: pnpm build:linux
+        run: pnpm package:linux
 
       - name: Verify Electron fuses
         run: |
