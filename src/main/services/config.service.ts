@@ -16,7 +16,7 @@ import { ElectronSafeStorageSecretCodec, SettingsPersistence } from './secret-st
 
 const SERVICE = 'ConfigService'
 
-class ConfigService extends EventEmitter {
+export class ConfigService extends EventEmitter {
   private data: AppSettings = { ...defaultSettings }
   private configPath: string = ''
   private persistence: SettingsPersistence | undefined
@@ -126,11 +126,23 @@ class ConfigService extends EventEmitter {
   }
 
   public setConfig(config: Partial<AppSettings>): void {
+    const previousData = this.data
     const nextData = { ...this.data, ...config }
     this.save(nextData)
     this.data = nextData
+    try {
+      this.emit('config:updated', this.data)
+    } catch (error) {
+      this.data = previousData
+      this.save(previousData)
+      try {
+        this.emit('config:updated', this.data)
+      } catch {
+        // Preserve the original update failure after best-effort listener rollback.
+      }
+      throw error
+    }
     loggerService.debug('Config updated', SERVICE)
-    this.emit('config:updated', this.data)
   }
 
   public onUpdated(listener: (config: AppSettings) => void): void {

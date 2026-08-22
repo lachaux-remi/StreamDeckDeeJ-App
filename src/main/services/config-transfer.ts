@@ -133,7 +133,7 @@ export class ConfigTransferController {
       this.transfer.importFromFile(path)
       return {
         status: 'success',
-        message: 'Configuration importée. Les secrets existants ont été conservés.'
+        message: 'Configuration importée.'
       }
     } catch (error) {
       if (error instanceof ConfigTransferError && error.code === 'TOO_LARGE') {
@@ -188,12 +188,13 @@ function createSettingsUpdate(
   settings: PublicSettings,
   current: RendererSettings
 ): RendererSettingsUpdate {
+  const homeAssistantEndpointUnchanged = settings.homeAssistant.url === current.homeAssistant.url
   return {
     settings: {
       ...settings,
       homeAssistant: {
         url: settings.homeAssistant.url,
-        tokenConfigured: current.homeAssistant.tokenConfigured
+        tokenConfigured: homeAssistantEndpointUnchanged && current.homeAssistant.tokenConfigured
       },
       discord: {
         clientId: settings.discord.clientId,
@@ -201,7 +202,12 @@ function createSettingsUpdate(
         authenticated: current.discord.authenticated
       }
     },
-    secrets: unchangedSecrets
+    secrets: {
+      ...unchangedSecrets,
+      homeAssistantToken: homeAssistantEndpointUnchanged
+        ? { action: 'unchanged' }
+        : { action: 'clear' }
+    }
   }
 }
 

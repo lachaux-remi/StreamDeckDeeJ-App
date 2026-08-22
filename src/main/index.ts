@@ -39,7 +39,10 @@ const APP_ICON = isDev
   ? join(__dirname, '../../resources/logo.png')
   : join(process.resourcesPath, 'logo.png')
 const appQuitCoordinator = new AppQuitCoordinator({
-  shutdown: () => ledService.shutdown(),
+  shutdown: async () => {
+    deckService.shutdown()
+    await ledService.shutdown()
+  },
   exit: () => app.exit(),
   shutdownTimeoutMs: 3_000,
   onShutdownTimeout: () =>
