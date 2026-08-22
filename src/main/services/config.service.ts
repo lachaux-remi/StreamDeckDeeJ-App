@@ -84,15 +84,17 @@ class ConfigService extends EventEmitter {
     }
   }
 
-  private save(): void {
+  private save(): boolean {
     try {
       writeFileSync(this.configPath, JSON.stringify(this.data, null, 2), {
         encoding: 'utf-8',
         mode: 0o600
       })
       chmodSync(this.configPath, 0o600)
+      return true
     } catch (err) {
       loggerService.error(`Failed to save config: ${err}`, SERVICE)
+      return false
     }
   }
 
@@ -147,8 +149,12 @@ class ConfigService extends EventEmitter {
   }
 
   public setConfig(config: Partial<AppSettings>): void {
+    const previous = this.data
     this.data = { ...this.data, ...config }
-    this.save()
+    if (!this.save()) {
+      this.data = previous
+      throw new Error('Failed to persist config')
+    }
     loggerService.debug('Config updated', SERVICE)
     this.emit('config:updated', this.data)
   }
