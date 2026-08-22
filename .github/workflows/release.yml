@@ -59,6 +59,7 @@ jobs:
           test "$(git describe --tags --exact-match)" = "${{ steps.release.outputs.tag_name }}"
           test "$(node --print 'require("./package.json").version')" = "${{ steps.release.outputs.version }}"
           pnpm package:linux
+          pnpm verify:update-metadata
 
       - name: Upload Linux artifacts to GitHub Release
         if: ${{ steps.release.outputs.release_created == 'true' }}
@@ -68,6 +69,10 @@ jobs:
         run: |
           mapfile -t appimages < <(find dist -maxdepth 1 -type f -name '*.AppImage')
           mapfile -t pacman_packages < <(find dist -maxdepth 1 -type f -name '*.pkg.tar.xz')
+          mapfile -t update_metadata < <(find dist -maxdepth 1 -type f -name 'latest-linux.yml')
+          mapfile -t blockmaps < <(find dist -maxdepth 1 -type f -name '*.blockmap')
           test "${#appimages[@]}" -eq 1
           test "${#pacman_packages[@]}" -eq 1
-          gh release upload "$RELEASE_TAG" "${appimages[0]}" "${pacman_packages[0]}"
+          test "${#update_metadata[@]}" -eq 1
+          test "${#blockmaps[@]}" -le 1
+          gh release upload "$RELEASE_TAG" "${appimages[0]}" "${pacman_packages[0]}" "${update_metadata[0]}" "${blockmaps[@]}"

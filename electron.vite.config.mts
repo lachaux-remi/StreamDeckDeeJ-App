@@ -8,7 +8,13 @@ export default defineConfig({
     build: {
       outDir: 'out/main',
       rollupOptions: {
-        external: ['electron', 'serialport', '@serialport/bindings-cpp', 'node-hid']
+        external: [
+          'electron',
+          'electron-updater',
+          'serialport',
+          '@serialport/bindings-cpp',
+          'node-hid'
+        ]
       }
     },
     resolve: {

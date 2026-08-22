@@ -5,6 +5,7 @@ import { registerHardwarePermissionsHandlers } from './hardware-permissions.hand
 import { registerSerialHandlers } from './serial.handlers'
 import { registerSettingsHandlers } from './settings.handlers'
 import { registerStreamdeckHandlers } from './streamdeck.handlers'
+import { registerUpdateHandlers } from './update.handlers'
 import type { WebContents } from 'electron'
 
 export function registerAllHandlers(trustedSender: WebContents): void {
@@ -15,4 +16,5 @@ export function registerAllHandlers(trustedSender: WebContents): void {
   registerHardwarePermissionsHandlers(trustedSender)
   registerAppHandlers(trustedSender)
   registerConditionsHandlers(trustedSender)
+  registerUpdateHandlers(trustedSender)
 }

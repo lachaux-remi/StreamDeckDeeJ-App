@@ -2,6 +2,11 @@ appId: fr.remi-lachaux.streamdeck-deej
 productName: streamdeck-deej
 directories:
   buildResources: build
+publish:
+  provider: github
+  owner: lachaux-remi
+  repo: StreamDeckDeeJ-App
+  private: false
 electronFuses:
   runAsNode: false
   enableNodeOptionsEnvironmentVariable: false
