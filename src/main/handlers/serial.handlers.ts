@@ -1,7 +1,8 @@
-import { ipcMain } from 'electron'
+import type { WebContents } from 'electron'
 import { serialService } from '@main/services/serial.service'
+import { handleIpc } from './trusted-ipc'
 
-export function registerSerialHandlers(): void {
-  ipcMain.handle('serial:list', () => serialService.listPorts())
-  ipcMain.handle('serial:status', () => serialService.getStatus())
+export function registerSerialHandlers(trustedSender: WebContents): void {
+  handleIpc(trustedSender, 'serial:list', () => serialService.listPorts())
+  handleIpc(trustedSender, 'serial:status', () => serialService.getStatus())
 }

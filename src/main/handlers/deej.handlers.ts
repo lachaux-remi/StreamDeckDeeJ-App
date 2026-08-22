@@ -1,9 +1,10 @@
-import { ipcMain } from 'electron'
+import type { WebContents } from 'electron'
 import { sessionsService } from '@main/services/sessions.service'
 import { sliderService } from '@main/services/slider.service'
+import { handleIpc } from './trusted-ipc'
 
-export function registerDeejHandlers(): void {
-  ipcMain.handle('deej:sliders', () => {
+export function registerDeejHandlers(trustedSender: WebContents): void {
+  handleIpc(trustedSender, 'deej:sliders', () => {
     const sliders = sliderService.getSliders()
     // If no data from Arduino yet, read current volumes from OS
     if (Object.keys(sliders).length === 0) {
@@ -11,5 +12,5 @@ export function registerDeejHandlers(): void {
     }
     return sliders
   })
-  ipcMain.handle('deej:sessions', () => sessionsService.getAllSessions())
+  handleIpc(trustedSender, 'deej:sessions', () => sessionsService.getAllSessions())
 }

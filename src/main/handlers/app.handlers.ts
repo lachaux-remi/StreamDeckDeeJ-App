@@ -1,20 +1,17 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app } from 'electron'
+import type { WebContents } from 'electron'
 import { loggerService } from '@main/services/logger.service'
+import { handleIpc, onIpc } from './trusted-ipc'
 
-export function registerAppHandlers(): void {
-  ipcMain.handle('electron:versions', () => ({
+export function registerAppHandlers(trustedSender: WebContents): void {
+  handleIpc(trustedSender, 'electron:versions', () => ({
     app: app.getVersion(),
     electron: process.versions.electron,
     node: process.versions.node,
     chrome: process.versions.chrome
   }))
 
-  ipcMain.handle('electron:logs', () => loggerService.getLogs())
+  handleIpc(trustedSender, 'electron:logs', () => loggerService.getLogs())
 
-  ipcMain.on('app:toggle-devtools', (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender)
-    if (win) {
-      win.webContents.toggleDevTools()
-    }
-  })
+  onIpc(trustedSender, 'app:toggle-devtools', () => trustedSender.toggleDevTools())
 }
