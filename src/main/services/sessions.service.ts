@@ -1,8 +1,9 @@
-import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
+import { spawn, type ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { configService } from './config.service'
 import { loggerService } from './logger.service'
 import { sliderService } from './slider.service'
+import { commandRunner, LatestValueExecutor, runCommandWithFallback } from './audio-command'
 
 const SERVICE = 'SessionsService'
 const MIN_REFRESH_TIME = 5 * 1000
@@ -42,38 +43,53 @@ class SessionsService extends EventEmitter {
   private subscribeProcess: ChildProcess | null = null
   private reapplyTimers: NodeJS.Timeout[] = []
   private recentlySet: boolean = false
+  private activeVolumeSets: number = 0
+  private recentlySetTimer: NodeJS.Timeout | null = null
+  private refreshPromise: Promise<void> | null = null
+  private mprisRefreshPromise: Promise<void> | null = null
+  private readonly volumeExecutor = new LatestValueExecutor<string, number>(
+    4,
+    (sessionName, value) => this.setSessionVolume(sessionName, value)
+  )
 
   constructor() {
     super()
     loggerService.debug('INIT', SERVICE)
 
-    this.refreshSessions()
+    void this.refreshSessions()
     this.runIsStaleTask()
     this.runIsFreshTask()
     this.startSubscribe()
 
     sliderService.on('sliders:batch', (sliders: Record<string, number>) => {
       for (const [sliderKey, value] of Object.entries(sliders)) {
-        this.updateSessions(sliderKey, value)
+        void this.updateSessions(sliderKey, value)
       }
     })
   }
 
-  public getAllSessions(): string[] {
-    this.refreshSessions()
+  public async getAllSessions(): Promise<string[]> {
+    await this.refreshSessions()
     const names = new Set(this.sessions.map((s) => s.name.toLowerCase()))
     return ['master', ...names]
   }
 
-  private refreshSessions(): void {
+  private refreshSessions(): Promise<void> {
+    if (this.refreshPromise) return this.refreshPromise
+
+    this.refreshPromise = this.loadSessions().finally(() => {
+      this.refreshPromise = null
+    })
+    return this.refreshPromise
+  }
+
+  private async loadSessions(): Promise<void> {
     try {
-      this.sessions = this.parsePwDump()
+      const raw = await commandRunner.run('pw-dump', ['--no-colors'], 5000)
+      this.sessions = this.parsePwDump(raw)
     } catch {
       try {
-        const output = execFileSync('pactl', ['list', 'sink-inputs'], {
-          encoding: 'utf-8',
-          timeout: 5000
-        })
+        const output = await commandRunner.run('pactl', ['list', 'sink-inputs'], 5000)
         this.sessions = this.parsePactlOutput(output)
       } catch (error) {
         loggerService.error(`Failed to list audio sessions: ${error}`, SERVICE)
@@ -91,37 +107,39 @@ class SessionsService extends EventEmitter {
    * Returns current OS volumes for each configured slider (0–1).
    * Reads master via wpctl, per-app from cached sessions.
    */
-  public getOsVolumes(): Record<string, number> {
+  public async getOsVolumes(): Promise<Record<string, number>> {
     const deejConfig = configService.getConfig().deej || {}
     const volumes: Record<string, number> = {}
 
-    this.refreshSessions()
+    await this.refreshSessions()
 
     for (const [sliderKey, sessionNames] of Object.entries(deejConfig)) {
       if (!sessionNames || sessionNames.length === 0) continue
       const firstSession = sessionNames[0]
-      const vol = this.getSessionVolume(firstSession)
+      const vol = await this.getSessionVolume(firstSession)
       if (vol !== null) volumes[sliderKey] = vol
     }
 
     return volumes
   }
 
-  private getSessionVolume(sessionName: string): number | null {
+  private async getSessionVolume(sessionName: string): Promise<number | null> {
     try {
       if (sessionName === 'master') {
         try {
-          const output = execFileSync('wpctl', ['get-volume', '@DEFAULT_AUDIO_SINK@'], {
-            encoding: 'utf-8',
-            timeout: 2000
-          })
+          const output = await commandRunner.run(
+            'wpctl',
+            ['get-volume', '@DEFAULT_AUDIO_SINK@'],
+            2000
+          )
           const match = output.match(/Volume:\s+([\d.]+)/)
           return match ? parseFloat(match[1]) : null
         } catch {
-          const output = execFileSync('pactl', ['get-sink-volume', '@DEFAULT_SINK@'], {
-            encoding: 'utf-8',
-            timeout: 2000
-          })
+          const output = await commandRunner.run(
+            'pactl',
+            ['get-sink-volume', '@DEFAULT_SINK@'],
+            2000
+          )
           const match = output.match(/(\d+)%/)
           return match ? parseInt(match[1]) / 100 : null
         }
@@ -169,8 +187,7 @@ class SessionsService extends EventEmitter {
    * which is required for PipeWire-native apps (e.g. Spotify) whose stream
    * node does NOT carry application.name itself.
    */
-  private parsePwDump(): AudioSession[] {
-    const raw = execFileSync('pw-dump', ['--no-colors'], { encoding: 'utf-8', timeout: 5000 })
+  private parsePwDump(raw: string): AudioSession[] {
     const objects: PwDumpObject[] = JSON.parse(raw)
 
     const clientMap = new Map<number, Record<string, unknown>>()
@@ -269,17 +286,19 @@ class SessionsService extends EventEmitter {
     for (const delay of REAPPLY_DELAYS) {
       this.reapplyTimers.push(
         setTimeout(() => {
-          this.refreshSessions()
-          this.reapplyVolumes()
-          if (delay === REAPPLY_DELAYS[REAPPLY_DELAYS.length - 1]) {
-            this.reapplyTimers = []
-          }
+          void this.refreshSessions()
+            .then(() => this.reapplyVolumes())
+            .then(() => {
+              if (delay === REAPPLY_DELAYS[REAPPLY_DELAYS.length - 1]) {
+                this.reapplyTimers = []
+              }
+            })
         }, delay)
       )
     }
   }
 
-  private reapplyVolumes(): void {
+  private reapplyVolumes(): Promise<void> {
     const deejConfig = configService.getConfig().deej || {}
     const sliders = sliderService.getSliders()
 
@@ -287,14 +306,25 @@ class SessionsService extends EventEmitter {
       const value = sliders[sliderKey]
       if (value === undefined || !sessionNames) continue
       for (const sessionName of sessionNames) {
-        this.setSessionVolume(sessionName, value)
+        this.volumeExecutor.submit(sessionName.toLowerCase(), value)
       }
     }
+
+    return this.volumeExecutor.onIdle()
   }
 
-  private refreshMprisPlayers(): void {
+  private refreshMprisPlayers(): Promise<void> {
+    if (this.mprisRefreshPromise) return this.mprisRefreshPromise
+
+    this.mprisRefreshPromise = this.loadMprisPlayers().finally(() => {
+      this.mprisRefreshPromise = null
+    })
+    return this.mprisRefreshPromise
+  }
+
+  private async loadMprisPlayers(): Promise<void> {
     try {
-      const output = execFileSync(
+      const output = await commandRunner.run(
         'dbus-send',
         [
           '--session',
@@ -304,7 +334,7 @@ class SessionsService extends EventEmitter {
           '/org/freedesktop/DBus',
           'org.freedesktop.DBus.ListNames'
         ],
-        { encoding: 'utf-8', timeout: 2000 }
+        2000
       )
       this.mprisPlayers = []
       for (const line of output.split('\n')) {
@@ -318,9 +348,9 @@ class SessionsService extends EventEmitter {
     }
   }
 
-  private findMprisBusName(sessionName: string): string | null {
+  private async findMprisBusName(sessionName: string): Promise<string | null> {
     if (Date.now() - this.mprisLastRefresh > MPRIS_REFRESH_INTERVAL) {
-      this.refreshMprisPlayers()
+      await this.refreshMprisPlayers()
     }
 
     const target = sessionName.toLowerCase()
@@ -335,9 +365,9 @@ class SessionsService extends EventEmitter {
     return null
   }
 
-  private setMprisVolume(busName: string, value: number): void {
+  private async setMprisVolume(busName: string, value: number): Promise<void> {
     try {
-      execFileSync(
+      await commandRunner.run(
         'dbus-send',
         [
           '--session',
@@ -349,30 +379,38 @@ class SessionsService extends EventEmitter {
           'string:Volume',
           `variant:double:${value}`
         ],
-        { timeout: 2000, stdio: 'ignore' }
+        2000
       )
     } catch {
       // MPRIS volume not supported for this player
     }
   }
 
-  private setSessionVolume(sessionName: string, value: number): void {
+  private async setSessionVolume(sessionName: string, value: number): Promise<void> {
     const percent = Math.round(value * 100)
 
-    try {
-      this.recentlySet = true
-      setTimeout(() => (this.recentlySet = false), 150)
+    this.activeVolumeSets += 1
+    if (this.recentlySetTimer) {
+      clearTimeout(this.recentlySetTimer)
+      this.recentlySetTimer = null
+    }
+    this.recentlySet = true
 
+    try {
       if (sessionName === 'master') {
-        try {
-          execFileSync('wpctl', ['set-volume', '@DEFAULT_AUDIO_SINK@', `${percent}%`], {
+        await runCommandWithFallback(
+          commandRunner,
+          {
+            file: 'wpctl',
+            args: ['set-volume', '@DEFAULT_AUDIO_SINK@', `${percent}%`],
             timeout: 2000
-          })
-        } catch {
-          execFileSync('pactl', ['set-sink-volume', '@DEFAULT_SINK@', `${percent}%`], {
+          },
+          {
+            file: 'pactl',
+            args: ['set-sink-volume', '@DEFAULT_SINK@', `${percent}%`],
             timeout: 2000
-          })
-        }
+          }
+        )
       } else {
         const matching = this.sessions.filter(
           (s) => s.name.toLowerCase() === sessionName.toLowerCase()
@@ -380,35 +418,47 @@ class SessionsService extends EventEmitter {
         if (matching.length > 0) {
           for (const session of matching) {
             try {
-              execFileSync('wpctl', ['set-volume', String(session.pwNodeId), `${percent}%`], {
-                timeout: 2000
-              })
+              await commandRunner.run(
+                'wpctl',
+                ['set-volume', String(session.pwNodeId), `${percent}%`],
+                2000
+              )
             } catch {
-              this.refreshSessions()
+              await this.refreshSessions()
               const fresh = this.sessions.find(
                 (s) => s.name.toLowerCase() === sessionName.toLowerCase()
               )
               if (fresh) {
-                execFileSync('wpctl', ['set-volume', String(fresh.pwNodeId), `${percent}%`], {
-                  timeout: 2000
-                })
+                await commandRunner.run(
+                  'wpctl',
+                  ['set-volume', String(fresh.pwNodeId), `${percent}%`],
+                  2000
+                )
               }
             }
           }
         } else {
           // No PipeWire session found — fall back to MPRIS (e.g. native players bypassing PipeWire)
-          const mprisBus = this.findMprisBusName(sessionName)
-          if (mprisBus) this.setMprisVolume(mprisBus, value)
+          const mprisBus = await this.findMprisBusName(sessionName)
+          if (mprisBus) await this.setMprisVolume(mprisBus, value)
         }
       }
     } catch (error) {
       loggerService.error(`Failed to set volume for ${sessionName}: ${error}`, SERVICE)
+    } finally {
+      this.activeVolumeSets -= 1
+      if (this.activeVolumeSets === 0) {
+        this.recentlySetTimer = setTimeout(() => {
+          this.recentlySet = false
+          this.recentlySetTimer = null
+        }, 150)
+      }
     }
   }
 
-  private updateSessions(sliderKey: string, value: number): void {
+  private async updateSessions(sliderKey: string, value: number): Promise<void> {
     if (this.isStale) {
-      this.refreshSessions()
+      await this.refreshSessions()
     }
 
     const targetSessions = configService.getConfig().deej?.[sliderKey] || []
@@ -419,10 +469,12 @@ class SessionsService extends EventEmitter {
         .every((name) => this.sessions.some((s) => s.name.toLowerCase() === name.toLowerCase())) &&
       !this.isFresh
     ) {
-      this.refreshSessions()
+      await this.refreshSessions()
     }
 
-    targetSessions.forEach((sessionName) => this.setSessionVolume(sessionName, value))
+    targetSessions.forEach((sessionName) =>
+      this.volumeExecutor.submit(sessionName.toLowerCase(), value)
+    )
   }
 }
 

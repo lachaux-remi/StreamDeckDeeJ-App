@@ -1,5 +1,6 @@
-import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
+import { spawn, type ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
+import { commandRunner, LatestValueExecutor } from './audio-command'
 import { loggerService } from './logger.service'
 
 const SERVICE = 'MicService'
@@ -7,9 +8,13 @@ const SERVICE = 'MicService'
 class MicService extends EventEmitter {
   private muted = false
   private subscribeProcess: ChildProcess | null = null
+  private readonly queryExecutor = new LatestValueExecutor<string, true>(1, () =>
+    this.queryMuteState()
+  )
 
   async init(): Promise<void> {
-    this.queryMuteState()
+    this.queryExecutor.submit('default-source', true)
+    await this.queryExecutor.onIdle()
     this.startSubscribe()
     loggerService.info('MicService initialisé', SERVICE)
   }
@@ -18,12 +23,9 @@ class MicService extends EventEmitter {
     return this.muted
   }
 
-  private queryMuteState(): void {
+  private async queryMuteState(): Promise<void> {
     try {
-      const out = execFileSync('pactl', ['get-source-mute', '@DEFAULT_SOURCE@'], {
-        encoding: 'utf-8',
-        timeout: 2000
-      })
+      const out = await commandRunner.run('pactl', ['get-source-mute', '@DEFAULT_SOURCE@'], 2000)
       const muted = out.includes('Mute: yes')
       if (muted !== this.muted) {
         this.muted = muted
@@ -43,7 +45,7 @@ class MicService extends EventEmitter {
       this.subscribeProcess.stdout?.on('data', (chunk: Buffer) => {
         for (const line of chunk.toString().split('\n')) {
           if (line.includes("'change'") && line.includes('source')) {
-            this.queryMuteState()
+            this.queryExecutor.submit('default-source', true)
           }
         }
       })

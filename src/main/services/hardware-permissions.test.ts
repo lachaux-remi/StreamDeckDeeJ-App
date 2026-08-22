@@ -60,6 +60,42 @@ test('reports official interfaces absent without confusing absence with permissi
   expect(diagnostic.manualCommand).toBe(buildManualInstallCommand(EXPECTED_RULE))
 })
 
+test('normalizes official USB IDs and reports an installed canonical rule', async () => {
+  const diagnostic = await buildHardwarePermissionsDiagnostic({
+    hidDevices: [{}],
+    serialDevices: [{ path: '/dev/ttyACM9', vendorId: '0x5239', productId: '1' }],
+    canReadWrite: async () => true,
+    readInstalledRule: async () => EXPECTED_RULE,
+    appImage: false,
+    pkexecAvailable: false,
+    installerAvailable: false,
+    officialVendorId: '5239',
+    officialProductId: '0001',
+    expectedRule: EXPECTED_RULE
+  })
+
+  expect(diagnostic.hid).toBe('not-detected')
+  expect(diagnostic.serial).toBe('accessible')
+  expect(diagnostic.rule).toBe('installed')
+})
+
+test('reports a modified installed rule without treating it as canonical', async () => {
+  const diagnostic = await buildHardwarePermissionsDiagnostic({
+    hidDevices: [],
+    serialDevices: [],
+    canReadWrite: async () => true,
+    readInstalledRule: async () => `${EXPECTED_RULE}# administrator change\n`,
+    appImage: false,
+    pkexecAvailable: false,
+    installerAvailable: false,
+    officialVendorId: '5239',
+    officialProductId: '0001',
+    expectedRule: EXPECTED_RULE
+  })
+
+  expect(diagnostic.rule).toBe('different')
+})
+
 test('offers elevation only when packaged resources are on a read-only AppImage mount', () => {
   const mountInfo =
     '42 31 0:99 / /tmp/.mount_stream\\040deck ro,nosuid,nodev - fuse.streamdeck streamdeck ro'
@@ -80,6 +116,37 @@ test('offers elevation only when packaged resources are on a read-only AppImage 
       mountInfo: '42 31 0:99 / /tmp/extracted rw - ext4 /dev/root rw'
     })
   ).toBe(false)
+  expect(
+    isReadOnlyAppImageMount({
+      isPackaged: false,
+      appImagePath: '/home/user/streamdeck-deej.AppImage',
+      resourcesPath: '/tmp/.mount_stream-deej/resources',
+      mountInfo: ''
+    })
+  ).toBe(false)
+  expect(
+    isReadOnlyAppImageMount({
+      isPackaged: true,
+      resourcesPath: '/tmp/.mount_stream-deej/resources',
+      mountInfo: ''
+    })
+  ).toBe(false)
+  expect(
+    isReadOnlyAppImageMount({
+      isPackaged: true,
+      appImagePath: '/home/user/streamdeck-deej.AppImage',
+      resourcesPath: '/tmp/.mount_stream-deej/resources',
+      mountInfo: 'malformed mount info'
+    })
+  ).toBe(false)
+  expect(
+    isReadOnlyAppImageMount({
+      isPackaged: true,
+      appImagePath: '/home/user/streamdeck-deej.AppImage',
+      resourcesPath: '/tmp/.mount_stream-deej',
+      mountInfo: '42 31 0:99 / /tmp/.mount_stream-deej ro - squashfs streamdeck ro'
+    })
+  ).toBe(true)
 })
 
 test('runs only the fixed AppImage helper through pkexec without a shell', async () => {
@@ -117,6 +184,36 @@ test('refuses privileged installation outside an AppImage', async () => {
       async () => 0
     )
   ).rejects.toThrow(/AppImage/)
+})
+
+test('refuses any pkexec executable other than the fixed system path', async () => {
+  await expect(
+    runPermissionInstaller(
+      {
+        appImage: true,
+        pkexecPath: '/tmp/pkexec',
+        installerPath: '/read-only-appimage/resources/linux/install-udev-rule'
+      },
+      async () => 0
+    )
+  ).rejects.toThrow(/fixed pkexec/)
+})
+
+test.each([
+  [126, 'cancelled'],
+  [127, 'cancelled'],
+  [1, 'failed']
+] as const)('maps installer exit code %i to %s', async (exitCode, expected) => {
+  await expect(
+    runPermissionInstaller(
+      {
+        appImage: true,
+        pkexecPath: '/usr/bin/pkexec',
+        installerPath: '/read-only-appimage/resources/linux/install-udev-rule'
+      },
+      async () => exitCode
+    )
+  ).resolves.toBe(expected)
 })
 
 test('permission IPC exposes fixed no-input diagnostic and install operations', () => {
