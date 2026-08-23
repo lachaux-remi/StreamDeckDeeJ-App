@@ -154,6 +154,44 @@ test('bounds socket discovery and coalesces reconnect when no trusted endpoint e
   vi.clearAllTimers()
 })
 
+test('exchanges an authorization code and authenticates with the returned token', async () => {
+  const socket = fakeSocket()
+  fakes.createConnection.mockReturnValue(socket)
+  const fetch = vi.fn().mockResolvedValue({
+    json: () =>
+      Promise.resolve({
+        access_token: 'new-access-token',
+        refresh_token: 'new-refresh-token'
+      })
+  })
+  vi.stubGlobal('fetch', fetch)
+  const { discordService } = await import('@main/services/discord.service')
+
+  await discordService.init()
+  await Promise.resolve()
+  socket.emit('connect')
+  socket.emit('data', rpcFrame({ cmd: 'AUTHORIZE', data: { code: 'authorization-code' } }))
+  await settleUntil(() => fakes.setConfig.mock.calls.length === 1)
+
+  expect(fetch).toHaveBeenCalledWith(
+    'https://discord.com/api/oauth2/token',
+    expect.objectContaining({ method: 'POST' })
+  )
+  expect(fakes.setConfig).toHaveBeenCalledWith({
+    discord: expect.objectContaining({
+      accessToken: 'new-access-token',
+      refreshToken: 'new-refresh-token'
+    })
+  })
+  expect(writtenPayload(socket, 1)).toEqual({
+    cmd: 'AUTHENTICATE',
+    args: { access_token: 'new-access-token' },
+    nonce: 'authenticate'
+  })
+  vi.unstubAllGlobals()
+  vi.clearAllTimers()
+})
+
 test('refreshes rejected authentication without exposing stored secrets in failures', async () => {
   const socket = fakeSocket()
   fakes.createConnection.mockReturnValue(socket)
