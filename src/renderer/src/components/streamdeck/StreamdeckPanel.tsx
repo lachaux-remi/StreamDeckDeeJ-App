@@ -109,7 +109,9 @@ export default function StreamdeckPanel({
                 index={index}
                 config={streamdeck[index]}
                 cellSize={cellSize}
-                onClick={() => { if (!didDrag.current) onButtonClick(index) }}
+                onClick={() => {
+                  if (!didDrag.current) onButtonClick(index)
+                }}
                 animationDelay={i * 30}
                 isDragSource={dragSourceIndex === index}
                 isDragOver={dragOverIndex === index && dragSourceIndex !== index}

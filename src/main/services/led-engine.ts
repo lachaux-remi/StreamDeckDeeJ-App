@@ -3,7 +3,15 @@ import type { LedColor, LedProfile } from '@main/types/settings.types'
 // OpenLinkHub-style 5-segment piecewise rainbow (Red→Yellow→Green→Cyan→Blue→Red)
 function rainbowColor(position: number): LedColor {
   position = ((position % 1) + 1) % 1
-  const seg = (r1: number, g1: number, b1: number, r2: number, g2: number, b2: number, t: number): LedColor => ({
+  const seg = (
+    r1: number,
+    g1: number,
+    b1: number,
+    r2: number,
+    g2: number,
+    b2: number,
+    t: number
+  ): LedColor => ({
     r: Math.round((r1 + (r2 - r1) * t) * 255),
     g: Math.round((g1 + (g2 - g1) * t) * 255),
     b: Math.round((b1 + (b2 - b1) * t) * 255)
@@ -49,9 +57,11 @@ export class LedEngine {
     const cycleSeconds = cycleMs / 1000
     const gridRows = Math.ceil(ledCount / gridCols)
     const spatialCount =
-      direction === 'horizontal' ? gridCols :
-      direction === 'vertical'   ? gridRows :
-      gridCols + gridRows - 1  // diagonal: col+row ranges 0 → (cols+rows-2)
+      direction === 'horizontal'
+        ? gridCols
+        : direction === 'vertical'
+          ? gridRows
+          : gridCols + gridRows - 1 // diagonal: col+row ranges 0 → (cols+rows-2)
 
     const getSpatialIndex = (i: number): number => {
       const col = i % gridCols
@@ -79,8 +89,7 @@ export class LedEngine {
         // spatialFraction 0→1 spans the grid; the wave moves forward continuously.
         const T = cycleMs
         return Array.from({ length: ledCount }, (_, i) => {
-          const spatialIndex =
-            getSpatialIndex(i)
+          const spatialIndex = getSpatialIndex(i)
           const spatialFraction = spatialIndex / Math.max(1, spatialCount - 1)
           const phase = 2 * Math.PI * (spatialFraction - elapsedMs / T)
           const intensity = (Math.sin(phase) + 1) / 2
@@ -121,8 +130,7 @@ export class LedEngine {
         const pingpong = progress < 0.5 ? progress * 2 : (1 - progress) * 2
         const activePos = pingpong * (spatialCount - 1)
         return Array.from({ length: ledCount }, (_, i) => {
-          const spatialIndex =
-            getSpatialIndex(i)
+          const spatialIndex = getSpatialIndex(i)
           const distance = Math.abs(spatialIndex - activePos)
           const intensity = Math.exp(-0.5 * Math.pow(distance / 1.2, 2))
           return applyBrightness(interpolateColor(BLACK, startColor, intensity), brightness)
@@ -136,7 +144,10 @@ export class LedEngine {
         const cycleProgress = totalProgress % 1.0
         const cycleCount = Math.floor(totalProgress)
         const step = Math.floor(cycleProgress * ledCount)
-        const currentColor = applyBrightness(cycleCount % 2 === 0 ? startColor : endColor, brightness)
+        const currentColor = applyBrightness(
+          cycleCount % 2 === 0 ? startColor : endColor,
+          brightness
+        )
         const prevColor = applyBrightness(cycleCount % 2 === 0 ? endColor : startColor, brightness)
         return Array.from({ length: ledCount }, (_, i) => (i <= step ? currentColor : prevColor))
       }

@@ -50,10 +50,18 @@ class DiscordService extends EventEmitter {
     void this.connect()
   }
 
-  isMuted(): boolean { return this.muted }
-  isDeafened(): boolean { return this.deafened }
-  isStreaming(): boolean { return this.streaming }
-  isConnected(): boolean { return this._connected }
+  isMuted(): boolean {
+    return this.muted
+  }
+  isDeafened(): boolean {
+    return this.deafened
+  }
+  isStreaming(): boolean {
+    return this.streaming
+  }
+  isConnected(): boolean {
+    return this._connected
+  }
 
   private socketPaths(index: number): string[] {
     const paths: string[] = []
@@ -157,7 +165,10 @@ class DiscordService extends EventEmitter {
         if (discord?.refreshToken) {
           void this.tryRefreshToken(discord.refreshToken)
         } else {
-          if (discord) configService.setConfig({ discord: { ...discord, accessToken: undefined, refreshToken: undefined } })
+          if (discord)
+            configService.setConfig({
+              discord: { ...discord, accessToken: undefined, refreshToken: undefined }
+            })
           this.authorize()
         }
       } else {
@@ -203,13 +214,20 @@ class DiscordService extends EventEmitter {
   private authorize(): void {
     const clientId = configService.getConfig().discord?.clientId
     if (!clientId) return
-    loggerService.info('Discord RPC: demande d\'autorisation (accepte la popup dans Discord)', SERVICE)
+    loggerService.info(
+      "Discord RPC: demande d'autorisation (accepte la popup dans Discord)",
+      SERVICE
+    )
     this.writeFrame(OP_FRAME, {
       cmd: 'AUTHORIZE',
       args: {
         client_id: clientId,
         scopes: [
-          'rpc','rpc.voice.read','rpc.notifications.read','rpc.video.read','rpc.screenshare.read'
+          'rpc',
+          'rpc.voice.read',
+          'rpc.notifications.read',
+          'rpc.video.read',
+          'rpc.screenshare.read'
         ],
         prompt: 'consent'
       },
@@ -234,10 +252,16 @@ class DiscordService extends EventEmitter {
         })
       })
 
-      const data = await resp.json() as { access_token?: string; refresh_token?: string; error?: string }
+      const data = (await resp.json()) as {
+        access_token?: string
+        refresh_token?: string
+        error?: string
+      }
 
       if (data.access_token) {
-        configService.setConfig({ discord: { ...discord, accessToken: data.access_token, refreshToken: data.refresh_token } })
+        configService.setConfig({
+          discord: { ...discord, accessToken: data.access_token, refreshToken: data.refresh_token }
+        })
         loggerService.info('Discord RPC: token OAuth obtenu et sauvegardé', SERVICE)
         this.authenticate(data.access_token)
       } else {
@@ -265,19 +289,33 @@ class DiscordService extends EventEmitter {
           refresh_token: refreshToken
         })
       })
-      const data = await resp.json() as { access_token?: string; refresh_token?: string; error?: string }
+      const data = (await resp.json()) as {
+        access_token?: string
+        refresh_token?: string
+        error?: string
+      }
       if (data.access_token) {
-        configService.setConfig({ discord: { ...discord, accessToken: data.access_token, refreshToken: data.refresh_token ?? refreshToken } })
+        configService.setConfig({
+          discord: {
+            ...discord,
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token ?? refreshToken
+          }
+        })
         loggerService.info('Discord RPC: token rafraîchi silencieusement', SERVICE)
         this.authenticate(data.access_token)
       } else {
         loggerService.warn('Discord RPC: refresh échoué, relance autorisation', SERVICE)
-        configService.setConfig({ discord: { ...discord, accessToken: undefined, refreshToken: undefined } })
+        configService.setConfig({
+          discord: { ...discord, accessToken: undefined, refreshToken: undefined }
+        })
         this.authorize()
       }
     } catch (err) {
       loggerService.warn(`Discord RPC: erreur réseau lors du refresh: ${err}`, SERVICE)
-      configService.setConfig({ discord: { ...discord, accessToken: undefined, refreshToken: undefined } })
+      configService.setConfig({
+        discord: { ...discord, accessToken: undefined, refreshToken: undefined }
+      })
       this.authorize()
     }
   }

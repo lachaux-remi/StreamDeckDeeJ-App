@@ -11,8 +11,7 @@ const api = {
     list: (): Promise<
       { path: string; displayName: string; manufacturer?: string; official: boolean }[]
     > => ipcRenderer.invoke('serial:list'),
-    status: (): Promise<{ connected: boolean; port: string }> =>
-      ipcRenderer.invoke('serial:status')
+    status: (): Promise<{ connected: boolean; port: string }> => ipcRenderer.invoke('serial:status')
   },
   hardwarePermissions: {
     diagnose: (): Promise<{

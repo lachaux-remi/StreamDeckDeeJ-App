@@ -32,12 +32,8 @@ export default function LogEntry({ log }: { log: LogEntryType }): React.JSX.Elem
     <div className="group flex items-start gap-2 px-4 py-[3px] font-mono text-[11px] leading-relaxed hover:bg-surface-2/50 animate-slide-in-left">
       <span className="shrink-0 text-muted-foreground/40 tabular-nums">{time}</span>
       <div className={cn('mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full', style.dot)} />
-      <span className={cn('shrink-0 w-10 uppercase font-semibold', style.text)}>
-        {log.level}
-      </span>
-      {log.service && (
-        <span className="shrink-0 text-neon-purple/40">{log.service}</span>
-      )}
+      <span className={cn('shrink-0 w-10 uppercase font-semibold', style.text)}>{log.level}</span>
+      {log.service && <span className="shrink-0 text-neon-purple/40">{log.service}</span>}
       <span className="text-foreground/60 group-hover:text-foreground/80 transition-colors flex-1">
         {log.msg}
       </span>
@@ -45,11 +41,7 @@ export default function LogEntry({ log }: { log: LogEntryType }): React.JSX.Elem
         onClick={handleCopy}
         className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-muted-foreground/30 hover:text-foreground"
       >
-        {copied ? (
-          <Check className="h-3 w-3 text-neon-green" />
-        ) : (
-          <Copy className="h-3 w-3" />
-        )}
+        {copied ? <Check className="h-3 w-3 text-neon-green" /> : <Copy className="h-3 w-3" />}
       </button>
     </div>
   )
