@@ -36,7 +36,7 @@ class HomeAssistantAPI {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.token}`
       },
-      body: JSON.stringify({ entity_id: entityId, ...extraData })
+      body: JSON.stringify({ ...extraData, entity_id: entityId })
     })
 
     if (!response.ok) {

@@ -1,5 +1,10 @@
 import HID from 'node-hid'
-import type { AppSettings, LedColor, LedProfile, StreamdeckConfig } from '@main/types/settings.types'
+import type {
+  AppSettings,
+  LedColor,
+  LedProfile,
+  StreamdeckConfig
+} from '@main/types/settings.types'
 import { configService } from './config.service'
 import { loggerService } from './logger.service'
 import { conditionService } from './condition.service'
@@ -26,6 +31,7 @@ class LedService {
   private device: HID.HIDAsync | null = null
   private engine = new LedEngine()
   private animTimer: ReturnType<typeof setInterval> | null = null
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private profile: LedProfile = { ...DEFAULT_PROFILE }
   private overrides: Record<number, LedColor> = {}
   private buttonConfigs: StreamdeckConfig = {}
@@ -106,9 +112,12 @@ class LedService {
       loggerService.warn(`LED flush error: ${err}`, SERVICE)
       this.device = null
       this.stopAnimation()
-      setTimeout(() => {
+      if (this.reconnectTimer || this.isShuttingDown) return
+      this.reconnectTimer = setTimeout(() => {
+        this.reconnectTimer = null
+        if (this.isShuttingDown) return
         void this.connect().then(() => {
-          if (this.device) this.startAnimation()
+          if (this.device && !this.isShuttingDown) this.startAnimation()
         })
       }, 5000)
     }
@@ -117,6 +126,8 @@ class LedService {
   async shutdown(): Promise<void> {
     this.isShuttingDown = true
     this.stopAnimation()
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
+    this.reconnectTimer = null
 
     if (!this.device) return
     try {
