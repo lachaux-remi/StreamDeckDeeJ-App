@@ -30,5 +30,14 @@ export function useIpcHydration(): void {
       unsubStatus()
       unsubLog()
     }
-  }, [])
+  }, [
+    addLog,
+    hydrate,
+    setLogs,
+    setSerialPorts,
+    setSerialStatus,
+    setSessions,
+    setSliders,
+    setVersions
+  ])
 }

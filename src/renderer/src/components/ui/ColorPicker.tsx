@@ -94,11 +94,13 @@ export default function ColorPicker({
   const isDragging = useRef(false)
   const PANEL_W = 228
   const PANEL_H = 252
+  const { r, g, b } = value
 
   useEffect(() => {
-    setHsv(rgbToHsv(value))
-    setHexInput(toHex(value).slice(1))
-  }, [value.r, value.g, value.b])
+    const nextValue = { r, g, b }
+    setHsv(rgbToHsv(nextValue))
+    setHexInput(toHex(nextValue).slice(1))
+  }, [r, g, b])
 
   useEffect(() => {
     if (!isOpen) return
