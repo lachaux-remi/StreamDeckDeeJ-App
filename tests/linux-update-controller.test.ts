@@ -101,6 +101,41 @@ test('rejects downgrade metadata and invalid transitions', async () => {
   await expect(controller.install()).rejects.toThrow(/not downloaded/)
 })
 
+test('reports AppImage progress, completion, and updater failures to subscribers', async () => {
+  const fake = createUpdater()
+  const controller = new LinuxUpdateController({
+    mode: 'appimage',
+    currentVersion: '4.0.6',
+    updater: fake.updater
+  })
+  const states: string[] = []
+  const unsubscribe = controller.onStateChanged((state) => states.push(state.status))
+
+  await controller.check()
+  fake.emit('not-available')
+  await controller.check()
+  fake.emit('available', update)
+  await controller.download()
+  fake.emit('download-progress', { percent: 150 })
+  expect(controller.getState()).toEqual(
+    expect.objectContaining({ status: 'downloading', progress: 100 })
+  )
+  fake.emit('downloaded', update)
+  fake.emit('error')
+  unsubscribe()
+
+  expect(states).toEqual([
+    'checking',
+    'up-to-date',
+    'checking',
+    'available',
+    'downloading',
+    'downloading',
+    'downloaded',
+    'error'
+  ])
+})
+
 test('package-manager mode only checks and opens the fixed official release page', async () => {
   const calls: string[] = []
   const controller = new LinuxUpdateController({

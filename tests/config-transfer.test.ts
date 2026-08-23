@@ -152,6 +152,11 @@ test('rejects malformed JSON and unknown or invalid schema keys without applying
     JSON.stringify({
       format: CONFIG_EXPORT_FORMAT,
       version: CONFIG_EXPORT_VERSION,
+      settings: { ...rendererSettings, homeAssistant: null }
+    }),
+    JSON.stringify({
+      format: CONFIG_EXPORT_FORMAT,
+      version: CONFIG_EXPORT_VERSION,
       settings: { ...rendererSettings, unexpected: true }
     }),
     JSON.stringify({

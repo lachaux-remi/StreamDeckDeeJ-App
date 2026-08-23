@@ -21,6 +21,7 @@ const fakes = vi.hoisted(() => ({
   installPermissions: vi.fn(),
   getUpdateState: vi.fn(),
   executeUpdate: vi.fn(),
+  showMessageBox: vi.fn(),
   showSaveDialog: vi.fn(),
   showOpenDialog: vi.fn(),
   parentWindow: undefined as unknown,
@@ -43,7 +44,11 @@ vi.mock('electron', () => ({
       fakes.events.set(channel, listener)
   },
   BrowserWindow: { fromWebContents: () => fakes.parentWindow },
-  dialog: { showSaveDialog: fakes.showSaveDialog, showOpenDialog: fakes.showOpenDialog }
+  dialog: {
+    showMessageBox: fakes.showMessageBox,
+    showSaveDialog: fakes.showSaveDialog,
+    showOpenDialog: fakes.showOpenDialog
+  }
 }))
 vi.mock('@main/services/serial.service', () => ({
   serialService: { listPorts: fakes.listPorts, getStatus: fakes.getStatus }
@@ -224,6 +229,7 @@ test('validates hardware and update command arity before invoking privileged ada
     'do not accept arguments'
   )
   expect(() => invoke('update:state', 'unexpected')).toThrow('Invalid update state request')
+  expect(invoke('update:state')).toEqual({ mode: 'appimage', status: 'idle' })
   await expect(invoke('update:command', 'invalid')).rejects.toThrow('Invalid update command')
   await expect(invoke('update:command', 'check')).resolves.toEqual({
     mode: 'appimage',

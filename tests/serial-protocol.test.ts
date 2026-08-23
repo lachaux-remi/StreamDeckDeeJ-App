@@ -101,6 +101,10 @@ test('rejects malformed, unknown, and non-strict messages', () => {
     Buffer.from('{"type":"deej","value":{"01":1}}'),
     Buffer.from('{"type":"deej","value":{"0":1.5}}'),
     Buffer.from('{"type":"deej","value":{"0":1024}}'),
+    Buffer.from('{"type":"deej","value":{}}'),
+    Buffer.from(
+      `{"type":"deej","value":{${Array.from({ length: 17 }, (_, i) => `"${i}":0`).join(',')}}}`
+    ),
     Buffer.from('{"type":"deej","value":[]}')
   ]
 
