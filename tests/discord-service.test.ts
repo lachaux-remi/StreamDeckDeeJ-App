@@ -70,8 +70,12 @@ function writtenPayload(socket: FakeSocket, index: number): Record<string, unkno
   return JSON.parse(frame.subarray(8).toString()) as Record<string, unknown>
 }
 
-async function settle(turns = 30): Promise<void> {
-  for (let index = 0; index < turns; index += 1) await Promise.resolve()
+async function settleUntil(predicate: () => boolean): Promise<void> {
+  for (let index = 0; index < 100; index += 1) {
+    if (predicate()) return
+    await Promise.resolve()
+  }
+  throw new Error('Async operation did not settle')
 }
 
 beforeEach(() => {
@@ -142,7 +146,7 @@ test('bounds socket discovery and coalesces reconnect when no trusted endpoint e
   const { discordService } = await import('@main/services/discord.service')
 
   await discordService.init()
-  await settle()
+  await settleUntil(() => vi.getTimerCount() === 1)
 
   expect(fakes.lstat).toHaveBeenCalledTimes(process.env['XDG_RUNTIME_DIR'] ? 30 : 10)
   expect(fakes.createConnection).not.toHaveBeenCalled()
