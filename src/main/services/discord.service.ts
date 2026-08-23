@@ -2,6 +2,7 @@ import * as net from 'node:net'
 import { EventEmitter } from 'node:events'
 import { lstat } from 'node:fs/promises'
 import { configService } from './config.service'
+import { DiscordRpcFrameReader } from './discord-rpc-codec'
 import { loggerService } from './logger.service'
 
 const SERVICE = 'DiscordService'
@@ -25,7 +26,10 @@ class DiscordService extends EventEmitter {
   private deafened = false
   private streaming = false
   private _connected = false
-  private buf = Buffer.alloc(0)
+  private readonly frameReader = new DiscordRpcFrameReader(() => {
+    loggerService.warn('Discord RPC: oversized frame rejected', SERVICE)
+    this.socket?.destroy()
+  })
   private reconnectTimer: NodeJS.Timeout | null = null
 
   async init(): Promise<void> {
@@ -110,7 +114,7 @@ class DiscordService extends EventEmitter {
         clearTimeout(timeout)
         sock.removeAllListeners('error')
         this.socket = sock
-        this.buf = Buffer.alloc(0)
+        this.frameReader.reset()
         sock.on('data', (d: Buffer) => this.onData(d))
         sock.on('close', () => this.onDisconnect())
         sock.on('error', () => this.onDisconnect())
@@ -127,13 +131,7 @@ class DiscordService extends EventEmitter {
   }
 
   private onData(data: Buffer): void {
-    this.buf = Buffer.concat([this.buf, data])
-    while (this.buf.length >= 8) {
-      const payloadLen = this.buf.readUInt32LE(4)
-      if (this.buf.length < 8 + payloadLen) break
-      const op = this.buf.readUInt32LE(0)
-      const payload = this.buf.subarray(8, 8 + payloadLen).toString('utf8')
-      this.buf = this.buf.subarray(8 + payloadLen)
+    for (const { op, payload } of this.frameReader.push(data)) {
       if (op === OP_FRAME) {
         try {
           this.onMessage(JSON.parse(payload) as RpcMessage)

@@ -1,3 +1,18 @@
+import {
+  MAX_ACTION_PARAMS,
+  MAX_DEEJ_SLIDERS,
+  MAX_LED_CONDITIONS,
+  MAX_PARAM_LENGTH,
+  MAX_SESSIONS_PER_SLIDER,
+  MAX_SETTINGS_BYTES,
+  MAX_SHORT_STRING_LENGTH,
+  MAX_STREAMDECK_KEYS,
+  MAX_URL_LENGTH,
+  isDeckKey,
+  isIconDataUrl,
+  isSliderKey
+} from '../../../shared/input-limits'
+
 export interface LedColor {
   r: number
   g: number
@@ -5,14 +20,7 @@ export interface LedColor {
 }
 
 export type LedMode =
-  | 'static'
-  | 'rainbow'
-  | 'wave'
-  | 'pulse'
-  | 'colorshift'
-  | 'visor'
-  | 'sequential'
-  | 'spinner'
+  'static' | 'rainbow' | 'wave' | 'pulse' | 'colorshift' | 'visor' | 'sequential' | 'spinner'
 
 export interface LedProfile {
   mode: LedMode
@@ -29,7 +37,8 @@ export interface StreamdeckInputKey {
   icon?: string
 }
 
-export type LedConditionType = 'mic-mute' | 'discord-mute' | 'discord-deafen' | 'discord-stream' | 'ha-on' | 'ha-off'
+export type LedConditionType =
+  'mic-mute' | 'discord-mute' | 'discord-deafen' | 'discord-stream' | 'ha-on' | 'ha-off'
 
 export interface LedCondition {
   type: LedConditionType
@@ -130,6 +139,18 @@ function isIntegerBetween(value: unknown, min: number, max: number): value is nu
   return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max
 }
 
+function isStringAtMost(value: unknown, maxLength: number): value is string {
+  return typeof value === 'string' && value.length <= maxLength
+}
+
+function hasSerializedSizeAtMost(value: unknown, maxBytes: number): boolean {
+  try {
+    return new TextEncoder().encode(JSON.stringify(value)).byteLength <= maxBytes
+  } catch {
+    return false
+  }
+}
+
 function isHomeAssistantUrl(value: unknown): value is string {
   if (value === '') return true
   if (typeof value !== 'string' || value !== value.trim()) return false
@@ -164,8 +185,9 @@ function isInputKey(value: unknown): value is StreamdeckInputKey {
     hasOnlyKeys(value, ['module', 'params', 'icon']) &&
     ['', 'home-assistant', 'ir', 'macro'].includes(value.module as string) &&
     Array.isArray(value.params) &&
-    value.params.every((param) => typeof param === 'string') &&
-    (value.icon === undefined || typeof value.icon === 'string')
+    value.params.length <= MAX_ACTION_PARAMS &&
+    value.params.every((param) => isStringAtMost(param, MAX_PARAM_LENGTH)) &&
+    (value.icon === undefined || isIconDataUrl(value.icon))
   )
 }
 
@@ -182,25 +204,46 @@ function isStreamdeckInput(value: unknown): value is StreamdeckInputConfig {
   return (
     isRecord(value) &&
     hasOnlyKeys(value, ['icon', 'color', 'ledConditions', 'pressed', 'hold']) &&
-    (value.icon === undefined || typeof value.icon === 'string') &&
+    (value.icon === undefined || isIconDataUrl(value.icon)) &&
     (value.color === undefined || isLedColor(value.color)) &&
     (value.ledConditions === undefined ||
-      (Array.isArray(value.ledConditions) && value.ledConditions.every(isLedCondition))) &&
+      (Array.isArray(value.ledConditions) &&
+        value.ledConditions.length <= MAX_LED_CONDITIONS &&
+        value.ledConditions.every(isLedCondition))) &&
     (value.pressed === undefined || isInputKey(value.pressed)) &&
     (value.hold === undefined || isInputKey(value.hold))
   )
 }
 
 function isStringRecord(value: unknown): value is Record<string, string> {
-  return isRecord(value) && Object.values(value).every((entry) => typeof entry === 'string')
+  return (
+    isRecord(value) &&
+    Object.keys(value).length <= MAX_DEEJ_SLIDERS &&
+    Object.entries(value).every(
+      ([key, entry]) => isSliderKey(key) && isStringAtMost(entry, MAX_SHORT_STRING_LENGTH)
+    )
+  )
 }
 
 function isStringArrayRecord(value: unknown): value is Record<string, string[]> {
   return (
     isRecord(value) &&
-    Object.values(value).every(
-      (entry) => Array.isArray(entry) && entry.every((item) => typeof item === 'string')
+    Object.keys(value).length <= MAX_DEEJ_SLIDERS &&
+    Object.entries(value).every(
+      ([key, entry]) =>
+        isSliderKey(key) &&
+        Array.isArray(entry) &&
+        entry.length <= MAX_SESSIONS_PER_SLIDER &&
+        entry.every((item) => isStringAtMost(item, MAX_SHORT_STRING_LENGTH))
     )
+  )
+}
+
+function isStreamdeckConfig(value: unknown): value is StreamdeckConfig {
+  return (
+    isRecord(value) &&
+    Object.keys(value).length <= MAX_STREAMDECK_KEYS &&
+    Object.entries(value).every(([key, input]) => isDeckKey(key) && isStreamdeckInput(input))
   )
 }
 
@@ -241,13 +284,12 @@ export function isRendererSettings(value: unknown): value is RendererSettings {
   )
     return false
   if (
-    typeof value.comPort !== 'string' ||
+    !isStringAtMost(value.comPort, 1024) ||
     !isIntegerBetween(value.baudRate, 1, Number.MAX_SAFE_INTEGER) ||
     !isIntegerBetween(value.gridCols, 1, 8) ||
     !isIntegerBetween(value.gridRows, 1, 8) ||
     !isIntegerBetween(value.sliderCount, 1, 16) ||
-    !isRecord(value.streamdeck) ||
-    !Object.values(value.streamdeck).every(isStreamdeckInput) ||
+    !isStreamdeckConfig(value.streamdeck) ||
     !isStringArrayRecord(value.deej) ||
     !isStringRecord(value.deejNames) ||
     typeof value.invertSliders !== 'boolean' ||
@@ -262,15 +304,17 @@ export function isRendererSettings(value: unknown): value is RendererSettings {
   if (
     !isRecord(value.homeAssistant) ||
     !hasOnlyKeys(value.homeAssistant, ['url', 'tokenConfigured']) ||
+    !isStringAtMost(value.homeAssistant.url, MAX_URL_LENGTH) ||
     !isHomeAssistantUrl(value.homeAssistant.url) ||
     typeof value.homeAssistant.tokenConfigured !== 'boolean'
   ) {
     return false
   }
   return (
+    hasSerializedSizeAtMost(value, MAX_SETTINGS_BYTES) &&
     isRecord(value.discord) &&
     hasOnlyKeys(value.discord, ['clientId', 'clientSecretConfigured', 'authenticated']) &&
-    typeof value.discord.clientId === 'string' &&
+    isStringAtMost(value.discord.clientId, MAX_SHORT_STRING_LENGTH) &&
     typeof value.discord.clientSecretConfigured === 'boolean' &&
     typeof value.discord.authenticated === 'boolean'
   )
