@@ -94,9 +94,9 @@ export class SettingsPersistence {
   }
 
   public load(): unknown {
-    return this.transformSecrets(JSON.parse(readFileSync(this.path, 'utf8')), (value) =>
-      this.secretCodec.decode(value)
-    )
+    const storedSettings = JSON.parse(readFileSync(this.path, 'utf8'))
+    const migratedSettings = this.removeLegacyBrightnessState(storedSettings)
+    return this.transformSecrets(migratedSettings, (value) => this.secretCodec.decode(value))
   }
 
   public save(settings: unknown): void {
@@ -113,6 +113,14 @@ export class SettingsPersistence {
 
   public protectFile(): void {
     chmodSync(this.path, 0o600)
+  }
+
+  private removeLegacyBrightnessState(settings: unknown): unknown {
+    if (!isRecord(settings) || !('brightnessState' in settings)) return settings
+
+    const migratedSettings = { ...settings }
+    delete migratedSettings.brightnessState
+    return migratedSettings
   }
 
   private transformSecrets(
