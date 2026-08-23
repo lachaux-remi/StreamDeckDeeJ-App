@@ -47,7 +47,9 @@ export class HomeAssistantStateSync {
   }
 
   public start(config: SyncConfig): void {
-    if (this.interval) return
+    if (this.interval) {
+      return
+    }
     this.stopped = false
     this.update(config)
     this.interval = setInterval(() => this.sync(), this.pollIntervalMs)
@@ -59,14 +61,18 @@ export class HomeAssistantStateSync {
       config.homeAssistant.token !== this.config?.homeAssistant.token
     this.config = config
     this.revision += 1
-    if (targetChanged) this.abortInFlight()
+    if (targetChanged) {
+      this.abortInFlight()
+    }
     this.sync()
   }
 
   public shutdown(): void {
     this.stopped = true
     this.revision += 1
-    if (this.interval) clearInterval(this.interval)
+    if (this.interval) {
+      clearInterval(this.interval)
+    }
     this.interval = undefined
     this.abortInFlight()
     this.inFlight.length = 0
@@ -74,7 +80,9 @@ export class HomeAssistantStateSync {
 
   private sync(): void {
     const config = this.config
-    if (this.stopped || !config?.homeAssistant.url || !config.homeAssistant.token) return
+    if (this.stopped || !config?.homeAssistant.url || !config.homeAssistant.token) {
+      return
+    }
 
     const entities = new Map<string, string[]>()
     for (const [key, button] of Object.entries(config.streamdeck ?? {})) {
@@ -87,7 +95,9 @@ export class HomeAssistantStateSync {
       const hasHomeAssistantCondition = button.ledConditions?.some(
         (condition) => condition.type === 'ha-on' || condition.type === 'ha-off'
       )
-      if (!entityId || !hasHomeAssistantCondition) continue
+      if (!entityId || !hasHomeAssistantCondition) {
+        continue
+      }
       entities.set(entityId, [...(entities.get(entityId) ?? []), key])
     }
 
@@ -111,20 +121,30 @@ export class HomeAssistantStateSync {
     const revision = this.revision
     void this.getState(config.homeAssistant.url, config.homeAssistant.token, entityId, signal)
       .then(({ state }) => {
-        if (this.stopped || revision !== this.revision) return
-        for (const key of keys) this.setButtonState(key, state)
+        if (this.stopped || revision !== this.revision) {
+          return
+        }
+        for (const key of keys) {
+          this.setButtonState(key, state)
+        }
       })
       .catch(() => {})
       .finally(() => {
         const index = this.inFlight.indexOf(request)
-        if (index === -1) return
+        if (index === -1) {
+          return
+        }
         this.inFlight.splice(index, 1)
-        if (!this.stopped && revision !== this.revision) this.sync()
+        if (!this.stopped && revision !== this.revision) {
+          this.sync()
+        }
       })
     this.inFlight.push(request)
   }
 
   private abortInFlight(): void {
-    for (const request of this.inFlight) request.controller.abort()
+    for (const request of this.inFlight) {
+      request.controller.abort()
+    }
   }
 }

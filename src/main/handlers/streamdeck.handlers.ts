@@ -10,7 +10,9 @@ function invalidPayload(): never {
 
 export function registerStreamdeckHandlers(trustedSender: WebContents): void {
   handleIpc(trustedSender, 'streamdeck:keys', (...args: unknown[]) => {
-    if (args.length !== 1 || !isDeckKey(args[0])) invalidPayload()
+    if (args.length !== 1 || !isDeckKey(args[0])) {
+      invalidPayload()
+    }
     return deckService.getKeyInfo(args[0])
   })
 
@@ -20,8 +22,9 @@ export function registerStreamdeckHandlers(trustedSender: WebContents): void {
       !isStreamdeckConfig(args[0]) ||
       (args[1] !== '' && !isDeckKey(args[1])) ||
       (args[2] !== null && !isLedColor(args[2]))
-    )
+    ) {
       invalidPayload()
+    }
     const [streamdeck, previewKey, previewColor] = args
     const overrides = { ...streamdeck }
     if (previewKey) {
@@ -36,7 +39,9 @@ export function registerStreamdeckHandlers(trustedSender: WebContents): void {
   })
 
   handleIpc(trustedSender, 'led:setProfile', async (...args: unknown[]) => {
-    if (args.length !== 1 || !isLedProfile(args[0])) invalidPayload()
+    if (args.length !== 1 || !isLedProfile(args[0])) {
+      invalidPayload()
+    }
     const [profile] = args
     ledService.updateProfile(profile)
     await ledService.flush()

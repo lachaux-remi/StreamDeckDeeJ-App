@@ -87,7 +87,9 @@ class LedService {
   }
 
   async flush(): Promise<void> {
-    if (!this.device || this.isShuttingDown) return
+    if (!this.device || this.isShuttingDown) {
+      return
+    }
     try {
       const base = this.engine.compute(this.profile, LED_COUNT, this.gridCols, performance.now())
 
@@ -112,12 +114,18 @@ class LedService {
       loggerService.warn(`LED flush error: ${err}`, SERVICE)
       this.device = null
       this.stopAnimation()
-      if (this.reconnectTimer || this.isShuttingDown) return
+      if (this.reconnectTimer || this.isShuttingDown) {
+        return
+      }
       this.reconnectTimer = setTimeout(() => {
         this.reconnectTimer = null
-        if (this.isShuttingDown) return
+        if (this.isShuttingDown) {
+          return
+        }
         void this.connect().then(() => {
-          if (this.device && !this.isShuttingDown) this.startAnimation()
+          if (this.device && !this.isShuttingDown) {
+            this.startAnimation()
+          }
         })
       }, 5000)
     }
@@ -126,10 +134,14 @@ class LedService {
   async shutdown(): Promise<void> {
     this.isShuttingDown = true
     this.stopAnimation()
-    if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+    }
     this.reconnectTimer = null
 
-    if (!this.device) return
+    if (!this.device) {
+      return
+    }
     try {
       const blackPacket = this.buildPacket(
         Array.from({ length: LED_COUNT }, () => ({ r: 0, g: 0, b: 0 }))

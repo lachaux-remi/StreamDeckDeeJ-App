@@ -38,8 +38,12 @@ export function isLinuxUpdateState(value: unknown): value is LinuxUpdateState {
   if (value.mode === 'disabled') {
     return value.status === 'disabled' && hasOnlyKeys(value, ['mode', 'status'])
   }
-  if (value.mode !== 'appimage' && value.mode !== 'package-manager') return false
-  if (typeof value.currentVersion !== 'string') return false
+  if (value.mode !== 'appimage' && value.mode !== 'package-manager') {
+    return false
+  }
+  if (typeof value.currentVersion !== 'string') {
+    return false
+  }
   if (['idle', 'checking', 'up-to-date'].includes(value.status)) {
     return hasOnlyKeys(value, ['mode', 'status', 'currentVersion'])
   }
@@ -49,7 +53,9 @@ export function isLinuxUpdateState(value: unknown): value is LinuxUpdateState {
       hasOnlyKeys(value, ['mode', 'status', 'currentVersion', 'message'])
     )
   }
-  if (!['available', 'downloading', 'downloaded'].includes(value.status)) return false
+  if (!['available', 'downloading', 'downloaded'].includes(value.status)) {
+    return false
+  }
   return (
     typeof value.version === 'string' &&
     typeof value.releaseName === 'string' &&

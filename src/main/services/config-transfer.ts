@@ -115,7 +115,9 @@ export class ConfigTransferController {
 
   public async exportConfiguration(): Promise<ConfigTransferResult> {
     const path = await this.dialogs.chooseExportPath()
-    if (!path) return { status: 'cancelled', message: 'Export annulé.' }
+    if (!path) {
+      return { status: 'cancelled', message: 'Export annulé.' }
+    }
 
     try {
       this.transfer.exportToFile(path)
@@ -127,7 +129,9 @@ export class ConfigTransferController {
 
   public async importConfiguration(): Promise<ConfigTransferResult> {
     const path = await this.dialogs.chooseImportPath()
-    if (!path) return { status: 'cancelled', message: 'Import annulé.' }
+    if (!path) {
+      return { status: 'cancelled', message: 'Import annulé.' }
+    }
 
     try {
       this.transfer.importFromFile(path)
@@ -220,7 +224,9 @@ function readImportDocument(path: string): ConfigExportDocument {
   } catch {
     throw new ConfigTransferError('INVALID_FORMAT')
   }
-  if (!isConfigExportDocument(parsed)) throw new ConfigTransferError('INVALID_FORMAT')
+  if (!isConfigExportDocument(parsed)) {
+    throw new ConfigTransferError('INVALID_FORMAT')
+  }
   return parsed
 }
 
@@ -241,10 +247,14 @@ function readBoundedFile(path: string): Buffer {
         bytes.byteLength - totalRead,
         totalRead
       )
-      if (bytesRead === 0) break
+      if (bytesRead === 0) {
+        break
+      }
       totalRead += bytesRead
     }
-    if (totalRead > MAX_CONFIG_IMPORT_BYTES) throw new ConfigTransferError('TOO_LARGE')
+    if (totalRead > MAX_CONFIG_IMPORT_BYTES) {
+      throw new ConfigTransferError('TOO_LARGE')
+    }
     return bytes.subarray(0, totalRead)
   } finally {
     closeSync(descriptor)

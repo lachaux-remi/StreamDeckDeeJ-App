@@ -28,7 +28,9 @@ function fakeSocket(): FakeSocket {
       return socket
     },
     emit(event: string, ...args: unknown[]) {
-      for (const listener of [...(listeners.get(event) ?? [])]) listener(...args)
+      for (const listener of [...(listeners.get(event) ?? [])]) {
+        listener(...args)
+      }
     },
     removeAllListeners: vi.fn((event: string) => listeners.delete(event)),
     destroy: vi.fn(),
@@ -72,7 +74,9 @@ function writtenPayload(socket: FakeSocket, index: number): Record<string, unkno
 
 async function settleUntil(predicate: () => boolean): Promise<void> {
   for (let index = 0; index < 100; index += 1) {
-    if (predicate()) return
+    if (predicate()) {
+      return
+    }
     await Promise.resolve()
   }
   throw new Error('Async operation did not settle')

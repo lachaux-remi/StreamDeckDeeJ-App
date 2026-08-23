@@ -35,7 +35,9 @@ const trustedEvent = { sender: trustedSender, senderFrame: trustedSender.mainFra
 
 function invoke(channel: string, ...args: unknown[]): unknown {
   const handler = mocks.handlers.get(channel)
-  if (!handler) throw new Error(`Missing test handler: ${channel}`)
+  if (!handler) {
+    throw new Error(`Missing test handler: ${channel}`)
+  }
   return handler(trustedEvent, ...args)
 }
 

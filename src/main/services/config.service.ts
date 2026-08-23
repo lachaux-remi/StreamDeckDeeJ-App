@@ -56,7 +56,9 @@ export class ConfigService extends EventEmitter {
       if (existsSync(this.configPath)) {
         const parsed = this.persistence?.load() as Partial<AppSettings>
         const candidate = applySettingsDefaults(parsed)
-        if (!isAppSettings(candidate)) throw new Error('Invalid config')
+        if (!isAppSettings(candidate)) {
+          throw new Error('Invalid config')
+        }
         this.data = candidate
       } else {
         this.data = { ...defaultSettings }
@@ -78,7 +80,9 @@ export class ConfigService extends EventEmitter {
   }
 
   private save(data: AppSettings = this.data): void {
-    if (!this.persistenceEnabled) throw new Error('Config persistence is unavailable')
+    if (!this.persistenceEnabled) {
+      throw new Error('Config persistence is unavailable')
+    }
     try {
       this.persistence?.save(data)
     } catch {
@@ -128,7 +132,9 @@ export class ConfigService extends EventEmitter {
   public setConfig(config: Partial<AppSettings>): void {
     const previousData = this.data
     const nextData = { ...this.data, ...config }
-    if (!isAppSettings(nextData)) throw new TypeError('Invalid config update')
+    if (!isAppSettings(nextData)) {
+      throw new TypeError('Invalid config update')
+    }
     this.save(nextData)
     this.data = nextData
     try {
@@ -151,8 +157,12 @@ export class ConfigService extends EventEmitter {
   }
 
   private applySecretChange(currentValue: string, change: SecretChange): string {
-    if (change.action === 'set') return change.value
-    if (change.action === 'clear') return ''
+    if (change.action === 'set') {
+      return change.value
+    }
+    if (change.action === 'clear') {
+      return ''
+    }
     return currentValue
   }
 }

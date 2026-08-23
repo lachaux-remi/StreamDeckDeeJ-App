@@ -38,7 +38,9 @@ export default function DeejConfigDialog({
   }, [sliderIndex, deej, deejNames])
 
   const hasChanges = useMemo(() => {
-    if (sliderIndex === null) return false
+    if (sliderIndex === null) {
+      return false
+    }
     const originalName = deejNames[sliderIndex] || ''
     const originalAssigned = deej[sliderIndex] || []
     return name !== originalName || JSON.stringify(assigned) !== JSON.stringify(originalAssigned)
@@ -72,7 +74,9 @@ export default function DeejConfigDialog({
   const otherSlidersAssigned = useMemo(() => {
     const others: string[] = []
     for (const [key, sessions] of Object.entries(deej)) {
-      if (key !== sliderIndex && sessions) others.push(...sessions)
+      if (key !== sliderIndex && sessions) {
+        others.push(...sessions)
+      }
     }
     return others
   }, [deej, sliderIndex])
@@ -101,12 +105,16 @@ export default function DeejConfigDialog({
   }, [selectedAssigned])
 
   const handleSave = useCallback(() => {
-    if (sliderIndex === null) return
+    if (sliderIndex === null) {
+      return
+    }
     updateSlider(sliderIndex, assigned, name.trim() || undefined)
     onClose()
   }, [sliderIndex, assigned, name, updateSlider, onClose])
 
-  if (sliderIndex === null) return null
+  if (sliderIndex === null) {
+    return null
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in">

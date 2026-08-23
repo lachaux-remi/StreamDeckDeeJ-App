@@ -41,7 +41,9 @@ async function deviceAccess(
   paths: string[],
   canReadWrite: DiagnosticInputs['canReadWrite']
 ): Promise<DeviceAccess> {
-  if (paths.length === 0) return 'not-detected' as const
+  if (paths.length === 0) {
+    return 'not-detected' as const
+  }
   const access = await Promise.all(paths.map((path) => canReadWrite(path)))
   return access.some(Boolean) ? ('accessible' as const) : ('permission-denied' as const)
 }
@@ -111,11 +113,15 @@ export function isReadOnlyAppImageMount(configuration: {
   resourcesPath: string
   mountInfo: string
 }): boolean {
-  if (!configuration.isPackaged || !configuration.appImagePath?.startsWith('/')) return false
+  if (!configuration.isPackaged || !configuration.appImagePath?.startsWith('/')) {
+    return false
+  }
 
   return configuration.mountInfo.split('\n').some((line) => {
     const [mount, filesystem] = line.split(' - ')
-    if (!mount || !filesystem) return false
+    if (!mount || !filesystem) {
+      return false
+    }
     const fields = mount.split(' ')
     const mountPoint = decodeMountField(fields[4] ?? '')
     const options = (fields[5] ?? '').split(',')
@@ -159,7 +165,11 @@ export async function runPermissionInstaller(
     [configuration.installerPath, 'install'],
     { shell: false }
   )
-  if (exitCode === 0) return 'installed'
-  if (exitCode === 126 || exitCode === 127) return 'cancelled'
+  if (exitCode === 0) {
+    return 'installed'
+  }
+  if (exitCode === 126 || exitCode === 127) {
+    return 'cancelled'
+  }
   return 'failed'
 }

@@ -186,8 +186,12 @@ function hasSerializedSizeAtMost(value: unknown, maxBytes: number): boolean {
 }
 
 function isHomeAssistantUrl(value: unknown): value is string {
-  if (value === '') return true
-  if (typeof value !== 'string' || value !== value.trim()) return false
+  if (value === '') {
+    return true
+  }
+  if (typeof value !== 'string' || value !== value.trim()) {
+    return false
+  }
   try {
     const url = new URL(value)
     return (
@@ -315,9 +319,16 @@ function hasValidSharedSettings(value: Record<string, unknown>): boolean {
 }
 
 export function isAppSettings(value: unknown): value is AppSettings {
-  if (!isRecord(value) || !hasOnlyKeys(value, APP_SETTINGS_KEYS) || !hasValidSharedSettings(value))
+  if (
+    !isRecord(value) ||
+    !hasOnlyKeys(value, APP_SETTINGS_KEYS) ||
+    !hasValidSharedSettings(value)
+  ) {
     return false
-  if (!isRecord(value.homeAssistant)) return false
+  }
+  if (!isRecord(value.homeAssistant)) {
+    return false
+  }
   if (
     !hasOnlyKeys(value.homeAssistant, ['url', 'token']) ||
     !isStringAtMost(value.homeAssistant.url, MAX_URL_LENGTH) ||
@@ -326,7 +337,9 @@ export function isAppSettings(value: unknown): value is AppSettings {
   ) {
     return false
   }
-  if (value.discord === undefined) return hasSerializedSizeAtMost(value, MAX_SETTINGS_BYTES)
+  if (value.discord === undefined) {
+    return hasSerializedSizeAtMost(value, MAX_SETTINGS_BYTES)
+  }
   return (
     isRecord(value.discord) &&
     hasOnlyKeys(value.discord, ['clientId', 'clientSecret', 'accessToken', 'refreshToken']) &&
@@ -341,7 +354,9 @@ export function isAppSettings(value: unknown): value is AppSettings {
 }
 
 function isSecretChange(value: unknown): value is SecretChange {
-  if (!isRecord(value) || typeof value.action !== 'string') return false
+  if (!isRecord(value) || typeof value.action !== 'string') {
+    return false
+  }
   if (value.action === 'unchanged' || value.action === 'clear') {
     return hasOnlyKeys(value, ['action'])
   }
@@ -354,10 +369,14 @@ function isSecretChange(value: unknown): value is SecretChange {
 }
 
 export function isRendererSettingsUpdate(value: unknown): value is RendererSettingsUpdate {
-  if (!isRecord(value) || !hasOnlyKeys(value, ['settings', 'secrets'])) return false
+  if (!isRecord(value) || !hasOnlyKeys(value, ['settings', 'secrets'])) {
+    return false
+  }
   const settings = value.settings
   const secrets = value.secrets
-  if (!isRecord(settings) || !isRecord(secrets) || !hasValidSharedSettings(settings)) return false
+  if (!isRecord(settings) || !isRecord(secrets) || !hasValidSharedSettings(settings)) {
+    return false
+  }
   if (
     !hasOnlyKeys(settings, [
       'comPort',
@@ -377,8 +396,9 @@ export function isRendererSettingsUpdate(value: unknown): value is RendererSetti
       'ledProfile',
       'discord'
     ])
-  )
+  ) {
     return false
+  }
   if (
     !isRecord(settings.homeAssistant) ||
     !hasOnlyKeys(settings.homeAssistant, ['url', 'tokenConfigured']) ||

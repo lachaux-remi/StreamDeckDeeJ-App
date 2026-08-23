@@ -217,7 +217,9 @@ test('rolls back to the previous redacted configuration when application fails',
   adapter.updateFromRenderer = (update) => {
     attempts += 1
     apply(update)
-    if (attempts === 1) throw new Error('simulated apply failure')
+    if (attempts === 1) {
+      throw new Error('simulated apply failure')
+    }
   }
 
   expect(() => service.importFromFile(importPath)).toThrow(
@@ -321,7 +323,9 @@ test('returns specific secret-free messages for oversized input and restored app
   let attempts = 0
   failed.adapter.updateFromRenderer = () => {
     attempts += 1
-    if (attempts === 1) throw new Error('simulated apply failure')
+    if (attempts === 1) {
+      throw new Error('simulated apply failure')
+    }
   }
   const failedController = new ConfigTransferController(failed.service, {
     chooseExportPath: async () => null,

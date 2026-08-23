@@ -16,10 +16,18 @@ function rainbowColor(position: number): LedColor {
     g: Math.round((g1 + (g2 - g1) * t) * 255),
     b: Math.round((b1 + (b2 - b1) * t) * 255)
   })
-  if (position < 0.2) return seg(1, 0, 0, 1, 1, 0, position / 0.2)
-  if (position < 0.4) return seg(1, 1, 0, 0, 1, 0, (position - 0.2) / 0.2)
-  if (position < 0.6) return seg(0, 1, 0, 0, 1, 1, (position - 0.4) / 0.2)
-  if (position < 0.8) return seg(0, 1, 1, 0, 0, 1, (position - 0.6) / 0.2)
+  if (position < 0.2) {
+    return seg(1, 0, 0, 1, 1, 0, position / 0.2)
+  }
+  if (position < 0.4) {
+    return seg(1, 1, 0, 0, 1, 0, (position - 0.2) / 0.2)
+  }
+  if (position < 0.6) {
+    return seg(0, 1, 0, 0, 1, 1, (position - 0.4) / 0.2)
+  }
+  if (position < 0.8) {
+    return seg(0, 1, 1, 0, 0, 1, (position - 0.6) / 0.2)
+  }
   return seg(0, 0, 1, 1, 0, 0, (position - 0.8) / 0.2)
 }
 
@@ -66,8 +74,12 @@ export class LedEngine {
     const getSpatialIndex = (i: number): number => {
       const col = i % gridCols
       const row = Math.floor(i / gridCols)
-      if (direction === 'horizontal') return col
-      if (direction === 'vertical') return row
+      if (direction === 'horizontal') {
+        return col
+      }
+      if (direction === 'vertical') {
+        return row
+      }
       return col + row
     }
 

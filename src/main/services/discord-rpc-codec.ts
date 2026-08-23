@@ -22,7 +22,9 @@ export class DiscordRpcFrameReader {
   }
 
   push(data: Buffer): DiscordRpcFrame[] {
-    if (this.rejected) return []
+    if (this.rejected) {
+      return []
+    }
     const frames: DiscordRpcFrame[] = []
     let offset = 0
     while (offset < data.length) {
@@ -30,7 +32,9 @@ export class DiscordRpcFrameReader {
         const headerBytes = Math.min(8 - this.buffer.length, data.length - offset)
         this.buffer = Buffer.concat([this.buffer, data.subarray(offset, offset + headerBytes)])
         offset += headerBytes
-        if (this.buffer.length < 8) break
+        if (this.buffer.length < 8) {
+          break
+        }
       }
 
       const payloadLength = this.buffer.readUInt32LE(4)
@@ -42,7 +46,9 @@ export class DiscordRpcFrameReader {
       const payloadBytes = Math.min(frameLength - this.buffer.length, data.length - offset)
       this.buffer = Buffer.concat([this.buffer, data.subarray(offset, offset + payloadBytes)])
       offset += payloadBytes
-      if (this.buffer.length < frameLength) break
+      if (this.buffer.length < frameLength) {
+        break
+      }
       frames.push({
         op: this.buffer.readUInt32LE(0),
         payload: this.buffer.subarray(8, frameLength).toString('utf8')

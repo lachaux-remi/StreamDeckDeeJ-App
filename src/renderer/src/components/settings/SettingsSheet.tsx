@@ -131,18 +131,25 @@ export default function SettingsSheet({
   }, [isOpen, settings])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      return
+    }
     void window.api.streamdeck.setLedProfile(localSettings.ledProfile)
   }, [localSettings.ledProfile, isOpen])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      return
+    }
     void window.api.hardwarePermissions.diagnose().then(setHardwarePermissions)
   }, [isOpen])
 
   const handleClose = useCallback(() => {
-    if (hasChanges) setShowDiscardPrompt(true)
-    else onClose()
+    if (hasChanges) {
+      setShowDiscardPrompt(true)
+    } else {
+      onClose()
+    }
   }, [hasChanges, onClose])
 
   const handleDiscard = useCallback(() => {
@@ -169,7 +176,9 @@ export default function SettingsSheet({
     const confirmed = window.confirm(
       "Installer la règle udev du module officiel StreamDeck DeeJ ? Une demande d'authentification administrateur va s'ouvrir."
     )
-    if (!confirmed) return
+    if (!confirmed) {
+      return
+    }
 
     setIsInstallingPermissions(true)
     setPermissionMessage(null)
@@ -261,7 +270,9 @@ export default function SettingsSheet({
     }
   }, [hydrate])
 
-  if (!isOpen) return null
+  if (!isOpen) {
+    return null
+  }
 
   const inputBase =
     'w-full rounded-lg border border-border/40 bg-surface-2 px-3 py-2 text-sm text-foreground outline-none transition-colors focus:bg-surface-3'
@@ -1034,8 +1045,12 @@ function secretInputValue(change: SecretChange): string {
 }
 
 function secretConfigured(currentlyConfigured: boolean, change: SecretChange): boolean {
-  if (change.action === 'set') return true
-  if (change.action === 'clear') return false
+  if (change.action === 'set') {
+    return true
+  }
+  if (change.action === 'clear') {
+    return false
+  }
   return currentlyConfigured
 }
 

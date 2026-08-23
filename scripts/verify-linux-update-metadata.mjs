@@ -81,7 +81,9 @@ for (const entry of metadata.files) {
       .on('end', () => resolve(hash.digest('base64')))
   })
   assert.equal(entry.sha512, digest, `SHA512 in latest-linux.yml does not match ${entry.url}`)
-  if (entry.url === appImageName) appImageDigest = digest
+  if (entry.url === appImageName) {
+    appImageDigest = digest
+  }
 }
 assert.equal(metadata.path, appImageName, 'Top-level update path must reference the AppImage')
 assert.equal(metadata.sha512, appImageDigest, 'Top-level AppImage SHA512 does not match')

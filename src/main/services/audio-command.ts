@@ -45,7 +45,9 @@ export class LatestValueExecutor<Key, Value> {
   private active = 0
 
   constructor(concurrency: number, execute: (key: Key, value: Value) => Promise<void>) {
-    if (concurrency < 1) throw new Error('Concurrency must be at least one')
+    if (concurrency < 1) {
+      throw new Error('Concurrency must be at least one')
+    }
     this.concurrency = concurrency
     this.execute = execute
   }
@@ -56,14 +58,18 @@ export class LatestValueExecutor<Key, Value> {
   }
 
   onIdle(): Promise<void> {
-    if (this.active === 0 && this.pending.size === 0) return Promise.resolve()
+    if (this.active === 0 && this.pending.size === 0) {
+      return Promise.resolve()
+    }
     return new Promise((resolve) => this.idleListeners.add(resolve))
   }
 
   private pump(): void {
     while (this.active < this.concurrency && this.pending.size > 0) {
       const next = [...this.pending.entries()].find(([key]) => !this.activeKeys.has(key))
-      if (!next) return
+      if (!next) {
+        return
+      }
 
       this.pending.delete(next[0])
       this.activeKeys.add(next[0])
@@ -76,7 +82,9 @@ export class LatestValueExecutor<Key, Value> {
           this.active -= 1
           this.pump()
           if (this.active === 0 && this.pending.size === 0) {
-            for (const resolve of this.idleListeners) resolve()
+            for (const resolve of this.idleListeners) {
+              resolve()
+            }
             this.idleListeners.clear()
           }
         })

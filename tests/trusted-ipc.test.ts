@@ -26,7 +26,9 @@ test('requires both the trusted WebContents and its current main frame for invoc
   const listener = vi.fn((value: string) => `accepted:${value}`)
   handleIpc(trusted as never, 'test:invoke', listener)
   const invoke = electron.invokes.get('test:invoke')
-  if (!invoke) throw new Error('handler not registered')
+  if (!invoke) {
+    throw new Error('handler not registered')
+  }
 
   expect(invoke({ sender: trusted, senderFrame: trusted.mainFrame }, 'safe')).toBe('accepted:safe')
   expect(() => invoke({ sender: {}, senderFrame: trusted.mainFrame }, 'blocked')).toThrow(
@@ -43,7 +45,9 @@ test('silently drops untrusted one-way messages', () => {
   const listener = vi.fn()
   onIpc(trusted as never, 'test:event', listener)
   const receive = electron.events.get('test:event')
-  if (!receive) throw new Error('listener not registered')
+  if (!receive) {
+    throw new Error('listener not registered')
+  }
 
   receive({ sender: {}, senderFrame: trusted.mainFrame }, 'secret-payload')
   receive({ sender: trusted, senderFrame: {} }, 'secret-payload')

@@ -79,7 +79,9 @@ export default function DeejPanel({ onSliderClick }: DeejPanelProps): React.JSX.
             name={(deejNames || {})[index]}
             sessions={deej[index] || []}
             onClick={() => {
-              if (!didDrag.current) onSliderClick(index)
+              if (!didDrag.current) {
+                onSliderClick(index)
+              }
             }}
             animationDelay={i * 50}
             isDragSource={dragSourceIndex === index}

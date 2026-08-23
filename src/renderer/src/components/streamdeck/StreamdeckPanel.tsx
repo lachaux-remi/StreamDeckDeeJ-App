@@ -25,7 +25,9 @@ export default function StreamdeckPanel({
 
   useEffect(() => {
     const el = containerRef.current
-    if (!el) return
+    if (!el) {
+      return
+    }
     const observer = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect
       const maxCellW = (width - (gridCols - 1) * GAP) / gridCols
@@ -110,7 +112,9 @@ export default function StreamdeckPanel({
                 config={streamdeck[index]}
                 cellSize={cellSize}
                 onClick={() => {
-                  if (!didDrag.current) onButtonClick(index)
+                  if (!didDrag.current) {
+                    onButtonClick(index)
+                  }
                 }}
                 animationDelay={i * 30}
                 isDragSource={dragSourceIndex === index}

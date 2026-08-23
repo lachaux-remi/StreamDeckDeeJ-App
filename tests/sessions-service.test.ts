@@ -55,8 +55,12 @@ beforeEach(() => {
   fakes.sliderListener = undefined
   fakes.getConfig.mockReturnValue({ deej: { '0': ['Spotify'], '1': ['master'] } })
   fakes.run.mockImplementation(async (file: string) => {
-    if (file === 'pw-dump') return pipeWireDump
-    if (file === 'wpctl') return 'Volume: 0.75'
+    if (file === 'pw-dump') {
+      return pipeWireDump
+    }
+    if (file === 'wpctl') {
+      return 'Volume: 0.75'
+    }
     return ''
   })
 })
@@ -73,12 +77,18 @@ test('discovers PipeWire clients, deduplicates names, and reads configured OS vo
 
 test('falls back to pactl discovery and master volume when PipeWire commands fail', async () => {
   fakes.run.mockImplementation(async (file: string, args: readonly string[]) => {
-    if (file === 'pw-dump') throw new Error('missing')
+    if (file === 'pw-dump') {
+      throw new Error('missing')
+    }
     if (file === 'pactl' && args[0] === 'list') {
       return 'Sink Input #12\n application.process.binary = "Firefox"\n Volume: 40%'
     }
-    if (file === 'wpctl') throw new Error('missing')
-    if (file === 'pactl' && args[0] === 'get-sink-volume') return 'front-left: 32768 / 60%'
+    if (file === 'wpctl') {
+      throw new Error('missing')
+    }
+    if (file === 'pactl' && args[0] === 'get-sink-volume') {
+      return 'front-left: 32768 / 60%'
+    }
     return ''
   })
   fakes.getConfig.mockReturnValue({ deej: { '0': ['Firefox'], '1': ['master'] } })

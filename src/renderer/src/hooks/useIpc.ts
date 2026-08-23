@@ -11,7 +11,9 @@ export function useIpcHydration(): void {
 
   useEffect(() => {
     window.api.settings.hydrate().then((config) => {
-      if (!isRendererSettings(config)) throw new TypeError('Invalid settings received from main')
+      if (!isRendererSettings(config)) {
+        throw new TypeError('Invalid settings received from main')
+      }
       hydrate(config)
     })
     window.api.app.getVersions().then((v) => setVersions(v as ApplicationVersions))

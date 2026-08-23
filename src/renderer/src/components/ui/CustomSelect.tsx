@@ -34,18 +34,23 @@ export default function CustomSelect({
   const selected = options.find((o) => o.value === value)
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      return
+    }
 
     const handleClickOutside = (e: MouseEvent): void => {
       if (
         !triggerRef.current?.contains(e.target as Node) &&
         !panelRef.current?.contains(e.target as Node)
-      )
+      ) {
         setIsOpen(false)
+      }
     }
 
     const handleEscape = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') setIsOpen(false)
+      if (e.key === 'Escape') {
+        setIsOpen(false)
+      }
     }
 
     document.addEventListener('mousedown', handleClickOutside)

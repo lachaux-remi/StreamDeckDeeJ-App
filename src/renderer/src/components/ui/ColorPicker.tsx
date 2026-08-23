@@ -49,11 +49,17 @@ function rgbToHsv({ r, g, b }: LedColor): [number, number, number] {
   const s = max === 0 ? 0 : d / max
   const v = max
   if (d !== 0) {
-    if (max === r) h = ((g - b) / d) % 6
-    else if (max === g) h = (b - r) / d + 2
-    else h = (r - g) / d + 4
+    if (max === r) {
+      h = ((g - b) / d) % 6
+    } else if (max === g) {
+      h = (b - r) / d + 2
+    } else {
+      h = (r - g) / d + 4
+    }
     h = Math.round(h * 60)
-    if (h < 0) h += 360
+    if (h < 0) {
+      h += 360
+    }
   }
   return [h, Math.round(s * 100), Math.round(v * 100)]
 }
@@ -64,7 +70,9 @@ function toHex({ r, g, b }: LedColor): string {
 
 function parseHex(raw: string): LedColor | null {
   const clean = raw.replace('#', '')
-  if (!/^[0-9a-f]{6}$/i.test(clean)) return null
+  if (!/^[0-9a-f]{6}$/i.test(clean)) {
+    return null
+  }
   return {
     r: parseInt(clean.slice(0, 2), 16),
     g: parseInt(clean.slice(2, 4), 16),
@@ -103,13 +111,16 @@ export default function ColorPicker({
   }, [r, g, b])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      return
+    }
     const handler = (e: MouseEvent): void => {
       if (
         !triggerRef.current?.contains(e.target as Node) &&
         !panelRef.current?.contains(e.target as Node)
-      )
+      ) {
         setIsOpen(false)
+      }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)

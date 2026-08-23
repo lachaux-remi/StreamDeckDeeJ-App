@@ -76,7 +76,9 @@ class DiscordService extends EventEmitter {
 
   private async isTrustedSocket(path: string): Promise<boolean> {
     const uid = process.getuid?.()
-    if (uid === undefined) return false
+    if (uid === undefined) {
+      return false
+    }
 
     try {
       const socket = await lstat(path)
@@ -95,7 +97,9 @@ class DiscordService extends EventEmitter {
 
     for (let i = 0; i < 10; i++) {
       for (const path of this.socketPaths(i)) {
-        if (!(await this.isTrustedSocket(path))) continue
+        if (!(await this.isTrustedSocket(path))) {
+          continue
+        }
 
         try {
           await this.tryConnect(path, clientId)
@@ -157,7 +161,9 @@ class DiscordService extends EventEmitter {
       void this.onReady()
     } else if (msg.cmd === 'AUTHORIZE' && msg.evt !== 'ERROR') {
       const code = (msg.data as { code?: string } | undefined)?.code
-      if (code) void this.handleAuthCode(code)
+      if (code) {
+        void this.handleAuthCode(code)
+      }
     } else if (msg.cmd === 'AUTHENTICATE') {
       if (msg.evt === 'ERROR') {
         loggerService.warn('Discord RPC: token invalide, tentative de refresh', SERVICE)
@@ -178,7 +184,9 @@ class DiscordService extends EventEmitter {
       }
     } else if (msg.evt === 'VOICE_SETTINGS_UPDATE' || msg.cmd === 'GET_VOICE_SETTINGS') {
       const d = msg.data as { mute?: boolean; deaf?: boolean } | null | undefined
-      if (!d) return
+      if (!d) {
+        return
+      }
       const nm = !!d.mute
       const nd = !!d.deaf
       if (nm !== this.muted || nd !== this.deafened) {
@@ -201,7 +209,9 @@ class DiscordService extends EventEmitter {
 
   private async onReady(): Promise<void> {
     const discord = configService.getConfig().discord
-    if (!discord) return
+    if (!discord) {
+      return
+    }
 
     if (discord.accessToken) {
       this.authenticate(discord.accessToken)
@@ -214,7 +224,9 @@ class DiscordService extends EventEmitter {
 
   private authorize(): void {
     const clientId = configService.getConfig().discord?.clientId
-    if (!clientId) return
+    if (!clientId) {
+      return
+    }
     loggerService.info(
       "Discord RPC: demande d'autorisation (accepte la popup dans Discord)",
       SERVICE
@@ -238,7 +250,9 @@ class DiscordService extends EventEmitter {
 
   private async handleAuthCode(code: string): Promise<void> {
     const discord = configService.getConfig().discord
-    if (!discord?.clientId || !discord?.clientSecret) return
+    if (!discord?.clientId || !discord?.clientSecret) {
+      return
+    }
 
     try {
       const resp = await fetch('https://discord.com/api/oauth2/token', {
@@ -278,7 +292,9 @@ class DiscordService extends EventEmitter {
 
   private async tryRefreshToken(refreshToken: string): Promise<void> {
     const discord = configService.getConfig().discord
-    if (!discord?.clientId || !discord?.clientSecret) return
+    if (!discord?.clientId || !discord?.clientSecret) {
+      return
+    }
     try {
       const resp = await fetch('https://discord.com/api/oauth2/token', {
         method: 'POST',
@@ -350,7 +366,9 @@ class DiscordService extends EventEmitter {
   }
 
   private onDisconnect(): void {
-    if (!this._connected && !this.socket) return
+    if (!this._connected && !this.socket) {
+      return
+    }
     this.socket?.destroy()
     this.socket = null
     const hadState = this._connected
@@ -368,7 +386,9 @@ class DiscordService extends EventEmitter {
   }
 
   private scheduleReconnect(): void {
-    if (this.reconnectTimer) return
+    if (this.reconnectTimer) {
+      return
+    }
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null
       void this.connect()
@@ -376,7 +396,9 @@ class DiscordService extends EventEmitter {
   }
 
   private writeFrame(op: number, data: unknown): void {
-    if (!this.socket) return
+    if (!this.socket) {
+      return
+    }
     const json = JSON.stringify(data)
     const buf = Buffer.allocUnsafe(8 + Buffer.byteLength(json))
     buf.writeUInt32LE(op, 0)

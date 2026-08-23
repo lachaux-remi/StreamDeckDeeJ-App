@@ -98,15 +98,21 @@ class SerialService extends EventEmitter {
   }
 
   private requestReload(): void {
-    if (this.isShuttingDown) return
+    if (this.isShuttingDown) {
+      return
+    }
     this.reloadRequested = true
-    if (this.reloadPromise) return
+    if (this.reloadPromise) {
+      return
+    }
 
     this.reloadPromise = this.reloadConnection()
       .catch((error) => loggerService.error(`Error reloading connection: ${error}`, SERVICE))
       .finally(() => {
         this.reloadPromise = null
-        if (this.reloadRequested) this.requestReload()
+        if (this.reloadRequested) {
+          this.requestReload()
+        }
       })
   }
 
@@ -116,14 +122,18 @@ class SerialService extends EventEmitter {
       const epoch = this.configEpoch
       await this.closeCurrentPort()
 
-      if (epoch !== this.configEpoch || this.isShuttingDown) continue
+      if (epoch !== this.configEpoch || this.isShuttingDown) {
+        continue
+      }
       this.openConnection(epoch)
     }
   }
 
   private async closeCurrentPort(): Promise<void> {
     const port = this.serialPort
-    if (!port) return
+    if (!port) {
+      return
+    }
 
     loggerService.info('Reloading connection', SERVICE)
     this.serialPort = null
@@ -149,11 +159,15 @@ class SerialService extends EventEmitter {
     let ended = false
 
     const finish = (error?: Error): void => {
-      if (ended || epoch !== this.configEpoch || this.serialPort !== port) return
+      if (ended || epoch !== this.configEpoch || this.serialPort !== port) {
+        return
+      }
       ended = true
       this.serialPort = null
       this.expectedIrEchoes.clear()
-      if (this.readyTimer) clearTimeout(this.readyTimer)
+      if (this.readyTimer) {
+        clearTimeout(this.readyTimer)
+      }
       this.readyTimer = null
       if (error) {
         loggerService.error(`Connection failed: ${error.message}`, SERVICE)
@@ -172,7 +186,9 @@ class SerialService extends EventEmitter {
       .on('error', finish)
       .on('close', () => finish())
       .open((err) => {
-        if (epoch !== this.configEpoch || this.serialPort !== port) return
+        if (epoch !== this.configEpoch || this.serialPort !== port) {
+          return
+        }
 
         if (err) {
           finish(err)
@@ -196,14 +212,18 @@ class SerialService extends EventEmitter {
 
         const decoder = new BoundedSerialFrameDecoder()
         port.on('data', (chunk: Buffer) => {
-          if (epoch !== this.configEpoch || this.serialPort !== port) return
+          if (epoch !== this.configEpoch || this.serialPort !== port) {
+            return
+          }
           const decoded = decoder.write(chunk)
           for (const rejection of decoded.rejections) {
             this.logRejectedInput(rejection)
           }
 
           for (const frame of decoded.frames) {
-            if (this.expectedIrEchoes.consume(frame)) continue
+            if (this.expectedIrEchoes.consume(frame)) {
+              continue
+            }
 
             const parsed = parseSerialFrame(frame)
             if ('rejection' in parsed) {
@@ -231,8 +251,12 @@ class SerialService extends EventEmitter {
   }
 
   private clearConnectionTimers(): void {
-    if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
-    if (this.readyTimer) clearTimeout(this.readyTimer)
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+    }
+    if (this.readyTimer) {
+      clearTimeout(this.readyTimer)
+    }
     this.reconnectTimer = null
     this.readyTimer = null
   }
@@ -253,10 +277,14 @@ class SerialService extends EventEmitter {
   }
 
   private scheduleReconnect(epoch: number): void {
-    if (this.reconnectTimer || this.isShuttingDown || epoch !== this.configEpoch) return
+    if (this.reconnectTimer || this.isShuttingDown || epoch !== this.configEpoch) {
+      return
+    }
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null
-      if (epoch === this.configEpoch) this.requestReload()
+      if (epoch === this.configEpoch) {
+        this.requestReload()
+      }
     }, 1000)
   }
 }

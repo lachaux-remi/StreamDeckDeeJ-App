@@ -114,7 +114,9 @@ const trustedEvent = { sender: trustedSender, senderFrame: trustedSender.mainFra
 
 function invoke(channel: string, ...args: unknown[]): unknown {
   const listener = fakes.invokes.get(channel)
-  if (!listener) throw new Error(`Missing handler ${channel}`)
+  if (!listener) {
+    throw new Error(`Missing handler ${channel}`)
+  }
   return listener(trustedEvent, ...args)
 }
 
@@ -172,7 +174,9 @@ test('hydrates only the renderer view and rejects malformed secret-bearing setti
   fakes.importConfiguration.mockResolvedValue({ status: 'success' })
   await expect(invoke('settings:export')).resolves.toEqual({ status: 'success' })
   await expect(invoke('settings:import')).resolves.toEqual({ status: 'success' })
-  if (!fakes.transferDialogs) throw new Error('Transfer dialogs were not registered')
+  if (!fakes.transferDialogs) {
+    throw new Error('Transfer dialogs were not registered')
+  }
   await expect(fakes.transferDialogs.chooseExportPath()).resolves.toBe('/tmp/export.json')
   await expect(fakes.transferDialogs.chooseImportPath()).resolves.toBe('/tmp/import.json')
 })

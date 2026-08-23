@@ -168,14 +168,18 @@ export default function StreamdeckConfigDialog({
   }, [buttonIndex, streamdeck])
 
   useEffect(() => {
-    if (buttonIndex === null) return
+    if (buttonIndex === null) {
+      return
+    }
     return window.api.conditions.onChange((partial) => {
       setConditionsState((prev) => ({ ...prev, ...partial }))
     })
   }, [buttonIndex])
 
   const hasChanges = useMemo(() => {
-    if (buttonIndex === null) return false
+    if (buttonIndex === null) {
+      return false
+    }
     const original = streamdeck[buttonIndex]
     return (
       JSON.stringify(pressed) !== JSON.stringify(original?.pressed) ||
@@ -198,7 +202,9 @@ export default function StreamdeckConfigDialog({
 
   const sendLedPreview = useCallback(
     (enabled: boolean, color: LedColor) => {
-      if (buttonIndex === null) return
+      if (buttonIndex === null) {
+        return
+      }
       void window.api.streamdeck.setLedOverride(streamdeck, buttonIndex, enabled ? color : null)
     },
     [buttonIndex, streamdeck]
@@ -222,13 +228,25 @@ export default function StreamdeckConfigDialog({
   }, [onClose, buttonIndex, streamdeck, sendLedPreview])
 
   const handleSave = useCallback(() => {
-    if (buttonIndex === null) return
+    if (buttonIndex === null) {
+      return
+    }
     const config: StreamdeckInputConfig = {}
-    if (mainIcon) config.icon = mainIcon
-    if (ledOverrideEnabled) config.color = ledColor
-    if (ledConditions.length > 0) config.ledConditions = ledConditions
-    if (pressed?.module || pressed?.icon) config.pressed = pressed
-    if (hold?.module || hold?.icon) config.hold = hold
+    if (mainIcon) {
+      config.icon = mainIcon
+    }
+    if (ledOverrideEnabled) {
+      config.color = ledColor
+    }
+    if (ledConditions.length > 0) {
+      config.ledConditions = ledConditions
+    }
+    if (pressed?.module || pressed?.icon) {
+      config.pressed = pressed
+    }
+    if (hold?.module || hold?.icon) {
+      config.hold = hold
+    }
     updateStreamdeckButton(buttonIndex, config)
     onClose()
   }, [
@@ -244,7 +262,9 @@ export default function StreamdeckConfigDialog({
   ])
 
   const handleDelete = useCallback(() => {
-    if (buttonIndex === null) return
+    if (buttonIndex === null) {
+      return
+    }
     removeStreamdeckButton(buttonIndex)
     onClose()
   }, [buttonIndex, removeStreamdeckButton, onClose])
@@ -254,18 +274,26 @@ export default function StreamdeckConfigDialog({
 
   const handleMainIconUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file) {
+      return
+    }
     void readIconFile(file).then((iconData) => {
-      if (iconData) setMainIcon(iconData)
+      if (iconData) {
+        setMainIcon(iconData)
+      }
     })
   }, [])
 
   const handleActionIconUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
-      if (!file) return
+      if (!file) {
+        return
+      }
       void readIconFile(file).then((iconData) => {
-        if (!iconData) return
+        if (!iconData) {
+          return
+        }
         setCurrentAction((prev) =>
           prev ? { ...prev, icon: iconData } : { module: '', params: [''], icon: iconData }
         )
@@ -274,7 +302,9 @@ export default function StreamdeckConfigDialog({
     [setCurrentAction]
   )
 
-  if (buttonIndex === null) return null
+  if (buttonIndex === null) {
+    return null
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in">
@@ -395,7 +425,9 @@ export default function StreamdeckConfigDialog({
                       onDragOver={(e) => {
                         e.preventDefault()
                         e.dataTransfer.dropEffect = 'move'
-                        if (dragOverIndex !== idx) setDragOverIndex(idx)
+                        if (dragOverIndex !== idx) {
+                          setDragOverIndex(idx)
+                        }
                       }}
                       onDragLeave={() => setDragOverIndex(null)}
                       onDrop={(e) => {

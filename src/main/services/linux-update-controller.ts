@@ -29,13 +29,19 @@ interface ModeDetectionOptions {
 }
 
 export function detectLinuxUpdateMode(options: ModeDetectionOptions): LinuxUpdateMode {
-  if (!options.packaged || options.platform !== 'linux' || options.unpacked) return 'disabled'
-  if (options.appImage && isAbsolute(options.appImage)) return 'appimage'
+  if (!options.packaged || options.platform !== 'linux' || options.unpacked) {
+    return 'disabled'
+  }
+  if (options.appImage && isAbsolute(options.appImage)) {
+    return 'appimage'
+  }
   return options.packageType === 'pacman' ? 'package-manager' : 'disabled'
 }
 
 function isReleaseInfo(value: unknown): value is LinuxReleaseInfo {
-  if (typeof value !== 'object' || value === null) return false
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
   const candidate = value as Record<string, unknown>
   return (
     typeof candidate.version === 'string' &&
@@ -57,7 +63,9 @@ export class LinuxUpdateController {
         : { mode: options.mode, status: 'idle', currentVersion: options.currentVersion }
 
     if (options.mode === 'appimage') {
-      if (!options.updater) throw new Error('AppImage updater adapter is required')
+      if (!options.updater) {
+        throw new Error('AppImage updater adapter is required')
+      }
       options.updater.configure()
       options.updater.on('available', (value) => this.onAvailable(value))
       options.updater.on('not-available', () => this.setUpToDate())
@@ -77,8 +85,12 @@ export class LinuxUpdateController {
   }
 
   async check(): Promise<void> {
-    if (this.options.mode === 'disabled') return
-    if (this.state.status === 'checking') return
+    if (this.options.mode === 'disabled') {
+      return
+    }
+    if (this.state.status === 'checking') {
+      return
+    }
     if (!['idle', 'up-to-date', 'error'].includes(this.state.status)) {
       throw new Error('Update check is not allowed in the current state')
     }
@@ -93,17 +105,23 @@ export class LinuxUpdateController {
         return
       }
       const release = await this.options.releaseChecker?.()
-      if (release && this.isUpgrade(release.version)) this.setAvailable(release)
-      else this.setUpToDate()
+      if (release && this.isUpgrade(release.version)) {
+        this.setAvailable(release)
+      } else {
+        this.setUpToDate()
+      }
     } catch {
       this.setError('La vérification de mise à jour a échoué.')
     }
   }
 
   async download(): Promise<void> {
-    if (this.options.mode !== 'appimage')
+    if (this.options.mode !== 'appimage') {
       throw new Error('Downloads are only available for AppImage')
-    if (this.state.status !== 'available') throw new Error('Update is not available')
+    }
+    if (this.state.status !== 'available') {
+      throw new Error('Update is not available')
+    }
     this.setState({ ...this.state, status: 'downloading', progress: 0 })
     try {
       await this.options.updater?.download()
@@ -113,9 +131,12 @@ export class LinuxUpdateController {
   }
 
   async install(): Promise<void> {
-    if (this.options.mode !== 'appimage')
+    if (this.options.mode !== 'appimage') {
       throw new Error('Installation is only available for AppImage')
-    if (this.state.status !== 'downloaded') throw new Error('Update is not downloaded')
+    }
+    if (this.state.status !== 'downloaded') {
+      throw new Error('Update is not downloaded')
+    }
     await this.options.updater?.install()
   }
 
@@ -135,7 +156,9 @@ export class LinuxUpdateController {
   }
 
   private onProgress(value: unknown): void {
-    if (this.state.status !== 'downloading') return
+    if (this.state.status !== 'downloading') {
+      return
+    }
     const percent =
       typeof value === 'object' &&
       value !== null &&
@@ -157,7 +180,9 @@ export class LinuxUpdateController {
   }
 
   private setAvailable(release: LinuxReleaseInfo): void {
-    if (this.options.mode === 'disabled') return
+    if (this.options.mode === 'disabled') {
+      return
+    }
     this.setState({
       mode: this.options.mode,
       status: 'available',
@@ -167,7 +192,9 @@ export class LinuxUpdateController {
   }
 
   private setUpToDate(): void {
-    if (this.options.mode === 'disabled') return
+    if (this.options.mode === 'disabled') {
+      return
+    }
     this.setState({
       mode: this.options.mode,
       status: 'up-to-date',
@@ -176,7 +203,9 @@ export class LinuxUpdateController {
   }
 
   private setError(message: string): void {
-    if (this.options.mode === 'disabled') return
+    if (this.options.mode === 'disabled') {
+      return
+    }
     this.setState({
       mode: this.options.mode,
       status: 'error',
@@ -195,6 +224,8 @@ export class LinuxUpdateController {
 
   private setState(state: LinuxUpdateState): void {
     this.state = state
-    for (const listener of this.listeners) listener(this.getState())
+    for (const listener of this.listeners) {
+      listener(this.getState())
+    }
   }
 }

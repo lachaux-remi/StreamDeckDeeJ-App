@@ -65,7 +65,9 @@ function isSafeExternalUrl(url: string): boolean {
 }
 
 async function setAutostart(enabled: boolean): Promise<void> {
-  if (isDev) return
+  if (isDev) {
+    return
+  }
   try {
     await setLinuxAutostart({
       enabled,

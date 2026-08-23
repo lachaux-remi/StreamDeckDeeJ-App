@@ -13,7 +13,9 @@ export function registerUpdateHandlers(trustedSender: WebContents): void {
 
   const confirm = async (consent: UpdateConsent): Promise<boolean> => {
     const owner = BrowserWindow.fromWebContents(trustedSender)
-    if (!owner) throw new Error('Updater window is unavailable')
+    if (!owner) {
+      throw new Error('Updater window is unavailable')
+    }
     const download = consent === 'download'
     const result = await dialog.showMessageBox(owner, {
       type: 'question',
@@ -33,7 +35,9 @@ export function registerUpdateHandlers(trustedSender: WebContents): void {
   }
 
   handleIpc(trustedSender, 'update:state', (...args: unknown[]) => {
-    if (args.length !== 0) throw new TypeError('Invalid update state request')
+    if (args.length !== 0) {
+      throw new TypeError('Invalid update state request')
+    }
     return linuxUpdateService.getState()
   })
   handleIpc(trustedSender, 'update:command', async (...args: unknown[]) => {

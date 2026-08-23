@@ -42,7 +42,9 @@ test('runs the fallback only after the primary command fails', async () => {
   const fakeRunner: CommandRunner = {
     async run(file, args, timeout): Promise<string> {
       calls.push({ file, args, timeout })
-      if (file === 'wpctl') throw new Error('unavailable')
+      if (file === 'wpctl') {
+        throw new Error('unavailable')
+      }
       return 'Volume: 42%'
     }
   }
@@ -66,7 +68,9 @@ test('bounds concurrency and applies only the latest pending value per target', 
     active += 1
     maxActive = Math.max(maxActive, active)
     applied.push([target, value])
-    if (applied.length === 1) await first.promise
+    if (applied.length === 1) {
+      await first.promise
+    }
     active -= 1
   })
 
