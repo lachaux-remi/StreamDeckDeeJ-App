@@ -180,10 +180,9 @@ export function parseSerialFrame(
   return { rejection: 'unknown message type' }
 }
 
-function isDeejMessage(value: unknown): value is DeejSerialMessage {
-  if (!isRecord(value)) {
-    return false
-  }
+function isDeejMessage(
+  value: Record<string, unknown>
+): value is Record<string, unknown> & DeejSerialMessage {
   if (!hasExactKeys(value, ['type', 'value']) || !isRecord(value.value)) {
     return false
   }
@@ -207,10 +206,9 @@ function isDeejMessage(value: unknown): value is DeejSerialMessage {
   })
 }
 
-function isDeckMessage(value: unknown): value is DeckSerialMessage {
-  if (!isRecord(value)) {
-    return false
-  }
+function isDeckMessage(
+  value: Record<string, unknown>
+): value is Record<string, unknown> & DeckSerialMessage {
   return (
     hasExactKeys(value, ['type', 'state', 'value']) &&
     (value.state === 'pressed' || value.state === 'hold' || value.state === 'released') &&
