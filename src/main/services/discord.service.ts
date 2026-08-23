@@ -165,10 +165,11 @@ class DiscordService extends EventEmitter {
         if (discord?.refreshToken) {
           void this.tryRefreshToken(discord.refreshToken)
         } else {
-          if (discord)
+          if (discord) {
             configService.setConfig({
               discord: { ...discord, accessToken: undefined, refreshToken: undefined }
             })
+          }
           this.authorize()
         }
       } else {
