@@ -18,7 +18,9 @@ export class AppQuitCoordinator {
   constructor(private readonly options: AppQuitCoordinatorOptions) {}
 
   async installUpdate(quitAndInstall: () => void): Promise<void> {
-    if (this.ordinaryQuitStarted) throw new Error('Application quit is already in progress')
+    if (this.ordinaryQuitStarted) {
+      throw new Error('Application quit is already in progress')
+    }
     this.updateInstallPreparing = true
     try {
       await this.shutdownOnce()
@@ -32,10 +34,16 @@ export class AppQuitCoordinator {
   }
 
   handleBeforeQuit(event: BeforeQuitEvent): void {
-    if (this.updateQuitAllowed) return
+    if (this.updateQuitAllowed) {
+      return
+    }
     event.preventDefault()
-    if (this.updateInstallPreparing) return
-    if (this.ordinaryQuitStarted) return
+    if (this.updateInstallPreparing) {
+      return
+    }
+    if (this.ordinaryQuitStarted) {
+      return
+    }
     this.ordinaryQuitStarted = true
     void this.shutdownOnce()
       .catch(() => {})
@@ -50,7 +58,9 @@ export class AppQuitCoordinator {
   private shutdownWithDeadline(): Promise<void> {
     const shutdown = this.options.shutdown()
     const timeoutMs = this.options.shutdownTimeoutMs
-    if (timeoutMs === undefined) return shutdown
+    if (timeoutMs === undefined) {
+      return shutdown
+    }
 
     let timer: ReturnType<typeof setTimeout>
     const deadline = new Promise<void>((resolve) => {

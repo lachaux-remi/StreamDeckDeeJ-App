@@ -33,7 +33,9 @@ class ConditionService {
 
   resolveColor(conditions: LedCondition[], haState?: string): LedColor | undefined {
     for (const cond of conditions) {
-      if (this.evaluate(cond, haState)) return cond.color
+      if (this.evaluate(cond, haState)) {
+        return cond.color
+      }
     }
     return undefined
   }

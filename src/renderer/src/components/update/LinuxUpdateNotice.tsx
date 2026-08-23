@@ -8,7 +8,9 @@ import {
 
 async function sendCommand(command: LinuxUpdateCommand): Promise<LinuxUpdateState> {
   const state: unknown = await window.api.update.command(command)
-  if (!isLinuxUpdateState(state)) throw new TypeError('Invalid update state received from main')
+  if (!isLinuxUpdateState(state)) {
+    throw new TypeError('Invalid update state received from main')
+  }
   return state
 }
 
@@ -18,10 +20,14 @@ export default function LinuxUpdateNotice(): React.JSX.Element | null {
   useEffect(() => {
     let active = true
     void window.api.update.getState().then((value) => {
-      if (active && isLinuxUpdateState(value)) setState(value)
+      if (active && isLinuxUpdateState(value)) {
+        setState(value)
+      }
     })
     const unsubscribe = window.api.update.onStateChanged((value) => {
-      if (isLinuxUpdateState(value)) setState(value)
+      if (isLinuxUpdateState(value)) {
+        setState(value)
+      }
     })
     return () => {
       active = false
@@ -57,7 +63,9 @@ export default function LinuxUpdateNotice(): React.JSX.Element | null {
     )
   }
 
-  if (!('version' in state)) return null
+  if (!('version' in state)) {
+    return null
+  }
 
   return (
     <>

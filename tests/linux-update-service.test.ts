@@ -62,7 +62,7 @@ test('adapts AppImage updater events, bounds release notes, and delegates instal
   fakes.updaterListeners.get('update-available')?.({
     version: '4.1.0',
     releaseName: '',
-    releaseNotes: 'x'.repeat(20_001)
+    releaseNotes: [{ version: '4.1.0', note: 'Security fixes' }, { version: '4.0.9' }]
   })
   expect(linuxUpdateService.getState()).toEqual(
     expect.objectContaining({
@@ -70,8 +70,16 @@ test('adapts AppImage updater events, bounds release notes, and delegates instal
       status: 'available',
       version: '4.1.0',
       releaseName: 'Version 4.1.0',
-      releaseNotes: 'x'.repeat(20_000)
+      releaseNotes: '4.1.0\nSecurity fixes\n\n4.0.9\n'
     })
+  )
+  fakes.updaterListeners.get('update-available')?.({
+    version: '4.1.0',
+    releaseName: '',
+    releaseNotes: 'x'.repeat(20_001)
+  })
+  expect(linuxUpdateService.getState()).toEqual(
+    expect.objectContaining({ releaseNotes: 'x'.repeat(20_000) })
   )
   expect(fakes.checkForUpdates).toHaveBeenCalledOnce()
 
@@ -122,9 +130,14 @@ test('fails safely before initialization and on malformed release metadata', asy
   const { linuxUpdateService } = await import('@main/services/linux-update.service')
 
   expect(() => linuxUpdateService.getState()).toThrow('not initialized')
+  expect(() => linuxUpdateService.onStateChanged(vi.fn())).toThrow('not initialized')
   await expect(linuxUpdateService.check()).rejects.toThrow('not initialized')
   linuxUpdateService.init(fakes.installUpdate)
+  const listener = vi.fn()
+  const unsubscribe = linuxUpdateService.onStateChanged(listener)
   await linuxUpdateService.check()
+  unsubscribe()
+  expect(listener).toHaveBeenCalled()
   expect(linuxUpdateService.getState()).toEqual(
     expect.objectContaining({ mode: 'package-manager', status: 'error' })
   )

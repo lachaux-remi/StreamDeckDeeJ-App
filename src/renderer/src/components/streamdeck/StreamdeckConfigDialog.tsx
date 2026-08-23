@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Eye, EyeOff, GripVertical, ImagePlus, Plus, Trash2, WifiOff, X } from 'lucide-react'
+import {
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  GripVertical,
+  ImagePlus,
+  Plus,
+  Trash2,
+  WifiOff,
+  X
+} from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import { ICON_FILE_ACCEPT, readIconFile } from '@renderer/lib/icon-file'
 import { useSettingsStore } from '@renderer/stores/settings.store'
@@ -41,7 +51,6 @@ const DEFAULT_CONDITIONS_STATE: ConditionsState = {
   discordStreaming: false,
   discordConnected: false
 }
-
 
 interface ModuleParam {
   label: string
@@ -159,27 +168,43 @@ export default function StreamdeckConfigDialog({
   }, [buttonIndex, streamdeck])
 
   useEffect(() => {
-    if (buttonIndex === null) return
+    if (buttonIndex === null) {
+      return
+    }
     return window.api.conditions.onChange((partial) => {
       setConditionsState((prev) => ({ ...prev, ...partial }))
     })
   }, [buttonIndex])
 
   const hasChanges = useMemo(() => {
-    if (buttonIndex === null) return false
+    if (buttonIndex === null) {
+      return false
+    }
     const original = streamdeck[buttonIndex]
     return (
       JSON.stringify(pressed) !== JSON.stringify(original?.pressed) ||
       JSON.stringify(hold) !== JSON.stringify(original?.hold) ||
       mainIcon !== original?.icon ||
-      JSON.stringify(original?.color ?? null) !== JSON.stringify(ledOverrideEnabled ? ledColor : null) ||
+      JSON.stringify(original?.color ?? null) !==
+        JSON.stringify(ledOverrideEnabled ? ledColor : null) ||
       JSON.stringify(original?.ledConditions ?? []) !== JSON.stringify(ledConditions)
     )
-  }, [buttonIndex, streamdeck, pressed, hold, mainIcon, ledOverrideEnabled, ledColor, ledConditions])
+  }, [
+    buttonIndex,
+    streamdeck,
+    pressed,
+    hold,
+    mainIcon,
+    ledOverrideEnabled,
+    ledColor,
+    ledConditions
+  ])
 
   const sendLedPreview = useCallback(
     (enabled: boolean, color: LedColor) => {
-      if (buttonIndex === null) return
+      if (buttonIndex === null) {
+        return
+      }
       void window.api.streamdeck.setLedOverride(streamdeck, buttonIndex, enabled ? color : null)
     },
     [buttonIndex, streamdeck]
@@ -203,19 +228,43 @@ export default function StreamdeckConfigDialog({
   }, [onClose, buttonIndex, streamdeck, sendLedPreview])
 
   const handleSave = useCallback(() => {
-    if (buttonIndex === null) return
+    if (buttonIndex === null) {
+      return
+    }
     const config: StreamdeckInputConfig = {}
-    if (mainIcon) config.icon = mainIcon
-    if (ledOverrideEnabled) config.color = ledColor
-    if (ledConditions.length > 0) config.ledConditions = ledConditions
-    if (pressed?.module || pressed?.icon) config.pressed = pressed
-    if (hold?.module || hold?.icon) config.hold = hold
+    if (mainIcon) {
+      config.icon = mainIcon
+    }
+    if (ledOverrideEnabled) {
+      config.color = ledColor
+    }
+    if (ledConditions.length > 0) {
+      config.ledConditions = ledConditions
+    }
+    if (pressed?.module || pressed?.icon) {
+      config.pressed = pressed
+    }
+    if (hold?.module || hold?.icon) {
+      config.hold = hold
+    }
     updateStreamdeckButton(buttonIndex, config)
     onClose()
-  }, [buttonIndex, mainIcon, ledOverrideEnabled, ledColor, ledConditions, pressed, hold, updateStreamdeckButton, onClose])
+  }, [
+    buttonIndex,
+    mainIcon,
+    ledOverrideEnabled,
+    ledColor,
+    ledConditions,
+    pressed,
+    hold,
+    updateStreamdeckButton,
+    onClose
+  ])
 
   const handleDelete = useCallback(() => {
-    if (buttonIndex === null) return
+    if (buttonIndex === null) {
+      return
+    }
     removeStreamdeckButton(buttonIndex)
     onClose()
   }, [buttonIndex, removeStreamdeckButton, onClose])
@@ -225,18 +274,26 @@ export default function StreamdeckConfigDialog({
 
   const handleMainIconUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file) {
+      return
+    }
     void readIconFile(file).then((iconData) => {
-      if (iconData) setMainIcon(iconData)
+      if (iconData) {
+        setMainIcon(iconData)
+      }
     })
   }, [])
 
   const handleActionIconUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
-      if (!file) return
+      if (!file) {
+        return
+      }
       void readIconFile(file).then((iconData) => {
-        if (!iconData) return
+        if (!iconData) {
+          return
+        }
         setCurrentAction((prev) =>
           prev ? { ...prev, icon: iconData } : { module: '', params: [''], icon: iconData }
         )
@@ -245,7 +302,9 @@ export default function StreamdeckConfigDialog({
     [setCurrentAction]
   )
 
-  if (buttonIndex === null) return null
+  if (buttonIndex === null) {
+    return null
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in">
@@ -266,10 +325,8 @@ export default function StreamdeckConfigDialog({
 
         {/* Two-column body */}
         <div className="grid grid-cols-2 items-start divide-x divide-border/20">
-
           {/* Left column : LED */}
           <div className="space-y-5 pr-6">
-
             {/* Main icon */}
             <div>
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
@@ -291,7 +348,9 @@ export default function StreamdeckConfigDialog({
                     Couleur LED
                   </span>
                   {!ledOverrideEnabled && (
-                    <p className="text-[11px] text-muted-foreground/30">Suit l{"'"}animation globale</p>
+                    <p className="text-[11px] text-muted-foreground/30">
+                      Suit l{"'"}animation globale
+                    </p>
                   )}
                 </div>
                 <div className="relative flex-shrink-0">
@@ -347,9 +406,7 @@ export default function StreamdeckConfigDialog({
                 !conditionsState.discordConnected && (
                   <div className="mb-2 flex items-center gap-2 rounded-lg border border-neon-orange/20 bg-neon-orange/5 px-3 py-2">
                     <WifiOff className="h-3 w-3 shrink-0 text-neon-orange/70" />
-                    <span className="text-[11px] text-neon-orange/70">
-                      Discord non connecté
-                    </span>
+                    <span className="text-[11px] text-neon-orange/70">Discord non connecté</span>
                   </div>
                 )}
 
@@ -368,7 +425,9 @@ export default function StreamdeckConfigDialog({
                       onDragOver={(e) => {
                         e.preventDefault()
                         e.dataTransfer.dropEffect = 'move'
-                        if (dragOverIndex !== idx) setDragOverIndex(idx)
+                        if (dragOverIndex !== idx) {
+                          setDragOverIndex(idx)
+                        }
                       }}
                       onDragLeave={() => setDragOverIndex(null)}
                       onDrop={(e) => {
@@ -427,9 +486,7 @@ export default function StreamdeckConfigDialog({
                       </div>
 
                       <button
-                        onClick={() =>
-                          setLedConditions((prev) => prev.filter((_, i) => i !== idx))
-                        }
+                        onClick={() => setLedConditions((prev) => prev.filter((_, i) => i !== idx))}
                         className="shrink-0 rounded p-1 text-muted-foreground/30 hover:text-neon-red transition-colors"
                       >
                         <X className="h-3 w-3" />
@@ -439,12 +496,10 @@ export default function StreamdeckConfigDialog({
                 </div>
               )}
             </div>
-
           </div>
 
           {/* Right column : Actions */}
           <div className="space-y-4 overflow-hidden pl-6">
-
             {/* Tabs */}
             <div className="flex gap-1 rounded-lg bg-surface-2 p-1">
               {(['pressed', 'hold'] as const).map((tab) => {
@@ -549,7 +604,9 @@ export default function StreamdeckConfigDialog({
                   {MODULE_PARAMS[currentAction.module].map((paramDef, i) => {
                     const inputClass = cn(
                       'w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/30 outline-none transition-colors',
-                      activeTab === 'hold' ? 'focus:border-neon-blue/50' : 'focus:border-neon-purple/50'
+                      activeTab === 'hold'
+                        ? 'focus:border-neon-blue/50'
+                        : 'focus:border-neon-purple/50'
                     )
                     const value = currentAction.params?.[i] || ''
                     const onChange = (
@@ -614,7 +671,6 @@ export default function StreamdeckConfigDialog({
                 </div>
               )}
             </div>
-
           </div>
         </div>
 
@@ -623,7 +679,9 @@ export default function StreamdeckConfigDialog({
           <div className="mt-4 rounded-lg border border-neon-orange/20 bg-neon-orange/5 px-4 py-3 animate-slide-up">
             <div className="flex items-center gap-2 mb-2.5">
               <AlertTriangle className="h-3.5 w-3.5 text-neon-orange" />
-              <span className="text-xs font-semibold text-neon-orange">Modifications non sauvegardées</span>
+              <span className="text-xs font-semibold text-neon-orange">
+                Modifications non sauvegardées
+              </span>
             </div>
             <div className="flex gap-2">
               <button

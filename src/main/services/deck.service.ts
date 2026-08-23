@@ -37,7 +37,9 @@ class DeckService extends EventEmitter {
   public getKeyInfo(deckKey: string): Record<string, unknown> | undefined {
     const deckConfig: StreamdeckInputConfig | undefined =
       configService.getConfig().streamdeck?.[deckKey]
-    if (!deckConfig) return undefined
+    if (!deckConfig) {
+      return undefined
+    }
 
     const info: Record<string, unknown> = {}
     if (deckConfig.pressed) {
@@ -55,14 +57,20 @@ class DeckService extends EventEmitter {
     if (data.state === KeyUsageEnum.Released) {
       const deckConfig: StreamdeckInputConfig | undefined =
         configService.getConfig().streamdeck?.[deckKey]
-      if (!deckConfig) return
+      if (!deckConfig) {
+        return
+      }
 
       const currentState = this.keyState[deckKey]
-      if (!currentState) return
+      if (!currentState) {
+        return
+      }
 
       const stateConfig: StreamdeckInputKey | undefined =
         currentState === KeyUsageEnum.Pressed ? deckConfig.pressed : deckConfig.hold
-      if (!stateConfig) return
+      if (!stateConfig) {
+        return
+      }
 
       loggerService.debug(
         `Key ${deckKey} ${currentState} -> ${stateConfig.module}: ${stateConfig.params.join(', ')}`,
@@ -73,7 +81,9 @@ class DeckService extends EventEmitter {
         serialService.send(`${stateConfig.module}:${stateConfig.params[0]}`)
       } else if (stateConfig.module === ModuleEnum.HomeAssistant) {
         const homeAssistant = configService.getConfig().homeAssistant
-        if (!homeAssistant?.url || !homeAssistant?.token) return
+        if (!homeAssistant?.url || !homeAssistant?.token) {
+          return
+        }
 
         const stepParam = stateConfig.params[2]
         let service = stateConfig.params[0]
@@ -94,7 +104,9 @@ class DeckService extends EventEmitter {
           .then((states) => {
             const result = states[0] ?? {}
             const entityState = result.state as string | undefined
-            if (entityState) ledService.setHAButtonState(deckKey, entityState)
+            if (entityState) {
+              ledService.setHAButtonState(deckKey, entityState)
+            }
             this.emit('deck:updated', deckKey, result)
           })
           .catch((err) => loggerService.error(`Error calling Home Assistant: ${err}`, SERVICE))

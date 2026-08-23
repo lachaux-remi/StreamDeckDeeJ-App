@@ -117,3 +117,26 @@ test('renderer hydration enforces the same redacted settings bounds', () => {
   expect(isRendererSettings(invalidIndex)).toBe(false)
   expect(isRendererSettings(oversizedName)).toBe(false)
 })
+
+test('rejects malformed settings envelopes and integration objects', () => {
+  expect(isRendererSettingsUpdate(null)).toBe(false)
+
+  const extraSetting = rendererUpdate()
+  Object.assign(extraSetting.settings, { unexpected: true })
+  expect(isRendererSettingsUpdate(extraSetting)).toBe(false)
+
+  const invalidHomeAssistant = rendererUpdate()
+  invalidHomeAssistant.settings.homeAssistant = null as never
+  expect(isRendererSettingsUpdate(invalidHomeAssistant)).toBe(false)
+
+  const invalidDiscord = rendererUpdate()
+  invalidDiscord.settings.discord = null as never
+  expect(isRendererSettingsUpdate(invalidDiscord)).toBe(false)
+
+  expect(isRendererSettings(null)).toBe(false)
+  expect(isRendererSettings({ ...rendererUpdate().settings, unexpected: true })).toBe(false)
+
+  const rendererHomeAssistant = rendererUpdate().settings
+  rendererHomeAssistant.homeAssistant = null as never
+  expect(isRendererSettings(rendererHomeAssistant)).toBe(false)
+})

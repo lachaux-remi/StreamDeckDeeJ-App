@@ -190,3 +190,22 @@ test('emits connection status, sends readiness, parses runtime data, and closes 
   expect(serialService.getStatus()).toEqual({ connected: false, port: '/dev/ttyACM0' })
   expect(vi.getTimerCount()).toBe(0)
 })
+
+test('sends commands only while the configured port is open', async () => {
+  const { serialService } = await import('@main/services/serial.service')
+  serialService.send('ir:before-open\r\n')
+  fakes.onUpdated?.({ comPort: '/dev/ttyACM0', baudRate: 115_200 })
+  await settle()
+  const port = FakeSerialPort.instances[0]
+  port.isOpen = true
+  port.openCallback?.(null)
+
+  serialService.send('ir:send:1\r\n')
+  expect(port.write).toHaveBeenCalledWith('ir:send:1\r\n', expect.any(Function))
+
+  const shutdown = serialService.shutdown()
+  await settle()
+  port.isOpen = false
+  port.closeCallbacks[0]()
+  await shutdown
+})

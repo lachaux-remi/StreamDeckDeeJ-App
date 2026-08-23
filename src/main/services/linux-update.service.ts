@@ -28,8 +28,9 @@ function packageType(): string | undefined {
 }
 
 function releaseNotes(info: UpdateInfo): string {
-  if (typeof info.releaseNotes === 'string')
+  if (typeof info.releaseNotes === 'string') {
     return info.releaseNotes.slice(0, MAX_RELEASE_NOTES_LENGTH)
+  }
   if (Array.isArray(info.releaseNotes)) {
     return info.releaseNotes
       .map((note) => `${note.version}\n${note.note ?? ''}`)
@@ -53,14 +54,17 @@ function createAppImageUpdater(installUpdate: InstallUpdate): AppImageUpdateAdap
       configureSecureAppImageUpdater(autoUpdater)
     },
     on(event, listener): void {
-      if (event === 'available')
+      if (event === 'available') {
         autoUpdater.on('update-available', (info) => listener(updateInfo(info)))
-      else if (event === 'not-available') autoUpdater.on('update-not-available', () => listener())
-      else if (event === 'download-progress') {
+      } else if (event === 'not-available') {
+        autoUpdater.on('update-not-available', () => listener())
+      } else if (event === 'download-progress') {
         autoUpdater.on('download-progress', (progress: ProgressInfo) => listener(progress))
       } else if (event === 'downloaded') {
         autoUpdater.on('update-downloaded', (info) => listener(updateInfo(info)))
-      } else autoUpdater.on('error', () => listener())
+      } else {
+        autoUpdater.on('error', () => listener())
+      }
     },
     check: () => autoUpdater.checkForUpdates(),
     download: () => autoUpdater.downloadUpdate(),
@@ -73,7 +77,9 @@ function isGitHubRelease(value: unknown): value is {
   name: string | null
   body: string | null
 } {
-  if (typeof value !== 'object' || value === null) return false
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
   const release = value as Record<string, unknown>
   return (
     typeof release.tag_name === 'string' &&
@@ -90,9 +96,13 @@ async function checkOfficialRelease(): Promise<LinuxReleaseInfo> {
       'X-GitHub-Api-Version': '2022-11-28'
     }
   })
-  if (!response.ok) throw new Error(`GitHub release check failed with status ${response.status}`)
+  if (!response.ok) {
+    throw new Error(`GitHub release check failed with status ${response.status}`)
+  }
   const value: unknown = await response.json()
-  if (!isGitHubRelease(value)) throw new TypeError('Invalid GitHub release response')
+  if (!isGitHubRelease(value)) {
+    throw new TypeError('Invalid GitHub release response')
+  }
   const version = value.tag_name.startsWith('v') ? value.tag_name.slice(1) : value.tag_name
   return {
     version,
@@ -105,7 +115,9 @@ class LinuxUpdateService {
   private controller: LinuxUpdateController | undefined
 
   init(installUpdate: InstallUpdate): void {
-    if (this.controller) return
+    if (this.controller) {
+      return
+    }
     const mode = detectLinuxUpdateMode({
       packaged: app.isPackaged,
       platform: process.platform,
@@ -127,12 +139,16 @@ class LinuxUpdateService {
   }
 
   getState(): LinuxUpdateState {
-    if (!this.controller) throw new Error('Linux update service is not initialized')
+    if (!this.controller) {
+      throw new Error('Linux update service is not initialized')
+    }
     return this.controller.getState()
   }
 
   onStateChanged(listener: (state: LinuxUpdateState) => void): () => void {
-    if (!this.controller) throw new Error('Linux update service is not initialized')
+    if (!this.controller) {
+      throw new Error('Linux update service is not initialized')
+    }
     return this.controller.onStateChanged(listener)
   }
 
@@ -153,7 +169,9 @@ class LinuxUpdateService {
   }
 
   private requireController(): LinuxUpdateController {
-    if (!this.controller) throw new Error('Linux update service is not initialized')
+    if (!this.controller) {
+      throw new Error('Linux update service is not initialized')
+    }
     return this.controller
   }
 }

@@ -28,7 +28,9 @@ function fakeSocket(): FakeSocket {
       return socket
     },
     emit(event: string, ...args: unknown[]) {
-      for (const listener of [...(listeners.get(event) ?? [])]) listener(...args)
+      for (const listener of [...(listeners.get(event) ?? [])]) {
+        listener(...args)
+      }
     },
     removeAllListeners: vi.fn((event: string) => listeners.delete(event)),
     destroy: vi.fn(),
@@ -72,7 +74,9 @@ function writtenPayload(socket: FakeSocket, index: number): Record<string, unkno
 
 async function settleUntil(predicate: () => boolean): Promise<void> {
   for (let index = 0; index < 100; index += 1) {
-    if (predicate()) return
+    if (predicate()) {
+      return
+    }
     await Promise.resolve()
   }
   throw new Error('Async operation did not settle')
@@ -151,6 +155,44 @@ test('bounds socket discovery and coalesces reconnect when no trusted endpoint e
   expect(fakes.lstat).toHaveBeenCalledTimes(process.env['XDG_RUNTIME_DIR'] ? 30 : 10)
   expect(fakes.createConnection).not.toHaveBeenCalled()
   expect(vi.getTimerCount()).toBe(1)
+  vi.clearAllTimers()
+})
+
+test('exchanges an authorization code and authenticates with the returned token', async () => {
+  const socket = fakeSocket()
+  fakes.createConnection.mockReturnValue(socket)
+  const fetch = vi.fn().mockResolvedValue({
+    json: () =>
+      Promise.resolve({
+        access_token: 'new-access-token',
+        refresh_token: 'new-refresh-token'
+      })
+  })
+  vi.stubGlobal('fetch', fetch)
+  const { discordService } = await import('@main/services/discord.service')
+
+  await discordService.init()
+  await Promise.resolve()
+  socket.emit('connect')
+  socket.emit('data', rpcFrame({ cmd: 'AUTHORIZE', data: { code: 'authorization-code' } }))
+  await settleUntil(() => fakes.setConfig.mock.calls.length === 1)
+
+  expect(fetch).toHaveBeenCalledWith(
+    'https://discord.com/api/oauth2/token',
+    expect.objectContaining({ method: 'POST' })
+  )
+  expect(fakes.setConfig).toHaveBeenCalledWith({
+    discord: expect.objectContaining({
+      accessToken: 'new-access-token',
+      refreshToken: 'new-refresh-token'
+    })
+  })
+  expect(writtenPayload(socket, 1)).toEqual({
+    cmd: 'AUTHENTICATE',
+    args: { access_token: 'new-access-token' },
+    nonce: 'authenticate'
+  })
+  vi.unstubAllGlobals()
   vi.clearAllTimers()
 })
 

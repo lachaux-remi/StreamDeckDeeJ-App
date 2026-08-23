@@ -101,6 +101,43 @@ test('falls back without losing secrets when safeStorage encryption throws', () 
   expect(persistence.load()).toEqual(settings())
 })
 
+test('treats unavailable or failing safeStorage backends as insecure', () => {
+  const unavailable = safeStorage()
+  unavailable.isEncryptionAvailable = () => false
+  expect(new ElectronSafeStorageSecretCodec(unavailable).usesSecureBackend()).toBe(false)
+
+  const failing = safeStorage()
+  failing.isEncryptionAvailable = () => {
+    throw new Error('backend unavailable')
+  }
+  expect(new ElectronSafeStorageSecretCodec(failing).usesSecureBackend()).toBe(false)
+})
+
+test('rejects non-string secret values when saving', () => {
+  const path = join(mkdtempSync(join(tmpdir(), 'settings-')), 'config.json')
+  const persistence = new SettingsPersistence(
+    path,
+    new ElectronSafeStorageSecretCodec(safeStorage())
+  )
+  const invalid = settings()
+  const invalidHomeAssistant = invalid.homeAssistant as unknown as { token: unknown }
+  invalidHomeAssistant.token = 42
+
+  expect(() => persistence.save(invalid)).toThrow('Secret value is invalid')
+})
+
+test('passes through non-object settings and removes legacy brightness state', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'settings-'))
+  const codec = new ElectronSafeStorageSecretCodec(safeStorage())
+  const primitivePath = join(directory, 'primitive.json')
+  writeFileSync(primitivePath, 'null')
+  expect(new SettingsPersistence(primitivePath, codec).load()).toBeNull()
+
+  const legacyPath = join(directory, 'legacy.json')
+  writeFileSync(legacyPath, JSON.stringify({ brightnessState: true, retained: 1 }))
+  expect(new SettingsPersistence(legacyPath, codec).load()).toEqual({ retained: 1 })
+})
+
 test('rejects malformed and undecryptable encrypted values without exposing their contents', () => {
   const codec = new ElectronSafeStorageSecretCodec(safeStorage())
   const malformed = { type: 'electron-safe-storage', data: 42 }

@@ -7,7 +7,9 @@ export function createWindowCloseHandler(
   hideWindow: () => void
 ): (event: WindowCloseEvent) => void {
   return (event) => {
-    if (!closeToTrayEnabled()) return
+    if (!closeToTrayEnabled()) {
+      return
+    }
     event.preventDefault()
     hideWindow()
   }

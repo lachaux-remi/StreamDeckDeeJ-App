@@ -6,19 +6,14 @@ import type { ApplicationVersions, LogEntry } from '@renderer/types/serial.types
 
 export function useIpcHydration(): void {
   const hydrate = useSettingsStore((s) => s.hydrate)
-  const {
-    setSessions,
-    setSliders,
-    setVersions,
-    setSerialPorts,
-    setSerialStatus,
-    setLogs,
-    addLog
-  } = useSerialStore()
+  const { setSessions, setSliders, setVersions, setSerialPorts, setSerialStatus, setLogs, addLog } =
+    useSerialStore()
 
   useEffect(() => {
     window.api.settings.hydrate().then((config) => {
-      if (!isRendererSettings(config)) throw new TypeError('Invalid settings received from main')
+      if (!isRendererSettings(config)) {
+        throw new TypeError('Invalid settings received from main')
+      }
       hydrate(config)
     })
     window.api.app.getVersions().then((v) => setVersions(v as ApplicationVersions))
@@ -37,5 +32,14 @@ export function useIpcHydration(): void {
       unsubStatus()
       unsubLog()
     }
-  }, [])
+  }, [
+    addLog,
+    hydrate,
+    setLogs,
+    setSerialPorts,
+    setSerialStatus,
+    setSessions,
+    setSliders,
+    setVersions
+  ])
 }

@@ -31,3 +31,25 @@ test('validates states crossing IPC and rejects extra or malformed fields', () =
   ).toBe(false)
   expect(isLinuxUpdateState({ mode: 'disabled', status: 'disabled', token: 'secret' })).toBe(false)
 })
+
+test('validates every updater state shape and its guards', () => {
+  expect(isLinuxUpdateState(null)).toBe(false)
+  expect(isLinuxUpdateState({ mode: 'other', status: 'idle', currentVersion: '1' })).toBe(false)
+  expect(isLinuxUpdateState({ mode: 'appimage', status: 'idle' })).toBe(false)
+  for (const status of ['idle', 'checking', 'up-to-date']) {
+    expect(isLinuxUpdateState({ mode: 'package-manager', status, currentVersion: '1.0.0' })).toBe(
+      true
+    )
+  }
+  expect(
+    isLinuxUpdateState({
+      mode: 'appimage',
+      status: 'error',
+      currentVersion: '1.0.0',
+      message: 'failed'
+    })
+  ).toBe(true)
+  expect(isLinuxUpdateState({ mode: 'appimage', status: 'unknown', currentVersion: '1' })).toBe(
+    false
+  )
+})

@@ -21,9 +21,9 @@ const SEGMENT_COUNT = 20
 
 // Smooth linear interpolation between 3 colors: blue → purple → pink
 const COLORS = [
-  [56, 189, 248],  // #38bdf8 blue
-  [168, 85, 247],  // #a855f7 purple
-  [244, 114, 182]  // #f472b6 pink
+  [56, 189, 248], // #38bdf8 blue
+  [168, 85, 247], // #a855f7 purple
+  [244, 114, 182] // #f472b6 pink
 ] as const
 
 function lerp(a: number, b: number, t: number): number {
@@ -92,7 +92,11 @@ export default function DeejSlider({
       )}
       style={{
         ...(animationDelay !== undefined ? { animationDelay: `${animationDelay}ms` } : {}),
-        ...(isDragOver ? { boxShadow: '0 0 20px rgba(56, 189, 248, 0.2), inset 0 0 12px rgba(56, 189, 248, 0.08)' } : {})
+        ...(isDragOver
+          ? {
+              boxShadow: '0 0 20px rgba(56, 189, 248, 0.2), inset 0 0 12px rgba(56, 189, 248, 0.08)'
+            }
+          : {})
       }}
     >
       {/* Percentage */}

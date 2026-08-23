@@ -1,5 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Cpu, Download, Eye, EyeOff, Grid3X3, Headphones, Home, Monitor, RefreshCw, Settings, ShieldCheck, Sparkles, Upload, X } from 'lucide-react'
+import {
+  AlertTriangle,
+  Cpu,
+  Download,
+  Eye,
+  EyeOff,
+  Grid3X3,
+  Headphones,
+  Home,
+  Monitor,
+  RefreshCw,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  Upload,
+  X
+} from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import { useSettingsStore } from '@renderer/stores/settings.store'
 import { useSerialStore } from '@renderer/stores/serial.store'
@@ -14,20 +30,44 @@ const LED_MODES: { value: LedMode; label: string; description: string }[] = [
   { value: 'pulse', label: 'Pulsation', description: 'Respiration entre couleur et noir' },
   { value: 'colorshift', label: 'Transition', description: 'Dégradé entre deux couleurs' },
   { value: 'visor', label: 'Visor', description: 'Faisceau lumineux glissant' },
-  { value: 'sequential', label: 'Séquentiel', description: 'Allumage progressif bouton par bouton' },
+  {
+    value: 'sequential',
+    label: 'Séquentiel',
+    description: 'Allumage progressif bouton par bouton'
+  },
   { value: 'spinner', label: 'Spinner', description: 'Bouton lumineux tournant' }
 ]
 
 const MODES_WITH_END_COLOR: LedMode[] = ['wave', 'colorshift', 'visor']
 const MODES_WITH_DIRECTION: LedMode[] = ['wave', 'visor']
-const MODES_WITH_SPEED: LedMode[] = ['rainbow', 'wave', 'pulse', 'colorshift', 'visor', 'sequential', 'spinner']
+const MODES_WITH_SPEED: LedMode[] = [
+  'rainbow',
+  'wave',
+  'pulse',
+  'colorshift',
+  'visor',
+  'sequential',
+  'spinner'
+]
 
 type Tab = 'hardware' | 'integrations' | 'rgb'
-type HardwarePermissionsDiagnostic = Awaited<ReturnType<Window['api']['hardwarePermissions']['diagnose']>>
+type HardwarePermissionsDiagnostic = Awaited<
+  ReturnType<Window['api']['hardwarePermissions']['diagnose']>
+>
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode; accent: string }[] = [
-  { id: 'hardware', label: 'Système', icon: <Cpu className="h-3.5 w-3.5" />, accent: 'neon-purple' },
-  { id: 'integrations', label: 'Intégrations', icon: <Home className="h-3.5 w-3.5" />, accent: 'neon-green' },
+  {
+    id: 'hardware',
+    label: 'Système',
+    icon: <Cpu className="h-3.5 w-3.5" />,
+    accent: 'neon-purple'
+  },
+  {
+    id: 'integrations',
+    label: 'Intégrations',
+    icon: <Home className="h-3.5 w-3.5" />,
+    accent: 'neon-green'
+  },
   { id: 'rgb', label: 'RGB', icon: <Sparkles className="h-3.5 w-3.5" />, accent: 'neon-pink' }
 ]
 
@@ -36,7 +76,10 @@ interface SettingsSheetProps {
   onClose: () => void
 }
 
-export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): React.JSX.Element | null {
+export default function SettingsSheet({
+  isOpen,
+  onClose
+}: SettingsSheetProps): React.JSX.Element | null {
   const settings = useSettingsStore((s) => s.settings)
   const hydrate = useSettingsStore((s) => s.hydrate)
   const updateConfig = useSettingsStore((s) => s.updateConfig)
@@ -57,7 +100,8 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
     action: 'unchanged'
   })
   const [clearDiscordTokens, setClearDiscordTokens] = useState(false)
-  const [hardwarePermissions, setHardwarePermissions] = useState<HardwarePermissionsDiagnostic | null>(null)
+  const [hardwarePermissions, setHardwarePermissions] =
+    useState<HardwarePermissionsDiagnostic | null>(null)
   const [isInstallingPermissions, setIsInstallingPermissions] = useState(false)
   const [permissionMessage, setPermissionMessage] = useState<string | null>(null)
   const [isTransferring, setIsTransferring] = useState(false)
@@ -87,18 +131,25 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
   }, [isOpen, settings])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      return
+    }
     void window.api.streamdeck.setLedProfile(localSettings.ledProfile)
   }, [localSettings.ledProfile, isOpen])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      return
+    }
     void window.api.hardwarePermissions.diagnose().then(setHardwarePermissions)
   }, [isOpen])
 
   const handleClose = useCallback(() => {
-    if (hasChanges) setShowDiscardPrompt(true)
-    else onClose()
+    if (hasChanges) {
+      setShowDiscardPrompt(true)
+    } else {
+      onClose()
+    }
   }, [hasChanges, onClose])
 
   const handleDiscard = useCallback(() => {
@@ -125,7 +176,9 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
     const confirmed = window.confirm(
       "Installer la règle udev du module officiel StreamDeck DeeJ ? Une demande d'authentification administrateur va s'ouvrir."
     )
-    if (!confirmed) return
+    if (!confirmed) {
+      return
+    }
 
     setIsInstallingPermissions(true)
     setPermissionMessage(null)
@@ -217,10 +270,13 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
     }
   }, [hydrate])
 
-  if (!isOpen) return null
+  if (!isOpen) {
+    return null
+  }
 
-  const inputBase = 'w-full rounded-lg border border-border/40 bg-surface-2 px-3 py-2 text-sm text-foreground outline-none transition-colors focus:bg-surface-3'
-  const inputBlue  = `${inputBase} focus:border-neon-blue/50`
+  const inputBase =
+    'w-full rounded-lg border border-border/40 bg-surface-2 px-3 py-2 text-sm text-foreground outline-none transition-colors focus:bg-surface-3'
+  const inputBlue = `${inputBase} focus:border-neon-blue/50`
   const inputGreen = `${inputBase} focus:border-neon-green/50`
   const inputDiscord = `${inputBase} focus:border-[#5865F2]/50`
 
@@ -276,637 +332,645 @@ export default function SettingsSheet({ isOpen, onClose }: SettingsSheetProps): 
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-5">
-          <div
-            key={activeTab}
-            className={cn(
-              'space-y-6',
-              hasTabSwitched.current && (tabDirection === 'right' ? 'animate-slide-tab-right' : 'animate-slide-tab-left')
-            )}
-          >
-            {/* ── Matériel ── */}
-            {activeTab === 'hardware' && (
-              <>
-                <section>
-                  <SectionTitle
-                    icon={<Cpu className="h-3.5 w-3.5 text-neon-purple" />}
-                    label="Microcontrôleur"
-                    color="text-neon-purple"
-                  />
-                  <div className="space-y-3">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                        Port série
-                      </label>
-                      <div className="flex gap-2">
-                        <CustomSelect
-                          value={localSettings.comPort}
-                          onChange={(val) => setLocalSettings({ ...localSettings, comPort: val })}
-                          options={[
-                            ...serialPorts.map((port) => ({
-                              value: port.path,
-                              label: port.displayName.replace(/\s*\(.*\)$/, ''),
-                              description: [port.official ? 'Module officiel' : port.manufacturer, port.path]
-                                .filter(Boolean)
-                                .join(' — ')
-                            })),
-                            ...(!serialPorts.some((p) => p.path === localSettings.comPort)
-                              ? [{ value: localSettings.comPort, label: localSettings.comPort }]
-                              : [])
-                          ]}
-                          placeholder="Sélectionner un port..."
-                          className="flex-1"
-                        />
-                        <button
-                          onClick={refreshPorts}
-                          className="rounded-lg border border-border/40 bg-surface-2 p-2.5 text-muted-foreground transition-all hover:text-neon-purple hover:border-neon-purple/30 hover:bg-surface-3"
-                        >
-                          <RefreshCw
-                            className={cn(
-                              'h-4 w-4 transition-transform',
-                              isRefreshing && 'animate-spin'
-                            )}
+            <div
+              key={activeTab}
+              className={cn(
+                'space-y-6',
+                hasTabSwitched.current &&
+                  (tabDirection === 'right' ? 'animate-slide-tab-right' : 'animate-slide-tab-left')
+              )}
+            >
+              {/* ── Matériel ── */}
+              {activeTab === 'hardware' && (
+                <>
+                  <section>
+                    <SectionTitle
+                      icon={<Cpu className="h-3.5 w-3.5 text-neon-purple" />}
+                      label="Microcontrôleur"
+                      color="text-neon-purple"
+                    />
+                    <div className="space-y-3">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                          Port série
+                        </label>
+                        <div className="flex gap-2">
+                          <CustomSelect
+                            value={localSettings.comPort}
+                            onChange={(val) => setLocalSettings({ ...localSettings, comPort: val })}
+                            options={[
+                              ...serialPorts.map((port) => ({
+                                value: port.path,
+                                label: port.displayName.replace(/\s*\(.*\)$/, ''),
+                                description: [
+                                  port.official ? 'Module officiel' : port.manufacturer,
+                                  port.path
+                                ]
+                                  .filter(Boolean)
+                                  .join(' — ')
+                              })),
+                              ...(!serialPorts.some((p) => p.path === localSettings.comPort)
+                                ? [{ value: localSettings.comPort, label: localSettings.comPort }]
+                                : [])
+                            ]}
+                            placeholder="Sélectionner un port..."
+                            className="flex-1"
                           />
-                        </button>
+                          <button
+                            onClick={refreshPorts}
+                            className="rounded-lg border border-border/40 bg-surface-2 p-2.5 text-muted-foreground transition-all hover:text-neon-purple hover:border-neon-purple/30 hover:bg-surface-3"
+                          >
+                            <RefreshCw
+                              className={cn(
+                                'h-4 w-4 transition-transform',
+                                isRefreshing && 'animate-spin'
+                              )}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                          Débit en bauds
+                        </label>
+                        <CustomSelect
+                          value={String(localSettings.baudRate)}
+                          onChange={(val) =>
+                            setLocalSettings({ ...localSettings, baudRate: parseInt(val) })
+                          }
+                          options={[
+                            { value: '9600', label: '9600' },
+                            { value: '115200', label: '115200' }
+                          ]}
+                        />
                       </div>
                     </div>
-                    <div>
+                  </section>
+
+                  <section>
+                    <SectionTitle
+                      icon={<ShieldCheck className="h-3.5 w-3.5 text-neon-green" />}
+                      label="Accès Linux — module officiel"
+                      color="text-neon-green"
+                    />
+                    <div className="space-y-2 rounded-lg border border-border/20 bg-surface-2/50 p-3">
+                      <p className="text-[11px] leading-relaxed text-muted-foreground/75">
+                        Diagnostic ciblé sur le périphérique composite officiel 5239:0001. Les
+                        contrôleurs série tiers restent utilisables et conservent leur configuration
+                        manuelle.
+                      </p>
+                      {hardwarePermissions ? (
+                        <>
+                          <PermissionStateRow label="HID RGB" state={hardwarePermissions.hid} />
+                          <PermissionStateRow
+                            label="Port série officiel"
+                            state={hardwarePermissions.serial}
+                          />
+                          <PermissionStateRow label="Règle udev" state={hardwarePermissions.rule} />
+                          {hardwarePermissions.installAction === 'available' &&
+                            hardwarePermissions.rule !== 'installed' && (
+                              <button
+                                type="button"
+                                disabled={isInstallingPermissions}
+                                onClick={installHardwarePermissions}
+                                className="mt-1 w-full rounded-lg border border-neon-green/30 bg-neon-green/10 py-2 text-xs font-semibold text-neon-green transition-all hover:bg-neon-green/20 disabled:cursor-wait disabled:opacity-50"
+                              >
+                                {isInstallingPermissions
+                                  ? 'Demande administrateur en cours…'
+                                  : 'Installer la règle udev…'}
+                              </button>
+                            )}
+                          {hardwarePermissions.installAction === 'unavailable' &&
+                            hardwarePermissions.rule !== 'installed' && (
+                              <div className="space-y-1.5">
+                                <p className="text-[11px] leading-relaxed text-neon-orange/80">
+                                  Le paquet pacman installe cette règle automatiquement. Sinon,
+                                  exécutez explicitement cette commande fixe dans un terminal :
+                                </p>
+                                {hardwarePermissions.manualCommand && (
+                                  <code className="block overflow-x-auto whitespace-nowrap rounded bg-surface-3 p-2 text-[10px] leading-relaxed text-muted-foreground/80">
+                                    {hardwarePermissions.manualCommand}
+                                  </code>
+                                )}
+                              </div>
+                            )}
+                        </>
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground/40">Diagnostic en cours…</p>
+                      )}
+                      {permissionMessage && (
+                        <p className="text-[11px] leading-relaxed text-muted-foreground">
+                          {permissionMessage}
+                        </p>
+                      )}
+                    </div>
+                  </section>
+
+                  <section>
+                    <SectionTitle
+                      icon={<Grid3X3 className="h-3.5 w-3.5 text-neon-blue" />}
+                      label="Disposition"
+                      color="text-neon-blue"
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                          Colonnes
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={8}
+                          value={localSettings.gridCols}
+                          onChange={(e) =>
+                            setLocalSettings({
+                              ...localSettings,
+                              gridCols: parseInt(e.target.value) || 4
+                            })
+                          }
+                          className={inputBlue}
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                          Lignes
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={8}
+                          value={localSettings.gridRows}
+                          onChange={(e) =>
+                            setLocalSettings({
+                              ...localSettings,
+                              gridRows: parseInt(e.target.value) || 4
+                            })
+                          }
+                          className={inputBlue}
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-3">
                       <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                        Débit en bauds
+                        Nombre de sliders
                       </label>
-                      <CustomSelect
-                        value={String(localSettings.baudRate)}
-                        onChange={(val) =>
-                          setLocalSettings({ ...localSettings, baudRate: parseInt(val) })
+                      <input
+                        type="number"
+                        min={1}
+                        max={16}
+                        value={localSettings.sliderCount}
+                        onChange={(e) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            sliderCount: parseInt(e.target.value) || 4
+                          })
                         }
-                        options={[
-                          { value: '9600', label: '9600' },
-                          { value: '115200', label: '115200' }
-                        ]}
+                        className={inputBlue}
                       />
                     </div>
-                  </div>
-                </section>
+                    <Toggle
+                      checked={localSettings.invertSliders}
+                      onChange={(v) => setLocalSettings({ ...localSettings, invertSliders: v })}
+                      label="Inverser les sliders"
+                      desc="Inverser les valeurs (0-100 → 100-0)"
+                      color="neon-blue"
+                      className="mt-3"
+                    />
+                  </section>
 
-                <section>
-                  <SectionTitle
-                    icon={<ShieldCheck className="h-3.5 w-3.5 text-neon-green" />}
-                    label="Accès Linux — module officiel"
-                    color="text-neon-green"
-                  />
-                  <div className="space-y-2 rounded-lg border border-border/20 bg-surface-2/50 p-3">
-                    <p className="text-[11px] leading-relaxed text-muted-foreground/75">
-                      Diagnostic ciblé sur le périphérique composite officiel 5239:0001. Les
-                      contrôleurs série tiers restent utilisables et conservent leur configuration
-                      manuelle.
+                  <section>
+                    <SectionTitle
+                      icon={<Monitor className="h-3.5 w-3.5 text-neon-cyan" />}
+                      label="Application"
+                      color="text-neon-cyan"
+                    />
+                    <div className="space-y-2.5">
+                      {(
+                        [
+                          {
+                            key: 'runOnStartup',
+                            label: 'Lancer au démarrage',
+                            desc: "Démarrer l'application avec le système"
+                          },
+                          {
+                            key: 'runInBackground',
+                            label: 'Démarrer en arrière-plan',
+                            desc: 'Lancer minimisé en arrière-plan'
+                          },
+                          {
+                            key: 'closeToTray',
+                            label: 'Minimiser dans la barre',
+                            desc: 'Minimiser dans la zone de notification'
+                          },
+                          {
+                            key: 'devTools',
+                            label: 'Outils de développement',
+                            desc: 'Ouvrir les DevTools au lancement'
+                          }
+                        ] as { key: keyof typeof localSettings; label: string; desc: string }[]
+                      ).map(({ key, label, desc }) => (
+                        <Toggle
+                          key={key}
+                          checked={localSettings[key] as boolean}
+                          onChange={(v) => setLocalSettings({ ...localSettings, [key]: v })}
+                          label={label}
+                          desc={desc}
+                          color="neon-cyan"
+                        />
+                      ))}
+                    </div>
+                  </section>
+
+                  <section>
+                    <SectionTitle
+                      icon={<Download className="h-3.5 w-3.5 text-neon-green" />}
+                      label="Configuration"
+                      color="text-neon-green"
+                    />
+                    <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground/50">
+                      L’export JSON exclut les tokens et secrets. L’import conserve les secrets déjà
+                      enregistrés et crée une sauvegarde avant application.
                     </p>
-                    {hardwarePermissions ? (
-                      <>
-                        <PermissionStateRow label="HID RGB" state={hardwarePermissions.hid} />
-                        <PermissionStateRow label="Port série officiel" state={hardwarePermissions.serial} />
-                        <PermissionStateRow label="Règle udev" state={hardwarePermissions.rule} />
-                        {hardwarePermissions.installAction === 'available' &&
-                          hardwarePermissions.rule !== 'installed' && (
-                            <button
-                              type="button"
-                              disabled={isInstallingPermissions}
-                              onClick={installHardwarePermissions}
-                              className="mt-1 w-full rounded-lg border border-neon-green/30 bg-neon-green/10 py-2 text-xs font-semibold text-neon-green transition-all hover:bg-neon-green/20 disabled:cursor-wait disabled:opacity-50"
-                            >
-                              {isInstallingPermissions
-                                ? 'Demande administrateur en cours…'
-                                : 'Installer la règle udev…'}
-                            </button>
-                          )}
-                        {hardwarePermissions.installAction === 'unavailable' &&
-                          hardwarePermissions.rule !== 'installed' && (
-                            <div className="space-y-1.5">
-                              <p className="text-[11px] leading-relaxed text-neon-orange/80">
-                                Le paquet pacman installe cette règle automatiquement. Sinon, exécutez
-                                explicitement cette commande fixe dans un terminal :
-                              </p>
-                              {hardwarePermissions.manualCommand && (
-                                <code className="block overflow-x-auto whitespace-nowrap rounded bg-surface-3 p-2 text-[10px] leading-relaxed text-muted-foreground/80">
-                                  {hardwarePermissions.manualCommand}
-                                </code>
-                              )}
-                            </div>
-                          )}
-                      </>
-                    ) : (
-                      <p className="text-[11px] text-muted-foreground/40">Diagnostic en cours…</p>
-                    )}
-                    {permissionMessage && (
-                      <p className="text-[11px] leading-relaxed text-muted-foreground">
-                        {permissionMessage}
+                    {transferMessage && (
+                      <p
+                        role="status"
+                        className={cn(
+                          'mb-2.5 text-[11px] leading-relaxed',
+                          transferMessage.status === 'error'
+                            ? 'text-neon-red'
+                            : transferMessage.status === 'success'
+                              ? 'text-neon-green'
+                              : 'text-muted-foreground/60'
+                        )}
+                      >
+                        {transferMessage.message}
                       </p>
                     )}
-                  </div>
-                </section>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={handleExport}
+                        disabled={isTransferring}
+                        className="flex items-center justify-center gap-2 rounded-lg border border-neon-green/30 bg-neon-green/10 py-2.5 text-xs font-semibold text-neon-green transition-all hover:bg-neon-green/20 disabled:cursor-wait disabled:opacity-50"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Exporter
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleImport}
+                        disabled={isTransferring}
+                        className="flex items-center justify-center gap-2 rounded-lg border border-neon-blue/30 bg-neon-blue/10 py-2.5 text-xs font-semibold text-neon-blue transition-all hover:bg-neon-blue/20 disabled:cursor-wait disabled:opacity-50"
+                      >
+                        <Upload className="h-3.5 w-3.5" />
+                        Importer
+                      </button>
+                    </div>
+                  </section>
+                </>
+              )}
 
-                <section>
-                  <SectionTitle
-                    icon={<Grid3X3 className="h-3.5 w-3.5 text-neon-blue" />}
-                    label="Disposition"
-                    color="text-neon-blue"
-                  />
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                        Colonnes
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={8}
-                        value={localSettings.gridCols}
-                        onChange={(e) =>
-                          setLocalSettings({
-                            ...localSettings,
-                            gridCols: parseInt(e.target.value) || 4
-                          })
-                        }
-                        className={inputBlue}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                        Lignes
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={8}
-                        value={localSettings.gridRows}
-                        onChange={(e) =>
-                          setLocalSettings({
-                            ...localSettings,
-                            gridRows: parseInt(e.target.value) || 4
-                          })
-                        }
-                        className={inputBlue}
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                      Nombre de sliders
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={16}
-                      value={localSettings.sliderCount}
-                      onChange={(e) =>
-                        setLocalSettings({
-                          ...localSettings,
-                          sliderCount: parseInt(e.target.value) || 4
-                        })
-                      }
-                      className={inputBlue}
+              {/* ── Intégrations ── */}
+              {activeTab === 'integrations' && (
+                <>
+                  <section>
+                    <SectionTitle
+                      icon={<Home className="h-3.5 w-3.5 text-neon-green" />}
+                      label="Home Assistant"
+                      color="text-neon-green"
                     />
-                  </div>
-                  <Toggle
-                    checked={localSettings.invertSliders}
-                    onChange={(v) => setLocalSettings({ ...localSettings, invertSliders: v })}
-                    label="Inverser les sliders"
-                    desc="Inverser les valeurs (0-100 → 100-0)"
-                    color="neon-blue"
-                    className="mt-3"
-                  />
-                </section>
-
-                <section>
-                  <SectionTitle
-                    icon={<Monitor className="h-3.5 w-3.5 text-neon-cyan" />}
-                    label="Application"
-                    color="text-neon-cyan"
-                  />
-                  <div className="space-y-2.5">
-                    {(
-                      [
-                        {
-                          key: 'runOnStartup',
-                          label: 'Lancer au démarrage',
-                          desc: "Démarrer l'application avec le système"
-                        },
-                        {
-                          key: 'runInBackground',
-                          label: 'Démarrer en arrière-plan',
-                          desc: 'Lancer minimisé en arrière-plan'
-                        },
-                        {
-                          key: 'closeToTray',
-                          label: 'Minimiser dans la barre',
-                          desc: 'Minimiser dans la zone de notification'
-                        },
-                        {
-                          key: 'devTools',
-                          label: 'Outils de développement',
-                          desc: 'Ouvrir les DevTools au lancement'
-                        }
-                      ] as { key: keyof typeof localSettings; label: string; desc: string }[]
-                    ).map(({ key, label, desc }) => (
-                      <Toggle
-                        key={key}
-                        checked={localSettings[key] as boolean}
-                        onChange={(v) => setLocalSettings({ ...localSettings, [key]: v })}
-                        label={label}
-                        desc={desc}
-                        color="neon-cyan"
-                      />
-                    ))}
-                  </div>
-                </section>
-
-                <section>
-                  <SectionTitle
-                    icon={<Download className="h-3.5 w-3.5 text-neon-green" />}
-                    label="Configuration"
-                    color="text-neon-green"
-                  />
-                  <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground/50">
-                    L’export JSON exclut les tokens et secrets. L’import conserve les secrets déjà
-                    enregistrés et crée une sauvegarde avant application.
-                  </p>
-                  {transferMessage && (
-                    <p
-                      role="status"
-                      className={cn(
-                        'mb-2.5 text-[11px] leading-relaxed',
-                        transferMessage.status === 'error'
-                          ? 'text-neon-red'
-                          : transferMessage.status === 'success'
-                            ? 'text-neon-green'
-                            : 'text-muted-foreground/60'
-                      )}
-                    >
-                      {transferMessage.message}
-                    </p>
-                  )}
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={handleExport}
-                      disabled={isTransferring}
-                      className="flex items-center justify-center gap-2 rounded-lg border border-neon-green/30 bg-neon-green/10 py-2.5 text-xs font-semibold text-neon-green transition-all hover:bg-neon-green/20 disabled:cursor-wait disabled:opacity-50"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      Exporter
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleImport}
-                      disabled={isTransferring}
-                      className="flex items-center justify-center gap-2 rounded-lg border border-neon-blue/30 bg-neon-blue/10 py-2.5 text-xs font-semibold text-neon-blue transition-all hover:bg-neon-blue/20 disabled:cursor-wait disabled:opacity-50"
-                    >
-                      <Upload className="h-3.5 w-3.5" />
-                      Importer
-                    </button>
-                  </div>
-                </section>
-              </>
-            )}
-
-            {/* ── Intégrations ── */}
-            {activeTab === 'integrations' && (
-              <>
-                <section>
-                  <SectionTitle
-                    icon={<Home className="h-3.5 w-3.5 text-neon-green" />}
-                    label="Home Assistant"
-                    color="text-neon-green"
-                  />
-                  <div className="mb-3 rounded-lg border border-border/20 bg-surface-2/50 px-3 py-2.5 space-y-1">
-                    <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-                      Nécessaire pour les actions des boutons et les conditions LED{' '}
-                      <span className="text-neon-green">Actif</span> et{' '}
-                      <span className="text-neon-green">Inactif</span>{' '}
-                      (Home Assistant).
-                    </p>
-                    <p className="text-[11px] text-muted-foreground/40">
-                      Profil HA › Tokens d&apos;accès longue durée › Créer un token
-                    </p>
-                  </div>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                        URL
-                      </label>
-                      <input
-                        type="text"
-                        value={localSettings.homeAssistant.url}
-                        onChange={(e) =>
-                          setLocalSettings({
-                            ...localSettings,
-                            homeAssistant: { ...localSettings.homeAssistant, url: e.target.value }
-                          })
-                        }
-                        placeholder="http://homeassistant.local:8123"
-                        className={inputGreen}
-                      />
-                      {localSettings.homeAssistant.url &&
-                        !localSettings.homeAssistant.url.trim().toLowerCase().startsWith('https://') && (
-                          <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-relaxed text-neon-orange">
-                            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-                            Cette URL n&apos;utilise pas HTTPS. Le token peut circuler en clair ; HTTP
-                            reste autorisé pour les installations locales.
-                          </p>
-                        )}
+                    <div className="mb-3 rounded-lg border border-border/20 bg-surface-2/50 px-3 py-2.5 space-y-1">
+                      <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                        Nécessaire pour les actions des boutons et les conditions LED{' '}
+                        <span className="text-neon-green">Actif</span> et{' '}
+                        <span className="text-neon-green">Inactif</span> (Home Assistant).
+                      </p>
+                      <p className="text-[11px] text-muted-foreground/40">
+                        Profil HA › Tokens d&apos;accès longue durée › Créer un token
+                      </p>
                     </div>
-                    <div>
-                      <div className="mb-1.5 flex items-center justify-between">
-                        <label className="text-xs font-medium text-muted-foreground/70">
-                          Token (Long-Lived Access Token)
+                    <div className="space-y-3">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                          URL
                         </label>
-                        <ConfiguredState
-                          configured={secretConfigured(
-                            localSettings.homeAssistant.tokenConfigured,
-                            haTokenChange
-                          )}
+                        <input
+                          type="text"
+                          value={localSettings.homeAssistant.url}
+                          onChange={(e) =>
+                            setLocalSettings({
+                              ...localSettings,
+                              homeAssistant: { ...localSettings.homeAssistant, url: e.target.value }
+                            })
+                          }
+                          placeholder="http://homeassistant.local:8123"
+                          className={inputGreen}
                         />
+                        {localSettings.homeAssistant.url &&
+                          !localSettings.homeAssistant.url
+                            .trim()
+                            .toLowerCase()
+                            .startsWith('https://') && (
+                            <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-relaxed text-neon-orange">
+                              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                              Cette URL n&apos;utilise pas HTTPS. Le token peut circuler en clair ;
+                              HTTP reste autorisé pour les installations locales.
+                            </p>
+                          )}
                       </div>
-                      <PasswordInput
-                        value={secretInputValue(haTokenChange)}
-                        onChange={(v) =>
-                          setHATokenChange(
-                            v ? { action: 'set', value: v } : { action: 'unchanged' }
-                          )
-                        }
-                        show={showHAToken}
-                        onToggle={() => setShowHAToken((s) => !s)}
-                        className={`${inputGreen} pr-9`}
-                      />
-                      {(localSettings.homeAssistant.tokenConfigured ||
-                        haTokenChange.action !== 'unchanged') && (
-                        <button
-                          type="button"
-                          onClick={() =>
+                      <div>
+                        <div className="mb-1.5 flex items-center justify-between">
+                          <label className="text-xs font-medium text-muted-foreground/70">
+                            Token (Long-Lived Access Token)
+                          </label>
+                          <ConfiguredState
+                            configured={secretConfigured(
+                              localSettings.homeAssistant.tokenConfigured,
+                              haTokenChange
+                            )}
+                          />
+                        </div>
+                        <PasswordInput
+                          value={secretInputValue(haTokenChange)}
+                          onChange={(v) =>
                             setHATokenChange(
-                              haTokenChange.action === 'clear'
-                                ? { action: 'unchanged' }
-                                : { action: 'clear' }
+                              v ? { action: 'set', value: v } : { action: 'unchanged' }
                             )
                           }
-                          className="mt-1.5 text-[11px] text-neon-red/60 transition-colors hover:text-neon-red"
-                        >
-                          {haTokenChange.action === 'clear'
-                            ? 'Annuler la suppression'
-                            : 'Supprimer le token enregistré'}
-                        </button>
-                      )}
+                          show={showHAToken}
+                          onToggle={() => setShowHAToken((s) => !s)}
+                          className={`${inputGreen} pr-9`}
+                        />
+                        {(localSettings.homeAssistant.tokenConfigured ||
+                          haTokenChange.action !== 'unchanged') && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setHATokenChange(
+                                haTokenChange.action === 'clear'
+                                  ? { action: 'unchanged' }
+                                  : { action: 'clear' }
+                              )
+                            }
+                            className="mt-1.5 text-[11px] text-neon-red/60 transition-colors hover:text-neon-red"
+                          >
+                            {haTokenChange.action === 'clear'
+                              ? 'Annuler la suppression'
+                              : 'Supprimer le token enregistré'}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </section>
+                  </section>
 
+                  <section>
+                    <SectionTitle
+                      icon={<Headphones className="h-3.5 w-3.5 text-[#5865F2]" />}
+                      label="Discord"
+                      color="text-[#5865F2]"
+                    />
+                    <div className="mb-3 rounded-lg border border-border/20 bg-surface-2/50 px-3 py-2.5 space-y-1">
+                      <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                        Nécessaire pour les conditions LED{' '}
+                        <span className="text-[#5865F2]">Muet</span>,{' '}
+                        <span className="text-[#5865F2]">Sourd</span> et{' '}
+                        <span className="text-[#5865F2]">Stream</span> (Discord).
+                      </p>
+                      <p className="text-[11px] text-muted-foreground/40">
+                        discord.com/developers › New Application › OAuth2
+                      </p>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                          Client ID
+                        </label>
+                        <input
+                          type="text"
+                          value={localSettings.discord.clientId}
+                          onChange={(e) =>
+                            setLocalSettings({
+                              ...localSettings,
+                              discord: {
+                                ...localSettings.discord,
+                                clientId: e.target.value
+                              }
+                            })
+                          }
+                          placeholder="123456789012345678"
+                          className={inputDiscord}
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-1.5 flex items-center justify-between">
+                          <label className="text-xs font-medium text-muted-foreground/70">
+                            Client Secret
+                          </label>
+                          <ConfiguredState
+                            configured={secretConfigured(
+                              localSettings.discord.clientSecretConfigured,
+                              discordSecretChange
+                            )}
+                          />
+                        </div>
+                        <PasswordInput
+                          value={secretInputValue(discordSecretChange)}
+                          onChange={(v) =>
+                            setDiscordSecretChange(
+                              v ? { action: 'set', value: v } : { action: 'unchanged' }
+                            )
+                          }
+                          show={showDiscordSecret}
+                          onToggle={() => setShowDiscordSecret((s) => !s)}
+                          className={`${inputDiscord} pr-9`}
+                        />
+                        {(localSettings.discord.clientSecretConfigured ||
+                          discordSecretChange.action !== 'unchanged') && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDiscordSecretChange(
+                                discordSecretChange.action === 'clear'
+                                  ? { action: 'unchanged' }
+                                  : { action: 'clear' }
+                              )
+                            }
+                            className="mt-1.5 text-[11px] text-neon-red/60 transition-colors hover:text-neon-red"
+                          >
+                            {discordSecretChange.action === 'clear'
+                              ? 'Annuler la suppression'
+                              : 'Supprimer le secret enregistré'}
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <ConfiguredState
+                          configured={localSettings.discord.authenticated && !clearDiscordTokens}
+                        />
+                        {localSettings.discord.authenticated && (
+                          <button
+                            type="button"
+                            onClick={() => setClearDiscordTokens((clear) => !clear)}
+                            className="text-[11px] text-neon-red/50 hover:text-neon-red transition-colors"
+                          >
+                            {clearDiscordTokens ? 'Annuler la réinitialisation' : 'Réinitialiser'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </section>
+                </>
+              )}
+
+              {/* ── RGB ── */}
+              {activeTab === 'rgb' && (
                 <section>
                   <SectionTitle
-                    icon={<Headphones className="h-3.5 w-3.5 text-[#5865F2]" />}
-                    label="Discord"
-                    color="text-[#5865F2]"
+                    icon={<Sparkles className="h-3.5 w-3.5 text-neon-pink" />}
+                    label="RGB Stream Deck"
+                    color="text-neon-pink"
                   />
-                  <div className="mb-3 rounded-lg border border-border/20 bg-surface-2/50 px-3 py-2.5 space-y-1">
-                    <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-                      Nécessaire pour les conditions LED{' '}
-                      <span className="text-[#5865F2]">Muet</span>,{' '}
-                      <span className="text-[#5865F2]">Sourd</span> et{' '}
-                      <span className="text-[#5865F2]">Stream</span>{' '}
-                      (Discord).
-                    </p>
-                    <p className="text-[11px] text-muted-foreground/40">
-                      discord.com/developers › New Application › OAuth2
-                    </p>
-                  </div>
                   <div className="space-y-3">
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                        Client ID
+                        Mode d&apos;effet
                       </label>
-                      <input
-                        type="text"
-                        value={localSettings.discord.clientId}
-                        onChange={(e) =>
+                      <CustomSelect
+                        value={localSettings.ledProfile.mode}
+                        onChange={(val) =>
                           setLocalSettings({
                             ...localSettings,
-                            discord: {
-                              ...localSettings.discord,
-                              clientId: e.target.value
-                            }
+                            ledProfile: { ...localSettings.ledProfile, mode: val as LedMode }
                           })
                         }
-                        placeholder="123456789012345678"
-                        className={inputDiscord}
+                        options={LED_MODES.map((m) => ({
+                          value: m.value,
+                          label: m.label,
+                          description: m.description
+                        }))}
+                        accent="pink"
                       />
                     </div>
-                    <div>
-                      <div className="mb-1.5 flex items-center justify-between">
-                        <label className="text-xs font-medium text-muted-foreground/70">
-                          Client Secret
-                        </label>
-                        <ConfiguredState
-                          configured={secretConfigured(
-                            localSettings.discord.clientSecretConfigured,
-                            discordSecretChange
-                          )}
-                        />
-                      </div>
-                      <PasswordInput
-                        value={secretInputValue(discordSecretChange)}
-                        onChange={(v) =>
-                          setDiscordSecretChange(
-                            v ? { action: 'set', value: v } : { action: 'unchanged' }
-                          )
-                        }
-                        show={showDiscordSecret}
-                        onToggle={() => setShowDiscordSecret((s) => !s)}
-                        className={`${inputDiscord} pr-9`}
-                      />
-                      {(localSettings.discord.clientSecretConfigured ||
-                        discordSecretChange.action !== 'unchanged') && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setDiscordSecretChange(
-                              discordSecretChange.action === 'clear'
-                                ? { action: 'unchanged' }
-                                : { action: 'clear' }
-                            )
-                          }
-                          className="mt-1.5 text-[11px] text-neon-red/60 transition-colors hover:text-neon-red"
-                        >
-                          {discordSecretChange.action === 'clear'
-                            ? 'Annuler la suppression'
-                            : 'Supprimer le secret enregistré'}
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <ConfiguredState
-                        configured={localSettings.discord.authenticated && !clearDiscordTokens}
-                      />
-                      {localSettings.discord.authenticated && (
-                        <button
-                          type="button"
-                          onClick={() => setClearDiscordTokens((clear) => !clear)}
-                          className="text-[11px] text-neon-red/50 hover:text-neon-red transition-colors"
-                        >
-                          {clearDiscordTokens ? 'Annuler la réinitialisation' : 'Réinitialiser'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </section>
-              </>
-            )}
 
-            {/* ── RGB ── */}
-            {activeTab === 'rgb' && (
-              <section>
-                <SectionTitle
-                  icon={<Sparkles className="h-3.5 w-3.5 text-neon-pink" />}
-                  label="RGB Stream Deck"
-                  color="text-neon-pink"
-                />
-                <div className="space-y-3">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                      Mode d&apos;effet
-                    </label>
-                    <CustomSelect
-                      value={localSettings.ledProfile.mode}
-                      onChange={(val) =>
-                        setLocalSettings({
-                          ...localSettings,
-                          ledProfile: { ...localSettings.ledProfile, mode: val as LedMode }
-                        })
-                      }
-                      options={LED_MODES.map((m) => ({
-                        value: m.value,
-                        label: m.label,
-                        description: m.description
-                      }))}
-                      accent="pink"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground/70">
-                      <span>Luminosité</span>
-                      <span className="tabular-nums text-muted-foreground">
-                        {localSettings.ledProfile.brightness}%
-                      </span>
-                    </label>
-                    <Slider
-                      value={localSettings.ledProfile.brightness}
-                      min={0}
-                      max={100}
-                      onChange={(v) =>
-                        setLocalSettings({
-                          ...localSettings,
-                          ledProfile: { ...localSettings.ledProfile, brightness: v }
-                        })
-                      }
-                    />
-                  </div>
-
-                  {MODES_WITH_SPEED.includes(localSettings.ledProfile.mode) && (
                     <div>
                       <label className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground/70">
-                        <span>Vitesse</span>
+                        <span>Luminosité</span>
                         <span className="tabular-nums text-muted-foreground">
-                          {localSettings.ledProfile.speed}%
+                          {localSettings.ledProfile.brightness}%
                         </span>
                       </label>
                       <Slider
-                        value={localSettings.ledProfile.speed}
-                        min={1}
+                        value={localSettings.ledProfile.brightness}
+                        min={0}
                         max={100}
                         onChange={(v) =>
                           setLocalSettings({
                             ...localSettings,
-                            ledProfile: { ...localSettings.ledProfile, speed: v }
+                            ledProfile: { ...localSettings.ledProfile, brightness: v }
                           })
                         }
                       />
                     </div>
-                  )}
 
-                  <div
-                    className={cn(
-                      'grid gap-3',
-                      MODES_WITH_END_COLOR.includes(localSettings.ledProfile.mode)
-                        ? 'grid-cols-2'
-                        : 'grid-cols-1'
-                    )}
-                  >
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                        Couleur principale
-                      </label>
-                      <ColorPicker
-                        value={localSettings.ledProfile.startColor}
-                        onChange={(c) =>
-                          setLocalSettings({
-                            ...localSettings,
-                            ledProfile: { ...localSettings.ledProfile, startColor: c }
-                          })
-                        }
-                      />
-                    </div>
-                    {MODES_WITH_END_COLOR.includes(localSettings.ledProfile.mode) && (
+                    {MODES_WITH_SPEED.includes(localSettings.ledProfile.mode) && (
                       <div>
-                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                          Couleur secondaire
+                        <label className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground/70">
+                          <span>Vitesse</span>
+                          <span className="tabular-nums text-muted-foreground">
+                            {localSettings.ledProfile.speed}%
+                          </span>
                         </label>
-                        <ColorPicker
-                          value={localSettings.ledProfile.endColor}
-                          onChange={(c) =>
+                        <Slider
+                          value={localSettings.ledProfile.speed}
+                          min={1}
+                          max={100}
+                          onChange={(v) =>
                             setLocalSettings({
                               ...localSettings,
-                              ledProfile: { ...localSettings.ledProfile, endColor: c }
+                              ledProfile: { ...localSettings.ledProfile, speed: v }
                             })
                           }
                         />
                       </div>
                     )}
-                  </div>
 
-                  {MODES_WITH_DIRECTION.includes(localSettings.ledProfile.mode) && (
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                        Direction
-                      </label>
-                      <div className="flex gap-2">
-                        {(['horizontal', 'vertical', 'diagonal'] as const).map((dir) => (
-                          <button
-                            key={dir}
-                            type="button"
-                            onClick={() =>
+                    <div
+                      className={cn(
+                        'grid gap-3',
+                        MODES_WITH_END_COLOR.includes(localSettings.ledProfile.mode)
+                          ? 'grid-cols-2'
+                          : 'grid-cols-1'
+                      )}
+                    >
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                          Couleur principale
+                        </label>
+                        <ColorPicker
+                          value={localSettings.ledProfile.startColor}
+                          onChange={(c) =>
+                            setLocalSettings({
+                              ...localSettings,
+                              ledProfile: { ...localSettings.ledProfile, startColor: c }
+                            })
+                          }
+                        />
+                      </div>
+                      {MODES_WITH_END_COLOR.includes(localSettings.ledProfile.mode) && (
+                        <div>
+                          <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                            Couleur secondaire
+                          </label>
+                          <ColorPicker
+                            value={localSettings.ledProfile.endColor}
+                            onChange={(c) =>
                               setLocalSettings({
                                 ...localSettings,
-                                ledProfile: { ...localSettings.ledProfile, direction: dir }
+                                ledProfile: { ...localSettings.ledProfile, endColor: c }
                               })
                             }
-                            className={cn(
-                              'flex-1 rounded-lg border py-2 text-xs font-semibold uppercase tracking-wider transition-all',
-                              localSettings.ledProfile.direction === dir
-                                ? 'border-neon-pink/40 bg-neon-pink/15 text-neon-pink'
-                                : 'border-border/40 bg-surface-2 text-muted-foreground/50 hover:text-muted-foreground'
-                            )}
-                          >
-                            {dir === 'horizontal'
-                              ? 'Horiz.'
-                              : dir === 'vertical'
-                                ? 'Vert.'
-                                : 'Diag.'}
-                          </button>
-                        ))}
-                      </div>
+                          />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </section>
-            )}
-          </div>
+
+                    {MODES_WITH_DIRECTION.includes(localSettings.ledProfile.mode) && (
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                          Direction
+                        </label>
+                        <div className="flex gap-2">
+                          {(['horizontal', 'vertical', 'diagonal'] as const).map((dir) => (
+                            <button
+                              key={dir}
+                              type="button"
+                              onClick={() =>
+                                setLocalSettings({
+                                  ...localSettings,
+                                  ledProfile: { ...localSettings.ledProfile, direction: dir }
+                                })
+                              }
+                              className={cn(
+                                'flex-1 rounded-lg border py-2 text-xs font-semibold uppercase tracking-wider transition-all',
+                                localSettings.ledProfile.direction === dir
+                                  ? 'border-neon-pink/40 bg-neon-pink/15 text-neon-pink'
+                                  : 'border-border/40 bg-surface-2 text-muted-foreground/50 hover:text-muted-foreground'
+                              )}
+                            >
+                              {dir === 'horizontal'
+                                ? 'Horiz.'
+                                : dir === 'vertical'
+                                  ? 'Vert.'
+                                  : 'Diag.'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+            </div>
           </div>
 
           {/* Discard confirmation */}
@@ -981,8 +1045,12 @@ function secretInputValue(change: SecretChange): string {
 }
 
 function secretConfigured(currentlyConfigured: boolean, change: SecretChange): boolean {
-  if (change.action === 'set') return true
-  if (change.action === 'clear') return false
+  if (change.action === 'set') {
+    return true
+  }
+  if (change.action === 'clear') {
+    return false
+  }
   return currentlyConfigured
 }
 
@@ -1023,11 +1091,21 @@ function PermissionStateRow({
   )
 }
 
-function SectionTitle({ icon, label, color }: { icon: React.ReactNode; label: string; color: string }): React.JSX.Element {
+function SectionTitle({
+  icon,
+  label,
+  color
+}: {
+  icon: React.ReactNode
+  label: string
+  color: string
+}): React.JSX.Element {
   return (
     <div className="mb-3 flex items-center gap-2">
       {icon}
-      <h3 className={cn('font-display text-xs font-bold uppercase tracking-widest', color)}>{label}</h3>
+      <h3 className={cn('font-display text-xs font-bold uppercase tracking-widest', color)}>
+        {label}
+      </h3>
       <div className="gradient-line-h flex-1" />
     </div>
   )
@@ -1035,24 +1113,35 @@ function SectionTitle({ icon, label, color }: { icon: React.ReactNode; label: st
 
 const TOGGLE_VARIANTS: Record<string, { track: string; dot: string }> = {
   'neon-blue': {
-    track: 'peer-checked:border-neon-blue/40 peer-checked:bg-neon-blue/20 peer-checked:shadow-[0_0_8px_#38bdf84d]',
-    dot:   'peer-checked:left-[22px] peer-checked:bg-neon-blue peer-checked:shadow-[0_0_6px_#38bdf880]'
+    track:
+      'peer-checked:border-neon-blue/40 peer-checked:bg-neon-blue/20 peer-checked:shadow-[0_0_8px_#38bdf84d]',
+    dot: 'peer-checked:left-[22px] peer-checked:bg-neon-blue peer-checked:shadow-[0_0_6px_#38bdf880]'
   },
   'neon-cyan': {
-    track: 'peer-checked:border-neon-cyan/40 peer-checked:bg-neon-cyan/20 peer-checked:shadow-[0_0_8px_#22d3ee4d]',
-    dot:   'peer-checked:left-[22px] peer-checked:bg-neon-cyan peer-checked:shadow-[0_0_6px_#22d3ee80]'
+    track:
+      'peer-checked:border-neon-cyan/40 peer-checked:bg-neon-cyan/20 peer-checked:shadow-[0_0_8px_#22d3ee4d]',
+    dot: 'peer-checked:left-[22px] peer-checked:bg-neon-cyan peer-checked:shadow-[0_0_6px_#22d3ee80]'
   },
   'neon-purple': {
-    track: 'peer-checked:border-neon-purple/40 peer-checked:bg-neon-purple/20 peer-checked:shadow-[0_0_8px_#a855f74d]',
-    dot:   'peer-checked:left-[22px] peer-checked:bg-neon-purple peer-checked:shadow-[0_0_6px_#a855f780]'
+    track:
+      'peer-checked:border-neon-purple/40 peer-checked:bg-neon-purple/20 peer-checked:shadow-[0_0_8px_#a855f74d]',
+    dot: 'peer-checked:left-[22px] peer-checked:bg-neon-purple peer-checked:shadow-[0_0_6px_#a855f780]'
   },
   'neon-pink': {
-    track: 'peer-checked:border-neon-pink/40 peer-checked:bg-neon-pink/20 peer-checked:shadow-[0_0_8px_#f472b64d]',
-    dot:   'peer-checked:left-[22px] peer-checked:bg-neon-pink peer-checked:shadow-[0_0_6px_#f472b680]'
+    track:
+      'peer-checked:border-neon-pink/40 peer-checked:bg-neon-pink/20 peer-checked:shadow-[0_0_8px_#f472b64d]',
+    dot: 'peer-checked:left-[22px] peer-checked:bg-neon-pink peer-checked:shadow-[0_0_6px_#f472b680]'
   }
 }
 
-function Toggle({ checked, onChange, label, desc, color, className }: {
+function Toggle({
+  checked,
+  onChange,
+  label,
+  desc,
+  color,
+  className
+}: {
   checked: boolean
   onChange: (v: boolean) => void
   label: string
@@ -1062,11 +1151,31 @@ function Toggle({ checked, onChange, label, desc, color, className }: {
 }): React.JSX.Element {
   const variant = TOGGLE_VARIANTS[color] ?? TOGGLE_VARIANTS['neon-cyan']
   return (
-    <label className={cn('group flex cursor-pointer items-center gap-3 text-muted-foreground hover:text-foreground transition-colors', className)}>
+    <label
+      className={cn(
+        'group flex cursor-pointer items-center gap-3 text-muted-foreground hover:text-foreground transition-colors',
+        className
+      )}
+    >
       <div className="relative flex-shrink-0">
-        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
-        <div className={cn('h-6 w-11 rounded-full border border-border/50 bg-surface-3 transition-all duration-300', variant.track)} />
-        <div className={cn('absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-muted-foreground/40 shadow-sm transition-all duration-300', variant.dot)} />
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          className="peer sr-only"
+        />
+        <div
+          className={cn(
+            'h-6 w-11 rounded-full border border-border/50 bg-surface-3 transition-all duration-300',
+            variant.track
+          )}
+        />
+        <div
+          className={cn(
+            'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-muted-foreground/40 shadow-sm transition-all duration-300',
+            variant.dot
+          )}
+        />
       </div>
       <div>
         <span className="block text-xs font-medium">{label}</span>
@@ -1076,14 +1185,36 @@ function Toggle({ checked, onChange, label, desc, color, className }: {
   )
 }
 
-function Slider({ value, min, max, onChange }: { value: number; min: number; max: number; onChange: (v: number) => void }): React.JSX.Element {
+function Slider({
+  value,
+  min,
+  max,
+  onChange
+}: {
+  value: number
+  min: number
+  max: number
+  onChange: (v: number) => void
+}): React.JSX.Element {
   return (
-    <input type="range" min={min} max={max} value={value} onChange={(e) => onChange(parseInt(e.target.value))}
-      className="w-full h-1.5 rounded-full appearance-none bg-surface-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-neon-pink [&::-webkit-slider-thumb]:shadow-[0_0_6px_#f472b680] cursor-pointer" />
+    <input
+      type="range"
+      min={min}
+      max={max}
+      value={value}
+      onChange={(e) => onChange(parseInt(e.target.value))}
+      className="w-full h-1.5 rounded-full appearance-none bg-surface-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-neon-pink [&::-webkit-slider-thumb]:shadow-[0_0_6px_#f472b680] cursor-pointer"
+    />
   )
 }
 
-function PasswordInput({ value, onChange, show, onToggle, className }: {
+function PasswordInput({
+  value,
+  onChange,
+  show,
+  onToggle,
+  className
+}: {
   value: string
   onChange: (v: string) => void
   show: boolean
@@ -1092,14 +1223,19 @@ function PasswordInput({ value, onChange, show, onToggle, className }: {
 }): React.JSX.Element {
   return (
     <div className="relative">
-      <input type={show ? 'text' : 'password'} value={value} onChange={(e) => onChange(e.target.value)}
+      <input
+        type={show ? 'text' : 'password'}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         placeholder="••••••••••••••••••••••••••••••••"
-        className={className} />
-      <button type="button" onClick={onToggle}
-        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors">
-        {show
-          ? <EyeOff className="h-3.5 w-3.5" />
-          : <Eye className="h-3.5 w-3.5" />}
+        className={className}
+      />
+      <button
+        type="button"
+        onClick={onToggle}
+        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+      >
+        {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
       </button>
     </div>
   )

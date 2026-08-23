@@ -41,19 +41,27 @@ export class ExpectedIrEchoTracker {
 
   public recordCommand(command: string, now = Date.now()): void {
     const normalized = command.replace(/\r?\n$/, '')
-    if (!normalized.startsWith('ir:')) return
+    if (!normalized.startsWith('ir:')) {
+      return
+    }
 
     const payload = normalized.slice(3)
-    if (!/^\d+(?:,\d+)*$/.test(payload)) return
+    if (!/^\d+(?:,\d+)*$/.test(payload)) {
+      return
+    }
 
     this.pending.push({ payload, expiresAt: now + IR_ECHO_TTL_MS })
-    if (this.pending.length > MAX_PENDING_IR_ECHOES) this.pending.shift()
+    if (this.pending.length > MAX_PENDING_IR_ECHOES) {
+      this.pending.shift()
+    }
   }
 
   public consume(frame: Buffer, now = Date.now()): boolean {
     this.pending = this.pending.filter((echo) => echo.expiresAt >= now)
     const index = this.pending.findIndex((echo) => echo.payload === frame.toString('utf8'))
-    if (index === -1) return false
+    if (index === -1) {
+      return false
+    }
 
     this.pending.splice(index, 1)
     return true
@@ -109,7 +117,9 @@ export class BoundedSerialFrameDecoder {
   }
 
   private appendByte(byte: number, result: DecoderResult): void {
-    if (this.discardingOversizedFrame) return
+    if (this.discardingOversizedFrame) {
+      return
+    }
 
     if (this.buffer.length >= this.maxFrameBytes) {
       this.buffer.length = 0
@@ -170,12 +180,17 @@ export function parseSerialFrame(
   return { rejection: 'unknown message type' }
 }
 
-function isDeejMessage(value: unknown): value is DeejSerialMessage {
-  if (!isRecord(value)) return false
-  if (!hasExactKeys(value, ['type', 'value']) || !isRecord(value.value)) return false
+function isDeejMessage(
+  value: Record<string, unknown>
+): value is Record<string, unknown> & DeejSerialMessage {
+  if (!hasExactKeys(value, ['type', 'value']) || !isRecord(value.value)) {
+    return false
+  }
 
   const entries = Object.entries(value.value)
-  if (entries.length === 0 || entries.length > MAX_SLIDER_INDEX + 1) return false
+  if (entries.length === 0 || entries.length > MAX_SLIDER_INDEX + 1) {
+    return false
+  }
 
   return entries.every(([index, sliderValue]) => {
     const numericIndex = Number(index)
@@ -191,8 +206,9 @@ function isDeejMessage(value: unknown): value is DeejSerialMessage {
   })
 }
 
-function isDeckMessage(value: unknown): value is DeckSerialMessage {
-  if (!isRecord(value)) return false
+function isDeckMessage(
+  value: Record<string, unknown>
+): value is Record<string, unknown> & DeckSerialMessage {
   return (
     hasExactKeys(value, ['type', 'state', 'value']) &&
     (value.state === 'pressed' || value.state === 'hold' || value.state === 'released') &&

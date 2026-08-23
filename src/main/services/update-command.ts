@@ -23,9 +23,17 @@ export async function executeLinuxUpdateCommand(
   actions: LinuxUpdateActions,
   confirm: (consent: UpdateConsent) => Promise<boolean>
 ): Promise<void> {
-  if (command === 'check') return actions.check()
-  if (command === 'open-release') return actions.openRelease()
-  if (!(await confirm(command))) return
-  if (command === 'download') return actions.download()
+  if (command === 'check') {
+    return actions.check()
+  }
+  if (command === 'open-release') {
+    return actions.openRelease()
+  }
+  if (!(await confirm(command))) {
+    return
+  }
+  if (command === 'download') {
+    return actions.download()
+  }
   await actions.install()
 }

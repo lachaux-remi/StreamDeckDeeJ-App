@@ -55,8 +55,12 @@ beforeEach(() => {
   fakes.sliderListener = undefined
   fakes.getConfig.mockReturnValue({ deej: { '0': ['Spotify'], '1': ['master'] } })
   fakes.run.mockImplementation(async (file: string) => {
-    if (file === 'pw-dump') return pipeWireDump
-    if (file === 'wpctl') return 'Volume: 0.75'
+    if (file === 'pw-dump') {
+      return pipeWireDump
+    }
+    if (file === 'wpctl') {
+      return 'Volume: 0.75'
+    }
     return ''
   })
 })
@@ -73,12 +77,18 @@ test('discovers PipeWire clients, deduplicates names, and reads configured OS vo
 
 test('falls back to pactl discovery and master volume when PipeWire commands fail', async () => {
   fakes.run.mockImplementation(async (file: string, args: readonly string[]) => {
-    if (file === 'pw-dump') throw new Error('missing')
+    if (file === 'pw-dump') {
+      throw new Error('missing')
+    }
     if (file === 'pactl' && args[0] === 'list') {
       return 'Sink Input #12\n application.process.binary = "Firefox"\n Volume: 40%'
     }
-    if (file === 'wpctl') throw new Error('missing')
-    if (file === 'pactl' && args[0] === 'get-sink-volume') return 'front-left: 32768 / 60%'
+    if (file === 'wpctl') {
+      throw new Error('missing')
+    }
+    if (file === 'pactl' && args[0] === 'get-sink-volume') {
+      return 'front-left: 32768 / 60%'
+    }
     return ''
   })
   fakes.getConfig.mockReturnValue({ deej: { '0': ['Firefox'], '1': ['master'] } })
@@ -99,5 +109,46 @@ test('routes slider batches to all matching sessions and tolerates command failu
   await Promise.resolve()
 
   expect(fakes.run).toHaveBeenCalledWith('wpctl', ['set-volume', '42', '33%'], 2000)
+  vi.clearAllTimers()
+})
+
+test('omits unconfigured and unavailable volumes when audio discovery fails', async () => {
+  fakes.getConfig.mockReturnValue({ deej: { '0': [], '1': ['missing'], '2': ['master'] } })
+  fakes.run.mockRejectedValue(new Error('audio unavailable'))
+  const { sessionsService } = await import('@main/services/sessions.service')
+
+  await expect(sessionsService.getOsVolumes()).resolves.toEqual({})
+  expect(fakes.error).toHaveBeenCalledWith(
+    expect.stringContaining('Failed to list audio sessions'),
+    'SessionsService'
+  )
+  vi.clearAllTimers()
+})
+
+test('filters unrelated PipeWire objects and reads direct node properties', async () => {
+  fakes.run.mockResolvedValue(
+    JSON.stringify([
+      { id: 1, type: 'PipeWire:Interface:Node' },
+      {
+        id: 2,
+        type: 'PipeWire:Interface:Node',
+        info: { props: { 'media.class': 'Video/Source' } }
+      },
+      {
+        id: 3,
+        type: 'PipeWire:Interface:Node',
+        info: {
+          props: {
+            'media.class': 'Stream/Output/Audio',
+            'application.process.binary': 'DirectPlayer'
+          },
+          params: { Props: [{ volume: 0.25 }] }
+        }
+      }
+    ])
+  )
+  const { sessionsService } = await import('@main/services/sessions.service')
+
+  await expect(sessionsService.getAllSessions()).resolves.toEqual(['master', 'directplayer'])
   vi.clearAllTimers()
 })

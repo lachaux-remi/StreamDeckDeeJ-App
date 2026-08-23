@@ -64,9 +64,7 @@ export default function StreamdeckButton({
         'flex flex-col items-center justify-center',
         'transition-all duration-300 cursor-pointer select-none',
         !isDragSource && 'hover:scale-[1.04] active:scale-95',
-        hasActions
-          ? 'bg-surface-2/60 backdrop-blur-sm'
-          : 'bg-surface-2/40',
+        hasActions ? 'bg-surface-2/60 backdrop-blur-sm' : 'bg-surface-2/40',
         animationDelay !== undefined && 'animate-scale-in',
         isDragSource && 'opacity-40 scale-95',
         isDragOver && 'ring-2 ring-neon-purple/70 bg-neon-purple/10'
@@ -89,7 +87,8 @@ export default function StreamdeckButton({
       <div
         className="absolute inset-0 pointer-events-none opacity-100 group-hover:opacity-0 transition-opacity duration-300"
         style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 50%, transparent 100%)'
+          background:
+            'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 50%, transparent 100%)'
         }}
       />
 
@@ -97,7 +96,8 @@ export default function StreamdeckButton({
       <div
         className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"
         style={{
-          background: 'radial-gradient(ellipse at center, rgba(168, 85, 247, 0.08) 0%, transparent 70%)',
+          background:
+            'radial-gradient(ellipse at center, rgba(168, 85, 247, 0.08) 0%, transparent 70%)',
           boxShadow: '0 0 20px rgba(168, 85, 247, 0.15), inset 0 0 20px rgba(168, 85, 247, 0.05)'
         }}
       />

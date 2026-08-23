@@ -37,12 +37,42 @@ test('runs commands without blocking the event loop', async () => {
   expect(await command).toBe('done')
 })
 
+test('rejects failed commands', async () => {
+  await expect(
+    commandRunner.run(process.execPath, ['-e', 'process.exit(2)'], 1_000)
+  ).rejects.toThrow()
+})
+
+test('validates concurrency and resolves immediately when already idle', async () => {
+  expect(() => new LatestValueExecutor(0, async () => undefined)).toThrow(
+    'Concurrency must be at least one'
+  )
+  await expect(new LatestValueExecutor(1, async () => undefined).onIdle()).resolves.toBeUndefined()
+})
+
+test('continues processing after an executor task fails', async () => {
+  const applied: number[] = []
+  const executor = new LatestValueExecutor<string, number>(1, async (_key, value) => {
+    applied.push(value)
+    if (value === 1) {
+      throw new Error('expected failure')
+    }
+  })
+  executor.submit('first', 1)
+  executor.submit('second', 2)
+
+  await executor.onIdle()
+  expect(applied).toEqual([1, 2])
+})
+
 test('runs the fallback only after the primary command fails', async () => {
   const calls: Command[] = []
   const fakeRunner: CommandRunner = {
     async run(file, args, timeout): Promise<string> {
       calls.push({ file, args, timeout })
-      if (file === 'wpctl') throw new Error('unavailable')
+      if (file === 'wpctl') {
+        throw new Error('unavailable')
+      }
       return 'Volume: 42%'
     }
   }
@@ -66,7 +96,9 @@ test('bounds concurrency and applies only the latest pending value per target', 
     active += 1
     maxActive = Math.max(maxActive, active)
     applied.push([target, value])
-    if (applied.length === 1) await first.promise
+    if (applied.length === 1) {
+      await first.promise
+    }
     active -= 1
   })
 

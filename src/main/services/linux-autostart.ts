@@ -58,7 +58,9 @@ async function validatedAppImagePath(appImagePath: string): Promise<string> {
     }
     await access(canonicalPath, constants.X_OK)
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith('AppImage path')) throw error
+    if (error instanceof Error && error.message.startsWith('AppImage path')) {
+      throw error
+    }
     throw new Error('AppImage path must reference an executable file', { cause: error })
   }
   return canonicalPath

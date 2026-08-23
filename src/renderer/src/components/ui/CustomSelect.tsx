@@ -34,17 +34,23 @@ export default function CustomSelect({
   const selected = options.find((o) => o.value === value)
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      return
+    }
 
     const handleClickOutside = (e: MouseEvent): void => {
       if (
         !triggerRef.current?.contains(e.target as Node) &&
         !panelRef.current?.contains(e.target as Node)
-      ) setIsOpen(false)
+      ) {
+        setIsOpen(false)
+      }
     }
 
     const handleEscape = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') setIsOpen(false)
+      if (e.key === 'Escape') {
+        setIsOpen(false)
+      }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
@@ -60,9 +66,10 @@ export default function CustomSelect({
       const rect = triggerRef.current.getBoundingClientRect()
       const estimatedH = options.length * 48
       const spaceBelow = window.innerHeight - rect.bottom
-      const top = spaceBelow < estimatedH + 8 && rect.top > estimatedH
-        ? rect.top - estimatedH - 4
-        : rect.bottom + 4
+      const top =
+        spaceBelow < estimatedH + 8 && rect.top > estimatedH
+          ? rect.top - estimatedH - 4
+          : rect.bottom + 4
       setDropdownPos({ top, left: rect.left, width: rect.width })
     }
     setIsOpen((v) => !v)
@@ -80,8 +87,8 @@ export default function CustomSelect({
             ? accent === 'blue'
               ? 'border-neon-blue/50 bg-surface-3'
               : accent === 'pink'
-              ? 'border-neon-pink/50 bg-surface-3'
-              : 'border-neon-purple/50 bg-surface-3'
+                ? 'border-neon-pink/50 bg-surface-3'
+                : 'border-neon-purple/50 bg-surface-3'
             : 'border-border/40 hover:border-border'
         )}
       >
@@ -96,53 +103,51 @@ export default function CustomSelect({
         />
       </button>
 
-      {isOpen && createPortal(
-        <div
-          ref={panelRef}
-          className="fixed z-[300] overflow-hidden rounded-lg border border-border/50 bg-surface-2 py-1 shadow-xl animate-fade-in"
-          style={{ top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
-        >
-          {options.map((option) => {
-            const isActive = option.value === value
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => {
-                  onChange(option.value)
-                  setIsOpen(false)
-                }}
-                className={cn(
-                  'flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors',
-                  isActive
-                    ? accent === 'blue'
-                      ? 'bg-neon-blue/10 text-neon-blue'
-                      : accent === 'pink'
-                      ? 'bg-neon-pink/10 text-neon-pink'
-                      : 'bg-neon-purple/10 text-neon-purple'
-                    : 'text-foreground/80 hover:bg-surface-3 hover:text-foreground'
-                )}
-              >
-                <Check
+      {isOpen &&
+        createPortal(
+          <div
+            ref={panelRef}
+            className="fixed z-[300] overflow-hidden rounded-lg border border-border/50 bg-surface-2 py-1 shadow-xl animate-fade-in"
+            style={{ top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
+          >
+            {options.map((option) => {
+              const isActive = option.value === value
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value)
+                    setIsOpen(false)
+                  }}
                   className={cn(
-                    'h-3.5 w-3.5 shrink-0',
-                    isActive ? 'opacity-100' : 'opacity-0'
+                    'flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors',
+                    isActive
+                      ? accent === 'blue'
+                        ? 'bg-neon-blue/10 text-neon-blue'
+                        : accent === 'pink'
+                          ? 'bg-neon-pink/10 text-neon-pink'
+                          : 'bg-neon-purple/10 text-neon-purple'
+                      : 'text-foreground/80 hover:bg-surface-3 hover:text-foreground'
                   )}
-                />
-                <div className="min-w-0 text-left">
-                  <span className="block truncate">{option.label}</span>
-                  {option.description && (
-                    <span className="block truncate text-[11px] text-muted-foreground/40">
-                      {option.description}
-                    </span>
-                  )}
-                </div>
-              </button>
-            )
-          })}
-        </div>,
-        document.body
-      )}
+                >
+                  <Check
+                    className={cn('h-3.5 w-3.5 shrink-0', isActive ? 'opacity-100' : 'opacity-0')}
+                  />
+                  <div className="min-w-0 text-left">
+                    <span className="block truncate">{option.label}</span>
+                    {option.description && (
+                      <span className="block truncate text-[11px] text-muted-foreground/40">
+                        {option.description}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

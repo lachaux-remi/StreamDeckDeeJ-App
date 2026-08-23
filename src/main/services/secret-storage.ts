@@ -44,7 +44,9 @@ export class ElectronSafeStorageSecretCodec implements SecretCodec {
   }
 
   public encode(value: string): StoredSecret {
-    if (!value || !this.hasSecureBackend()) return value
+    if (!value || !this.hasSecureBackend()) {
+      return value
+    }
 
     try {
       return {
@@ -62,8 +64,12 @@ export class ElectronSafeStorageSecretCodec implements SecretCodec {
   }
 
   public decode(value: unknown): string {
-    if (typeof value === 'string') return value
-    if (!isEncryptedSecret(value)) throw new Error('Stored secret is invalid')
+    if (typeof value === 'string') {
+      return value
+    }
+    if (!isEncryptedSecret(value)) {
+      throw new Error('Stored secret is invalid')
+    }
 
     try {
       return this.safeStorage.decryptString(Buffer.from(value.data, 'base64'))
@@ -101,7 +107,9 @@ export class SettingsPersistence {
 
   public save(settings: unknown): void {
     const storedSettings = this.transformSecrets(settings, (value) => {
-      if (typeof value !== 'string') throw new Error('Secret value is invalid')
+      if (typeof value !== 'string') {
+        throw new Error('Secret value is invalid')
+      }
       return this.secretCodec.encode(value)
     })
     writeFileSync(this.path, JSON.stringify(storedSettings, null, 2), {
@@ -116,7 +124,9 @@ export class SettingsPersistence {
   }
 
   private removeLegacyBrightnessState(settings: unknown): unknown {
-    if (!isRecord(settings) || !('brightnessState' in settings)) return settings
+    if (!isRecord(settings) || !('brightnessState' in settings)) {
+      return settings
+    }
 
     const migratedSettings = { ...settings }
     delete migratedSettings.brightnessState
@@ -127,7 +137,9 @@ export class SettingsPersistence {
     settings: unknown,
     transform: (value: unknown) => StoredSecret
   ): unknown {
-    if (!isRecord(settings)) return settings
+    if (!isRecord(settings)) {
+      return settings
+    }
 
     const transformed = { ...settings }
     if (isRecord(settings.homeAssistant) && 'token' in settings.homeAssistant) {

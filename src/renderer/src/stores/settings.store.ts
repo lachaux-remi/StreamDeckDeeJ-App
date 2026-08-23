@@ -70,7 +70,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   },
 
   swapStreamdeckButtons: (sourceIndex, targetIndex) => {
-    if (sourceIndex === targetIndex) return
+    if (sourceIndex === targetIndex) {
+      return
+    }
     const settings = { ...get().settings }
     const streamdeck = { ...settings.streamdeck }
     const sourceConfig = streamdeck[sourceIndex]
@@ -93,7 +95,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   },
 
   swapSliders: (sourceIndex, targetIndex) => {
-    if (sourceIndex === targetIndex) return
+    if (sourceIndex === targetIndex) {
+      return
+    }
     const settings = { ...get().settings }
     const deej = { ...settings.deej }
     const deejNames = { ...settings.deejNames }
@@ -104,16 +108,28 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     const tgtName = deejNames[targetIndex]
 
     // Swap sessions
-    if (srcSessions) deej[targetIndex] = srcSessions
-    else delete deej[targetIndex]
-    if (tgtSessions) deej[sourceIndex] = tgtSessions
-    else delete deej[sourceIndex]
+    if (srcSessions) {
+      deej[targetIndex] = srcSessions
+    } else {
+      delete deej[targetIndex]
+    }
+    if (tgtSessions) {
+      deej[sourceIndex] = tgtSessions
+    } else {
+      delete deej[sourceIndex]
+    }
 
     // Swap names
-    if (srcName) deejNames[targetIndex] = srcName
-    else delete deejNames[targetIndex]
-    if (tgtName) deejNames[sourceIndex] = tgtName
-    else delete deejNames[sourceIndex]
+    if (srcName) {
+      deejNames[targetIndex] = srcName
+    } else {
+      delete deejNames[targetIndex]
+    }
+    if (tgtName) {
+      deejNames[sourceIndex] = tgtName
+    } else {
+      delete deejNames[sourceIndex]
+    }
 
     settings.deej = deej
     settings.deejNames = deejNames

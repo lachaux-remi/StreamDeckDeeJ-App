@@ -15,7 +15,9 @@ export class PactlSubscription {
   constructor(private readonly options: PactlSubscriptionOptions) {}
 
   start(): void {
-    if (this.process || this.retryTimer) return
+    if (this.process || this.retryTimer) {
+      return
+    }
 
     try {
       const process = spawn('pactl', ['subscribe'], { stdio: ['ignore', 'pipe', 'ignore'] })
@@ -28,7 +30,9 @@ export class PactlSubscription {
       })
 
       const handleStop = (error?: Error): void => {
-        if (stopped) return
+        if (stopped) {
+          return
+        }
         stopped = true
         this.process = null
         if (!this.unavailableReported) {

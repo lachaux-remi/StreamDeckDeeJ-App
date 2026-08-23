@@ -19,7 +19,9 @@ export const SUPPORTED_ICON_MIME_TYPES = [
 ] as const
 
 export function isIconDataUrl(value: unknown): value is string {
-  if (typeof value !== 'string' || value.length > MAX_ICON_DATA_URL_LENGTH) return false
+  if (typeof value !== 'string' || value.length > MAX_ICON_DATA_URL_LENGTH) {
+    return false
+  }
   const match = /^data:([^;,]+);base64,([A-Za-z0-9+/]*={0,2})$/.exec(value)
   const payload = match?.[2]
   const padding = payload?.endsWith('==') ? 2 : payload?.endsWith('=') ? 1 : 0

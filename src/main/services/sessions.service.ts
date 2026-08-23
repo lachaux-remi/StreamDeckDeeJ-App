@@ -79,7 +79,9 @@ class SessionsService extends EventEmitter {
   }
 
   private refreshSessions(): Promise<void> {
-    if (this.refreshPromise) return this.refreshPromise
+    if (this.refreshPromise) {
+      return this.refreshPromise
+    }
 
     this.refreshPromise = this.loadSessions().finally(() => {
       this.refreshPromise = null
@@ -118,10 +120,14 @@ class SessionsService extends EventEmitter {
     await this.refreshSessions()
 
     for (const [sliderKey, sessionNames] of Object.entries(deejConfig)) {
-      if (!sessionNames || sessionNames.length === 0) continue
+      if (!sessionNames || sessionNames.length === 0) {
+        continue
+      }
       const firstSession = sessionNames[0]
       const vol = await this.getSessionVolume(firstSession)
-      if (vol !== null) volumes[sliderKey] = vol
+      if (vol !== null) {
+        volumes[sliderKey] = vol
+      }
     }
 
     return volumes
@@ -164,7 +170,9 @@ class SessionsService extends EventEmitter {
     const blocks = output.split('Sink Input #')
 
     for (const block of blocks) {
-      if (!block.trim()) continue
+      if (!block.trim()) {
+        continue
+      }
 
       const indexMatch = block.match(/^(\d+)/)
       const nameMatch = block.match(/application\.name\s*=\s*"([^"]+)"/)
@@ -205,9 +213,15 @@ class SessionsService extends EventEmitter {
 
     for (const obj of objects) {
       const props = obj.info?.props
-      if (!props) continue
-      if (obj.type !== 'PipeWire:Interface:Node') continue
-      if (props['media.class'] !== 'Stream/Output/Audio') continue
+      if (!props) {
+        continue
+      }
+      if (obj.type !== 'PipeWire:Interface:Node') {
+        continue
+      }
+      if (props['media.class'] !== 'Stream/Output/Audio') {
+        continue
+      }
 
       let name = props['application.name'] as string | undefined
 
@@ -227,7 +241,9 @@ class SessionsService extends EventEmitter {
         name = (props['application.process.binary'] as string) ?? (props['node.name'] as string)
       }
 
-      if (!name) continue
+      if (!name) {
+        continue
+      }
 
       const paramsProps = obj.info?.params?.Props
       let volume = 0
@@ -251,21 +267,31 @@ class SessionsService extends EventEmitter {
   }
 
   private runIsStaleTask(): void {
-    if (this.isStale) return
-    if (this.isStaleTask) clearTimeout(this.isStaleTask)
+    if (this.isStale) {
+      return
+    }
+    if (this.isStaleTask) {
+      clearTimeout(this.isStaleTask)
+    }
     this.isStaleTask = setTimeout(() => (this.isStale = true), MAX_REFRESH_TIME)
   }
 
   private runIsFreshTask(): void {
-    if (!this.isFresh) return
-    if (this.isFreshTask) clearTimeout(this.isFreshTask)
+    if (!this.isFresh) {
+      return
+    }
+    if (this.isFreshTask) {
+      clearTimeout(this.isFreshTask)
+    }
     this.isFreshTask = setTimeout(() => (this.isFresh = false), MIN_REFRESH_TIME)
   }
 
   private handleSubscriptionData(chunk: Buffer): void {
     const lines = chunk.toString().split('\n')
     for (const line of lines) {
-      if (!line.includes('sink-input')) continue
+      if (!line.includes('sink-input')) {
+        continue
+      }
       if (line.includes("'new'") || (line.includes("'change'") && !this.recentlySet)) {
         this.scheduleReapply()
       }
@@ -273,7 +299,9 @@ class SessionsService extends EventEmitter {
   }
 
   private scheduleReapply(): void {
-    if (this.reapplyTimers.length > 0) return
+    if (this.reapplyTimers.length > 0) {
+      return
+    }
     for (const delay of REAPPLY_DELAYS) {
       this.reapplyTimers.push(
         setTimeout(() => {
@@ -295,7 +323,9 @@ class SessionsService extends EventEmitter {
 
     for (const [sliderKey, sessionNames] of Object.entries(deejConfig)) {
       const value = sliders[sliderKey]
-      if (value === undefined || !sessionNames) continue
+      if (value === undefined || !sessionNames) {
+        continue
+      }
       for (const sessionName of sessionNames) {
         this.volumeExecutor.submit(sessionName.toLowerCase(), value)
       }
@@ -305,7 +335,9 @@ class SessionsService extends EventEmitter {
   }
 
   private refreshMprisPlayers(): Promise<void> {
-    if (this.mprisRefreshPromise) return this.mprisRefreshPromise
+    if (this.mprisRefreshPromise) {
+      return this.mprisRefreshPromise
+    }
 
     this.mprisRefreshPromise = this.loadMprisPlayers().finally(() => {
       this.mprisRefreshPromise = null
@@ -330,7 +362,9 @@ class SessionsService extends EventEmitter {
       this.mprisPlayers = []
       for (const line of output.split('\n')) {
         const match = line.match(/"(org\.mpris\.MediaPlayer2\..+)"/)
-        if (match) this.mprisPlayers.push(match[1])
+        if (match) {
+          this.mprisPlayers.push(match[1])
+        }
       }
       this.mprisLastRefresh = Date.now()
     } catch (error) {
@@ -431,7 +465,9 @@ class SessionsService extends EventEmitter {
         } else {
           // No PipeWire session found — fall back to MPRIS (e.g. native players bypassing PipeWire)
           const mprisBus = await this.findMprisBusName(sessionName)
-          if (mprisBus) await this.setMprisVolume(mprisBus, value)
+          if (mprisBus) {
+            await this.setMprisVolume(mprisBus, value)
+          }
         }
       }
     } catch (error) {

@@ -98,6 +98,28 @@ test('does not reopen HID after a failed write is followed by shutdown', async (
   expect(vi.getTimerCount()).toBe(0)
 })
 
+test('applies runtime profile, override, Home Assistant, and config updates', async () => {
+  const { ledService } = await import('@main/services/led.service')
+  await ledService.init()
+  fakes.device.write.mockClear()
+
+  ledService.updateProfile({
+    mode: 'static',
+    speed: 50,
+    brightness: 100,
+    startColor: { r: 1, g: 2, b: 3 },
+    endColor: { r: 0, g: 0, b: 0 },
+    direction: 'horizontal'
+  })
+  ledService.updateOverrides({ '2': { color: { r: 4, g: 5, b: 6 } } })
+  ledService.setHAButtonState('1', 'on')
+  await Promise.resolve()
+
+  expect(fakes.resolveColor).toHaveBeenCalledWith(expect.any(Array), 'on')
+  fakes.configListener?.({ streamdeck: {}, ledProfile: undefined, gridCols: undefined })
+  await ledService.shutdown()
+})
+
 test('handles missing and failing HID devices without starting animation work', async () => {
   fakes.devices.mockReturnValueOnce([]).mockImplementationOnce(() => {
     throw new Error('permission denied')

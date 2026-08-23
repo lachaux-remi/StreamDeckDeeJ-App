@@ -45,8 +45,12 @@ export function isLinuxUpdateState(value: unknown): value is LinuxUpdateState {
   if (value.mode === 'disabled') {
     return value.status === 'disabled' && hasOnlyKeys(value, ['mode', 'status'])
   }
-  if (value.mode !== 'appimage' && value.mode !== 'package-manager') return false
-  if (typeof value.currentVersion !== 'string') return false
+  if (value.mode !== 'appimage' && value.mode !== 'package-manager') {
+    return false
+  }
+  if (typeof value.currentVersion !== 'string') {
+    return false
+  }
 
   if (value.status === 'idle' || value.status === 'checking' || value.status === 'up-to-date') {
     return hasOnlyKeys(value, ['mode', 'status', 'currentVersion'])

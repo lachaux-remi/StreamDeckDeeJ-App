@@ -13,7 +13,9 @@ export default function ConnectionStatus(): React.JSX.Element {
     <div
       className={cn(
         'flex items-center gap-2.5 rounded-full px-3.5 py-1.5 transition-all duration-300',
-        connected ? 'bg-neon-green/8 border border-neon-green/20' : 'bg-surface-2 border border-border'
+        connected
+          ? 'bg-neon-green/8 border border-neon-green/20'
+          : 'bg-surface-2 border border-border'
       )}
     >
       <div className="relative flex items-center justify-center">
@@ -27,7 +29,7 @@ export default function ConnectionStatus(): React.JSX.Element {
           <div className="absolute inset-0 h-2 w-2 rounded-full bg-neon-green animate-pulse-glow" />
         )}
       </div>
-<span className="font-mono text-xs tracking-wide text-muted-foreground">
+      <span className="font-mono text-xs tracking-wide text-muted-foreground">
         {connected ? displayName : 'Déconnecté'}
       </span>
     </div>

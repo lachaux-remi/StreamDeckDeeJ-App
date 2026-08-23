@@ -21,6 +21,7 @@ const fakes = vi.hoisted(() => ({
   installPermissions: vi.fn(),
   getUpdateState: vi.fn(),
   executeUpdate: vi.fn(),
+  showMessageBox: vi.fn(),
   showSaveDialog: vi.fn(),
   showOpenDialog: vi.fn(),
   parentWindow: undefined as unknown,
@@ -43,7 +44,11 @@ vi.mock('electron', () => ({
       fakes.events.set(channel, listener)
   },
   BrowserWindow: { fromWebContents: () => fakes.parentWindow },
-  dialog: { showSaveDialog: fakes.showSaveDialog, showOpenDialog: fakes.showOpenDialog }
+  dialog: {
+    showMessageBox: fakes.showMessageBox,
+    showSaveDialog: fakes.showSaveDialog,
+    showOpenDialog: fakes.showOpenDialog
+  }
 }))
 vi.mock('@main/services/serial.service', () => ({
   serialService: { listPorts: fakes.listPorts, getStatus: fakes.getStatus }
@@ -114,7 +119,9 @@ const trustedEvent = { sender: trustedSender, senderFrame: trustedSender.mainFra
 
 function invoke(channel: string, ...args: unknown[]): unknown {
   const listener = fakes.invokes.get(channel)
-  if (!listener) throw new Error(`Missing handler ${channel}`)
+  if (!listener) {
+    throw new Error(`Missing handler ${channel}`)
+  }
   return listener(trustedEvent, ...args)
 }
 
@@ -172,7 +179,9 @@ test('hydrates only the renderer view and rejects malformed secret-bearing setti
   fakes.importConfiguration.mockResolvedValue({ status: 'success' })
   await expect(invoke('settings:export')).resolves.toEqual({ status: 'success' })
   await expect(invoke('settings:import')).resolves.toEqual({ status: 'success' })
-  if (!fakes.transferDialogs) throw new Error('Transfer dialogs were not registered')
+  if (!fakes.transferDialogs) {
+    throw new Error('Transfer dialogs were not registered')
+  }
   await expect(fakes.transferDialogs.chooseExportPath()).resolves.toBe('/tmp/export.json')
   await expect(fakes.transferDialogs.chooseImportPath()).resolves.toBe('/tmp/import.json')
 })
@@ -220,6 +229,7 @@ test('validates hardware and update command arity before invoking privileged ada
     'do not accept arguments'
   )
   expect(() => invoke('update:state', 'unexpected')).toThrow('Invalid update state request')
+  expect(invoke('update:state')).toEqual({ mode: 'appimage', status: 'idle' })
   await expect(invoke('update:command', 'invalid')).rejects.toThrow('Invalid update command')
   await expect(invoke('update:command', 'check')).resolves.toEqual({
     mode: 'appimage',

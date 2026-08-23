@@ -20,8 +20,12 @@ export function preferOfficialFirmwarePorts<T extends UsbPortIdentity>(ports: T[
 }
 
 function parseHexIdentifier(identifier: string | undefined): number | undefined {
-  if (!identifier) return undefined
+  if (!identifier) {
+    return undefined
+  }
   const normalized = identifier.trim().replace(/^0x/i, '')
-  if (!/^[0-9a-f]+$/i.test(normalized)) return undefined
+  if (!/^[0-9a-f]+$/i.test(normalized)) {
+    return undefined
+  }
   return Number.parseInt(normalized, 16)
 }

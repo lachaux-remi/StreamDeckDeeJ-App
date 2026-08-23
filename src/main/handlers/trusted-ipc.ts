@@ -25,7 +25,9 @@ export function onIpc<Args extends unknown[]>(
   listener: (...args: Args) => void
 ): void {
   ipcMain.on(channel, (event, ...args) => {
-    if (!isTrustedSender(event, trustedSender)) return
+    if (!isTrustedSender(event, trustedSender)) {
+      return
+    }
     listener(...(args as Args))
   })
 }

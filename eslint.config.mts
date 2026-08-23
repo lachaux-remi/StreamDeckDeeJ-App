@@ -25,5 +25,10 @@ export default tsConfig.config(
       }
     }
   },
-  prettierConfig
+  prettierConfig,
+  {
+    rules: {
+      curly: ['error', 'all']
+    }
+  }
 )

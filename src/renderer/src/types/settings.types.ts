@@ -152,8 +152,12 @@ function hasSerializedSizeAtMost(value: unknown, maxBytes: number): boolean {
 }
 
 function isHomeAssistantUrl(value: unknown): value is string {
-  if (value === '') return true
-  if (typeof value !== 'string' || value !== value.trim()) return false
+  if (value === '') {
+    return true
+  }
+  if (typeof value !== 'string' || value !== value.trim()) {
+    return false
+  }
   try {
     const url = new URL(value)
     return (
@@ -261,7 +265,9 @@ function isLedProfile(value: unknown): value is LedProfile {
 }
 
 export function isRendererSettings(value: unknown): value is RendererSettings {
-  if (!isRecord(value)) return false
+  if (!isRecord(value)) {
+    return false
+  }
   if (
     !hasOnlyKeys(value, [
       'comPort',
@@ -281,8 +287,9 @@ export function isRendererSettings(value: unknown): value is RendererSettings {
       'ledProfile',
       'discord'
     ])
-  )
+  ) {
     return false
+  }
   if (
     !isStringAtMost(value.comPort, 1024) ||
     !isIntegerBetween(value.baudRate, 1, Number.MAX_SAFE_INTEGER) ||

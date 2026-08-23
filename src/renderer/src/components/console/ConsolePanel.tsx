@@ -24,11 +24,7 @@ export default function ConsolePanel(): React.JSX.Element {
         className="flex w-full cursor-pointer items-center justify-between px-4 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
       >
         <div className="flex items-center gap-2">
-          {isOpen ? (
-            <ChevronDown className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronUp className="h-3.5 w-3.5" />
-          )}
+          {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
           <Terminal className="h-3.5 w-3.5 text-neon-green/50" />
           <span className="font-display text-xs font-semibold uppercase tracking-wider bg-gradient-to-r from-neon-green to-neon-cyan bg-clip-text text-transparent">
             Console

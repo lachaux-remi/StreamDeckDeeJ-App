@@ -12,9 +12,7 @@ export default function Header({ onOpenSettings }: HeaderProps): React.JSX.Eleme
         <span className="bg-[linear-gradient(to_right,#f472b6,#a855f7)] bg-clip-text text-transparent">
           StreamDeck
         </span>
-        <span className="ml-1.5 text-neon-blue">
-          DeeJ
-        </span>
+        <span className="ml-1.5 text-neon-blue">DeeJ</span>
       </div>
 
       <ConnectionStatus />

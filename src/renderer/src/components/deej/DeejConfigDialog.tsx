@@ -38,7 +38,9 @@ export default function DeejConfigDialog({
   }, [sliderIndex, deej, deejNames])
 
   const hasChanges = useMemo(() => {
-    if (sliderIndex === null) return false
+    if (sliderIndex === null) {
+      return false
+    }
     const originalName = deejNames[sliderIndex] || ''
     const originalAssigned = deej[sliderIndex] || []
     return name !== originalName || JSON.stringify(assigned) !== JSON.stringify(originalAssigned)
@@ -72,7 +74,9 @@ export default function DeejConfigDialog({
   const otherSlidersAssigned = useMemo(() => {
     const others: string[] = []
     for (const [key, sessions] of Object.entries(deej)) {
-      if (key !== sliderIndex && sessions) others.push(...sessions)
+      if (key !== sliderIndex && sessions) {
+        others.push(...sessions)
+      }
     }
     return others
   }, [deej, sliderIndex])
@@ -101,12 +105,16 @@ export default function DeejConfigDialog({
   }, [selectedAssigned])
 
   const handleSave = useCallback(() => {
-    if (sliderIndex === null) return
+    if (sliderIndex === null) {
+      return
+    }
     updateSlider(sliderIndex, assigned, name.trim() || undefined)
     onClose()
   }, [sliderIndex, assigned, name, updateSlider, onClose])
 
-  if (sliderIndex === null) return null
+  if (sliderIndex === null) {
+    return null
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in">
@@ -157,9 +165,7 @@ export default function DeejConfigDialog({
             </div>
             <div className="h-48 overflow-y-auto rounded-xl border border-border/30 bg-surface-2 p-1.5">
               {available.length === 0 ? (
-                <p className="p-3 text-center text-xs text-muted-foreground/40">
-                  Aucune session
-                </p>
+                <p className="p-3 text-center text-xs text-muted-foreground/40">Aucune session</p>
               ) : (
                 available.map((session) => (
                   <button
@@ -240,7 +246,9 @@ export default function DeejConfigDialog({
           <div className="mt-4 rounded-lg border border-neon-orange/20 bg-neon-orange/5 px-4 py-3 animate-slide-up">
             <div className="flex items-center gap-2 mb-2.5">
               <AlertTriangle className="h-3.5 w-3.5 text-neon-orange" />
-              <span className="text-xs font-semibold text-neon-orange">Modifications non sauvegardées</span>
+              <span className="text-xs font-semibold text-neon-orange">
+                Modifications non sauvegardées
+              </span>
             </div>
             <div className="flex gap-2">
               <button

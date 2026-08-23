@@ -80,9 +80,7 @@ class HardwarePermissionsService {
     const hidDevices = HID.devices(
       Number.parseInt(OFFICIAL_VENDOR_ID, 16),
       Number.parseInt(OFFICIAL_PRODUCT_ID, 16)
-    ).filter(
-      (device) => device.interface === 2 && device.usage === 1
-    )
+    ).filter((device) => device.interface === 2 && device.usage === 1)
 
     return buildHardwarePermissionsDiagnostic({
       hidDevices,
