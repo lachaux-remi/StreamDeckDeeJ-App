@@ -10,7 +10,10 @@ const fakes = vi.hoisted(() => ({
   fetch: vi.fn(),
   openExternal: vi.fn(),
   readFileSync: vi.fn(),
-  installUpdate: vi.fn(async (quit: () => void) => quit())
+  fetchSignedUpdateManifest: vi.fn(),
+  requireSignedAppImage: vi.fn(),
+  verifyDownloadedUpdateArtifact: vi.fn(),
+  installUpdate: vi.fn(async (quit: () => void | Promise<void>) => quit())
 }))
 
 vi.mock('electron', () => ({
@@ -31,6 +34,11 @@ vi.mock('electron-updater', () => ({
 vi.mock('@main/services/logger.service', () => ({
   loggerService: { info: vi.fn() }
 }))
+vi.mock('@main/services/signed-update', () => ({
+  fetchSignedUpdateManifest: fakes.fetchSignedUpdateManifest,
+  requireSignedAppImage: fakes.requireSignedAppImage,
+  verifyDownloadedUpdateArtifact: fakes.verifyDownloadedUpdateArtifact
+}))
 
 beforeEach(() => {
   vi.resetModules()
@@ -42,6 +50,13 @@ beforeEach(() => {
   fakes.checkForUpdates.mockResolvedValue(undefined)
   fakes.downloadUpdate.mockResolvedValue(undefined)
   fakes.openExternal.mockResolvedValue(undefined)
+  fakes.fetchSignedUpdateManifest.mockResolvedValue({ version: '4.1.0' })
+  fakes.requireSignedAppImage.mockReturnValue({
+    name: 'streamdeck-deej-4.1.0.AppImage',
+    size: 17,
+    sha512: 'signed-sha512'
+  })
+  fakes.verifyDownloadedUpdateArtifact.mockResolvedValue(undefined)
   Object.defineProperty(process, 'resourcesPath', {
     value: '/opt/streamdeck-deej/resources',
     configurable: true
@@ -62,32 +77,60 @@ test('adapts AppImage updater events, bounds release notes, and delegates instal
   fakes.updaterListeners.get('update-available')?.({
     version: '4.1.0',
     releaseName: '',
-    releaseNotes: [{ version: '4.1.0', note: 'Security fixes' }, { version: '4.0.9' }]
+    releaseNotes: [{ version: '4.1.0', note: 'Security fixes' }, { version: '4.0.9' }],
+    files: []
   })
-  expect(linuxUpdateService.getState()).toEqual(
-    expect.objectContaining({
-      mode: 'appimage',
-      status: 'available',
-      version: '4.1.0',
-      releaseName: 'Version 4.1.0',
-      releaseNotes: '4.1.0\nSecurity fixes\n\n4.0.9\n'
-    })
+  await vi.waitFor(() =>
+    expect(linuxUpdateService.getState()).toEqual(
+      expect.objectContaining({
+        mode: 'appimage',
+        status: 'available',
+        version: '4.1.0',
+        releaseName: 'Version 4.1.0',
+        releaseNotes: '4.1.0\nSecurity fixes\n\n4.0.9\n'
+      })
+    )
   )
   fakes.updaterListeners.get('update-available')?.({
     version: '4.1.0',
     releaseName: '',
-    releaseNotes: 'x'.repeat(20_001)
+    releaseNotes: 'x'.repeat(20_001),
+    files: []
   })
-  expect(linuxUpdateService.getState()).toEqual(
-    expect.objectContaining({ releaseNotes: 'x'.repeat(20_000) })
+  await vi.waitFor(() =>
+    expect(linuxUpdateService.getState()).toEqual(
+      expect.objectContaining({ releaseNotes: 'x'.repeat(20_000) })
+    )
   )
   expect(fakes.checkForUpdates).toHaveBeenCalledOnce()
 
   await linuxUpdateService.download()
-  fakes.updaterListeners.get('update-downloaded')?.({ version: '4.1.0', releaseNotes: null })
+  fakes.updaterListeners.get('update-downloaded')?.({
+    version: '4.1.0',
+    releaseNotes: null,
+    downloadedFile: '/cache/streamdeck-deej-4.1.0.AppImage'
+  })
+  await vi.waitFor(() => expect(linuxUpdateService.getState().status).toBe('downloaded'))
   await linuxUpdateService.install()
+  expect(fakes.verifyDownloadedUpdateArtifact).toHaveBeenCalledTimes(3)
   expect(fakes.installUpdate).toHaveBeenCalledOnce()
   expect(fakes.quitAndInstall).toHaveBeenCalledWith(false, true)
+})
+
+test('fails closed when the signed manifest cannot be fetched', async () => {
+  process.env['APPIMAGE'] = '/opt/StreamDeckDeeJ.AppImage'
+  fakes.readFileSync.mockImplementation(() => {
+    throw new Error('no package marker')
+  })
+  fakes.fetchSignedUpdateManifest.mockRejectedValue(new Error('signature asset missing'))
+  const { linuxUpdateService } = await import('@main/services/linux-update.service')
+  linuxUpdateService.init(fakes.installUpdate)
+
+  await linuxUpdateService.check()
+  fakes.updaterListeners.get('update-available')?.({ version: '4.1.0', files: [] })
+  await vi.waitFor(() => expect(linuxUpdateService.getState().status).toBe('error'))
+  await expect(linuxUpdateService.download()).rejects.toThrow(/not available/)
+  expect(fakes.downloadUpdate).not.toHaveBeenCalled()
 })
 
 test('validates official release responses and opens only the fixed release page', async () => {

@@ -1,7 +1,12 @@
 import { app, net, shell } from 'electron'
 import { readFileSync } from 'fs'
 import { basename, dirname, join } from 'path'
-import { autoUpdater, type ProgressInfo, type UpdateInfo } from 'electron-updater'
+import {
+  autoUpdater,
+  type ProgressInfo,
+  type UpdateDownloadedEvent,
+  type UpdateInfo
+} from 'electron-updater'
 import { loggerService } from './logger.service'
 import {
   LinuxUpdateController,
@@ -13,11 +18,17 @@ import {
   OFFICIAL_GITHUB_RELEASE_API,
   OFFICIAL_GITHUB_RELEASE_PAGE
 } from './linux-update-policy'
+import {
+  fetchSignedUpdateManifest,
+  requireSignedAppImage,
+  verifyDownloadedUpdateArtifact,
+  type SignedUpdateArtifact
+} from './signed-update'
 import type { LinuxReleaseInfo, LinuxUpdateState } from '@main/types/update.types'
 
 const MAX_RELEASE_NOTES_LENGTH = 20_000
 
-type InstallUpdate = (quitAndInstall: () => void) => Promise<void>
+type InstallUpdate = (quitAndInstall: () => void | Promise<void>) => Promise<void>
 
 function packageType(): string | undefined {
   try {
@@ -49,26 +60,78 @@ function updateInfo(info: UpdateInfo): LinuxReleaseInfo {
 }
 
 function createAppImageUpdater(installUpdate: InstallUpdate): AppImageUpdateAdapter {
+  let reportError = (): void => {}
+  let signedArtifact: SignedUpdateArtifact | undefined
+  let signedVersion: string | undefined
+  let downloadedFile: string | undefined
+
   return {
     configure(): void {
       configureSecureAppImageUpdater(autoUpdater)
     },
     on(event, listener): void {
       if (event === 'available') {
-        autoUpdater.on('update-available', (info) => listener(updateInfo(info)))
+        autoUpdater.on('update-available', (info) => {
+          void (async (): Promise<void> => {
+            try {
+              const manifest = await fetchSignedUpdateManifest(info.version, (url) =>
+                net.fetch(url)
+              )
+              signedArtifact = requireSignedAppImage(manifest, info)
+              signedVersion = manifest.version
+              listener(updateInfo(info))
+            } catch {
+              signedArtifact = undefined
+              signedVersion = undefined
+              downloadedFile = undefined
+              reportError()
+            }
+          })()
+        })
       } else if (event === 'not-available') {
         autoUpdater.on('update-not-available', () => listener())
       } else if (event === 'download-progress') {
         autoUpdater.on('download-progress', (progress: ProgressInfo) => listener(progress))
       } else if (event === 'downloaded') {
-        autoUpdater.on('update-downloaded', (info) => listener(updateInfo(info)))
+        autoUpdater.on('update-downloaded', (info: UpdateDownloadedEvent) => {
+          void (async (): Promise<void> => {
+            try {
+              if (!signedArtifact || info.version !== signedVersion) {
+                throw new Error('Downloaded update has no verified signed manifest')
+              }
+              await verifyDownloadedUpdateArtifact(info.downloadedFile, signedArtifact)
+              downloadedFile = info.downloadedFile
+              listener(updateInfo(info))
+            } catch {
+              downloadedFile = undefined
+              reportError()
+            }
+          })()
+        })
       } else {
-        autoUpdater.on('error', () => listener())
+        reportError = () => listener()
+        autoUpdater.on('error', reportError)
       }
     },
-    check: () => autoUpdater.checkForUpdates(),
+    check: () => {
+      signedArtifact = undefined
+      signedVersion = undefined
+      downloadedFile = undefined
+      return autoUpdater.checkForUpdates()
+    },
     download: () => autoUpdater.downloadUpdate(),
-    install: () => installUpdate(() => autoUpdater.quitAndInstall(false, true))
+    install: async () => {
+      if (!signedArtifact || !downloadedFile) {
+        throw new Error('Downloaded update has not passed signature verification')
+      }
+      const artifact = signedArtifact
+      const artifactPath = downloadedFile
+      await verifyDownloadedUpdateArtifact(artifactPath, artifact)
+      await installUpdate(async () => {
+        await verifyDownloadedUpdateArtifact(artifactPath, artifact)
+        autoUpdater.quitAndInstall(false, true)
+      })
+    }
   }
 }
 

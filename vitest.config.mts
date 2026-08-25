@@ -47,6 +47,7 @@ export default defineConfig({
         'src/main/services/serial.service.ts',
         'src/main/services/sessions.service.ts',
         'src/main/services/settings-defaults.ts',
+        'src/main/services/signed-update.ts',
         'src/main/services/update-command.ts',
         'src/main/services/window-close-handler.ts',
         'src/main/types/settings.types.ts',
