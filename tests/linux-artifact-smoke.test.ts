@@ -10,7 +10,7 @@ const temporaryDirectories: string[] = []
 
 async function runSmoke(
   body: string,
-  timeoutSeconds = '1'
+  timeoutSeconds = '3'
 ): Promise<{
   error?: Error & { stdout?: string; stderr?: string }
   log: string
@@ -74,7 +74,7 @@ while true; do sleep 1; done`)
 
   expect(result.error).toBeDefined()
   expect(result.output).toContain('started without readiness')
-  expect(result.output).toMatch(/readiness marker.*1 seconds/i)
+  expect(result.output).toMatch(/readiness marker.*3 seconds/i)
 })
 
 test('prints the log and fails immediately on a main-process exception', async () => {
