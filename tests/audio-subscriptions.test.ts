@@ -45,7 +45,7 @@ beforeEach(() => {
   vi.resetModules()
   fakes.children = []
   fakes.spawn.mockReset().mockImplementation(() => {
-    const child = Object.assign(new EventEmitter(), { stdout: new EventEmitter() })
+    const child = Object.assign(new EventEmitter(), { stdout: new EventEmitter(), kill: vi.fn() })
     fakes.children.push(child)
     return child
   })
@@ -132,4 +132,39 @@ test('subscription start is idempotent and reports an unexpected close', async (
   expect(onUnavailable).toHaveBeenCalledTimes(1)
   expect(onUnavailable).toHaveBeenCalledWith(expect.any(Error))
   expect(vi.getTimerCount()).toBe(1)
+})
+
+test('subscription stop terminates the child and never schedules a retry', async () => {
+  const { PactlSubscription } = await import('@main/services/audio-subscription')
+  const subscription = new PactlSubscription({ onData: vi.fn(), onUnavailable: vi.fn() })
+  subscription.start()
+  const child = fakes.children[0] as EventEmitter & { kill: ReturnType<typeof vi.fn> }
+
+  subscription.stop()
+  child.emit('close', 0)
+
+  expect(child.kill).toHaveBeenCalledOnce()
+  expect(vi.getTimerCount()).toBe(0)
+  await vi.advanceTimersByTimeAsync(10_000)
+  expect(fakes.spawn).toHaveBeenCalledOnce()
+})
+
+test('stop cancels a pending retry and a synchronous failure cannot re-arm it', async () => {
+  const { PactlSubscription } = await import('@main/services/audio-subscription')
+  const pending = new PactlSubscription({ onData: vi.fn(), onUnavailable: vi.fn() })
+  pending.start()
+  fakes.children[0].emit('error', new Error('unavailable'))
+  expect(vi.getTimerCount()).toBe(1)
+  pending.stop()
+  expect(vi.getTimerCount()).toBe(0)
+
+  fakes.spawn.mockImplementationOnce(() => {
+    throw new Error('synchronous failure')
+  })
+  const stopped = new PactlSubscription({
+    onData: vi.fn(),
+    onUnavailable: () => stopped.stop()
+  })
+  stopped.start()
+  expect(vi.getTimerCount()).toBe(0)
 })

@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest'
 import {
   isOfficialFirmwarePort,
+  linuxUsbProductLink,
   preferOfficialFirmwarePorts
 } from '@main/services/serial-port-discovery'
 
@@ -26,4 +27,11 @@ test('prefers the official module without removing another controller', () => {
 
   expect(result).toEqual([officialPort, configuredPort, otherPort])
   expect(result).toContain(configuredPort)
+})
+
+test('resolves Linux USB metadata only for Linux device paths', () => {
+  expect(linuxUsbProductLink('linux', '/dev/ttyACM2')).toBe('/sys/class/tty/ttyACM2/device')
+  expect(linuxUsbProductLink('win32', 'COM7')).toBeUndefined()
+  expect(linuxUsbProductLink('linux', 'COM7')).toBeUndefined()
+  expect(linuxUsbProductLink('linux', '/dev/serial/by-id/device')).toBeUndefined()
 })

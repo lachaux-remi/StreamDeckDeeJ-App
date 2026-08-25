@@ -1,11 +1,14 @@
 import type { WebContents } from 'electron'
+import type { MicrophoneCapability } from '@main/platform-runtime'
 import { discordService } from '@main/services/discord.service'
-import { micService } from '@main/services/mic.service'
 import { handleIpc } from './trusted-ipc'
 
-export function registerConditionsHandlers(trustedSender: WebContents): void {
+export function registerConditionsHandlers(
+  trustedSender: WebContents,
+  microphone: MicrophoneCapability
+): void {
   handleIpc(trustedSender, 'conditions:state', () => ({
-    micMuted: micService.isMuted(),
+    micMuted: microphone.isMuted(),
     discordMuted: discordService.isMuted(),
     discordDeafened: discordService.isDeafened(),
     discordStreaming: discordService.isStreaming(),

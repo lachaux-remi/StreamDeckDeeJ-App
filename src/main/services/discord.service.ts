@@ -20,12 +20,31 @@ interface RpcMessage {
   data?: unknown
 }
 
+export function discordSocketPaths(
+  platform: NodeJS.Platform,
+  index: number,
+  environment: NodeJS.ProcessEnv
+): string[] {
+  if (platform === 'win32') {
+    return [`\\\\?\\pipe\\discord-ipc-${index}`]
+  }
+  const paths: string[] = []
+  const xdg = environment['XDG_RUNTIME_DIR']
+  if (xdg) {
+    paths.push(`${xdg}/discord-ipc-${index}`)
+    paths.push(`${xdg}/app/com.discordapp.Discord/discord-ipc-${index}`)
+  }
+  paths.push(`/tmp/discord-ipc-${index}`)
+  return paths
+}
+
 class DiscordService extends EventEmitter {
   private socket: net.Socket | null = null
   private muted = false
   private deafened = false
   private streaming = false
   private _connected = false
+  private isShuttingDown = false
   private readonly frameReader = new DiscordRpcFrameReader(() => {
     loggerService.warn('Discord RPC: oversized frame rejected', SERVICE)
     this.socket?.destroy()
@@ -38,6 +57,9 @@ class DiscordService extends EventEmitter {
   }
 
   reconnect(): void {
+    if (this.isShuttingDown) {
+      return
+    }
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer)
       this.reconnectTimer = null
@@ -63,18 +85,25 @@ class DiscordService extends EventEmitter {
     return this._connected
   }
 
-  private socketPaths(index: number): string[] {
-    const paths: string[] = []
-    const xdg = process.env['XDG_RUNTIME_DIR']
-    if (xdg) {
-      paths.push(`${xdg}/discord-ipc-${index}`)
-      paths.push(`${xdg}/app/com.discordapp.Discord/discord-ipc-${index}`)
+  shutdown(): void {
+    this.isShuttingDown = true
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
     }
-    paths.push(`/tmp/discord-ipc-${index}`)
-    return paths
+    this.socket?.destroy()
+    this.socket = null
+    this._connected = false
+  }
+
+  private socketPaths(index: number): string[] {
+    return discordSocketPaths(process.platform, index, process.env)
   }
 
   private async isTrustedSocket(path: string): Promise<boolean> {
+    if (process.platform === 'win32') {
+      return /^\\\\\?\\pipe\\discord-ipc-\d+$/.test(path)
+    }
     const uid = process.getuid?.()
     if (uid === undefined) {
       return false
@@ -386,7 +415,7 @@ class DiscordService extends EventEmitter {
   }
 
   private scheduleReconnect(): void {
-    if (this.reconnectTimer) {
+    if (this.isShuttingDown || this.reconnectTimer) {
       return
     }
     this.reconnectTimer = setTimeout(() => {

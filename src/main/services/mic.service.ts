@@ -27,6 +27,10 @@ class MicService extends EventEmitter {
     return this.muted
   }
 
+  shutdown(): void {
+    this.subscription.stop()
+  }
+
   private async queryMuteState(): Promise<void> {
     try {
       const out = await commandRunner.run('pactl', ['get-source-mute', '@DEFAULT_SOURCE@'], 2000)

@@ -1,0 +1,72 @@
+name: Windows CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+
+      - name: Install Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Cache Electron downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~\AppData\Local\electron\Cache
+            ~\AppData\Local\electron-builder\Cache
+          key: ${{ runner.os }}-electron-${{ hashFiles('pnpm-lock.yaml', 'electron-builder.yml') }}
+
+      - name: Install dependencies and rebuild native modules
+        run: pnpm install --frozen-lockfile --strict-peer-dependencies
+
+      - name: Check formatting
+        run: pnpm exec prettier --check .github/workflows/*.yml electron-builder.yml package.json scripts/*.mjs tests/*.ts
+
+      - name: Typecheck tests
+        run: pnpm typecheck:test
+
+      - name: Test with coverage
+        run: pnpm test:coverage
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck and build application bundles
+        run: pnpm build
+
+      - name: Package Windows x64 NSIS
+        run: pnpm package:windows
+
+      - name: Verify package and native modules
+        shell: pwsh
+        run: |
+          $exe = 'dist/win-unpacked/streamdeck-deej.exe'
+          if (!(Test-Path $exe)) { throw "Missing unpacked executable: $exe" }
+          if (!(Test-Path 'dist/win-unpacked/resources/app.asar.unpacked/node_modules/node-hid/build/Release/HID.node')) { throw 'Missing rebuilt node-hid module' }
+          if (!(Test-Path 'dist/win-unpacked/resources/app.asar.unpacked/node_modules/@serialport/bindings-cpp/build/Release/bindings.node')) { throw 'Missing rebuilt serialport module' }
+          $installer = Get-ChildItem 'dist/streamdeck-deej-*-windows-x64.exe' | Select-Object -First 1
+          if (!$installer) { throw 'Missing stable NSIS installer artifact' }
+
+      - name: Smoke unpacked Windows application
+        shell: pwsh
+        run: |
+          $process = Start-Process -FilePath 'dist/win-unpacked/streamdeck-deej.exe' -PassThru
+          Start-Sleep -Seconds 8
+          if ($process.HasExited) { throw "Application exited during smoke test with code $($process.ExitCode)" }
+          Stop-Process -Id $process.Id -Force

@@ -4,10 +4,11 @@ interface WindowCloseEvent {
 
 export function createWindowCloseHandler(
   closeToTrayEnabled: () => boolean,
+  isQuitting: () => boolean,
   hideWindow: () => void
 ): (event: WindowCloseEvent) => void {
   return (event) => {
-    if (!closeToTrayEnabled()) {
+    if (isQuitting() || !closeToTrayEnabled()) {
       return
     }
     event.preventDefault()

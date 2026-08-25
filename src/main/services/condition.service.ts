@@ -1,15 +1,20 @@
 import type { LedColor, LedCondition } from '@main/types/settings.types'
-import type { micService } from './mic.service'
-import type { discordService } from './discord.service'
 
-type MicSvc = typeof micService
-type DiscordSvc = typeof discordService
+interface MicState {
+  isMuted(): boolean
+}
+
+interface DiscordState {
+  isMuted(): boolean
+  isDeafened(): boolean
+  isStreaming(): boolean
+}
 
 class ConditionService {
-  private micSvc: MicSvc | null = null
-  private discordSvc: DiscordSvc | null = null
+  private micSvc: MicState | null = null
+  private discordSvc: DiscordState | null = null
 
-  init(micSvc: MicSvc, discordSvc: DiscordSvc): void {
+  init(micSvc: MicState, discordSvc: DiscordState): void {
     this.micSvc = micSvc
     this.discordSvc = discordSvc
   }

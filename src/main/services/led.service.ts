@@ -5,11 +5,11 @@ import type {
   LedProfile,
   StreamdeckConfig
 } from '@main/types/settings.types'
+import type { MicrophoneCapability } from '@main/platform-runtime'
 import { configService } from './config.service'
 import { loggerService } from './logger.service'
 import { conditionService } from './condition.service'
 import { discordService } from './discord.service'
-import { micService } from './mic.service'
 import { LedEngine, applyBrightness } from './led-engine'
 
 const SERVICE = 'LedService'
@@ -39,7 +39,7 @@ class LedService {
   private isShuttingDown = false
   private haButtonStates: Record<string, string> = {}
 
-  async init(): Promise<void> {
+  async init(microphone: MicrophoneCapability): Promise<void> {
     const config = configService.getConfig()
     this.profile = config.ledProfile ?? { ...DEFAULT_PROFILE }
     this.gridCols = config.gridCols ?? 4
@@ -52,7 +52,7 @@ class LedService {
       this.startAnimation()
     }
 
-    micService.on('change', () => void this.flush())
+    microphone.on('change', () => void this.flush())
     discordService.on('change', () => void this.flush())
 
     configService.onUpdated((newConfig: AppSettings) => {

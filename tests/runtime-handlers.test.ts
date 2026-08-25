@@ -137,7 +137,11 @@ test('wires serial and deej success, fallback, and asynchronous failure paths', 
   const { registerSerialHandlers } = await import('@main/handlers/serial.handlers')
   const { registerDeejHandlers } = await import('@main/handlers/deej.handlers')
   registerSerialHandlers(trustedSender as never)
-  registerDeejHandlers(trustedSender as never)
+  registerDeejHandlers(trustedSender as never, {
+    getOsVolumes: fakes.getOsVolumes,
+    getAllSessions: fakes.getAllSessions,
+    shutdown: vi.fn()
+  })
   fakes.listPorts.mockResolvedValue([{ path: '/dev/ttyACM0', official: true }])
   fakes.getStatus.mockReturnValue({ connected: true, port: '/dev/ttyACM0' })
   fakes.getSliders.mockReturnValue({})
@@ -196,7 +200,15 @@ test('reports app and condition state and ignores untrusted devtools events', as
   const { registerAppHandlers } = await import('@main/handlers/app.handlers')
   const { registerConditionsHandlers } = await import('@main/handlers/conditions.handlers')
   registerAppHandlers(trustedSender as never)
-  registerConditionsHandlers(trustedSender as never)
+  registerConditionsHandlers(
+    trustedSender as never,
+    {
+      init: vi.fn(),
+      isMuted: fakes.micMuted,
+      on: vi.fn(),
+      shutdown: vi.fn()
+    } as never
+  )
 
   expect(invoke('electron:versions')).toEqual(expect.objectContaining({ app: '4.0.6' }))
   expect(invoke('electron:logs')).toEqual([{ level: 'info', message: 'ready' }])
@@ -221,8 +233,20 @@ test('validates hardware and update command arity before invoking privileged ada
   const { registerHardwarePermissionsHandlers } =
     await import('@main/handlers/hardware-permissions.handlers')
   const { registerUpdateHandlers } = await import('@main/handlers/update.handlers')
-  registerHardwarePermissionsHandlers(trustedSender as never)
-  registerUpdateHandlers(trustedSender as never)
+  registerHardwarePermissionsHandlers(trustedSender as never, {
+    diagnose: fakes.diagnose,
+    install: fakes.installPermissions
+  })
+  registerUpdateHandlers(
+    trustedSender as never,
+    {
+      getState: fakes.getUpdateState,
+      check: vi.fn(),
+      download: vi.fn(),
+      install: vi.fn(),
+      openRelease: vi.fn()
+    } as never
+  )
 
   await expect(invoke('hardware-permissions:diagnose')).resolves.toEqual({ rule: 'installed' })
   expect(() => invoke('hardware-permissions:install', 'unexpected')).toThrow(
@@ -240,7 +264,25 @@ test('validates hardware and update command arity before invoking privileged ada
 
 test('registers the complete main-process handler surface for one trusted renderer', async () => {
   const { registerAllHandlers } = await import('@main/handlers')
-  registerAllHandlers(trustedSender as never)
+  registerAllHandlers(
+    trustedSender as never,
+    {
+      audio: {
+        available: false,
+        sessions: {
+          getOsVolumes: fakes.getOsVolumes,
+          getAllSessions: fakes.getAllSessions,
+          shutdown: vi.fn()
+        },
+        microphone: { isMuted: fakes.micMuted }
+      },
+      hardwarePermissions: {
+        diagnose: fakes.diagnose,
+        install: fakes.installPermissions
+      },
+      updater: { getState: fakes.getUpdateState }
+    } as never
+  )
 
   expect([...fakes.invokes.keys()].sort()).toEqual(
     [

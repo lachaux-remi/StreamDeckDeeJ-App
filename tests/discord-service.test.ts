@@ -98,6 +98,32 @@ beforeEach(() => {
   vi.spyOn(process, 'getuid').mockReturnValue(1000)
 })
 
+test('uses Discord named pipes on Windows instead of Unix filesystem paths', async () => {
+  const { discordSocketPaths } = await import('@main/services/discord.service')
+
+  expect(discordSocketPaths('win32', 3, {})).toEqual(['\\\\?\\pipe\\discord-ipc-3'])
+  expect(discordSocketPaths('linux', 3, { XDG_RUNTIME_DIR: '/run/user/1000' })).toEqual([
+    '/run/user/1000/discord-ipc-3',
+    '/run/user/1000/app/com.discordapp.Discord/discord-ipc-3',
+    '/tmp/discord-ipc-3'
+  ])
+})
+
+test('shuts down the Discord socket without scheduling another reconnect', async () => {
+  const socket = fakeSocket()
+  fakes.createConnection.mockReturnValue(socket)
+  const { discordService } = await import('@main/services/discord.service')
+
+  await discordService.init()
+  await Promise.resolve()
+  socket.emit('connect')
+  await discordService.shutdown()
+  socket.emit('close')
+
+  expect(socket.destroy).toHaveBeenCalled()
+  expect(vi.getTimerCount()).toBe(0)
+})
+
 test('connects only to a trusted socket, authenticates, subscribes, updates state, and resets it on close', async () => {
   const socket = fakeSocket()
   fakes.createConnection.mockReturnValue(socket)

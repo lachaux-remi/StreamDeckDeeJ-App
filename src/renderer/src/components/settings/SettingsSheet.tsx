@@ -410,7 +410,11 @@ export default function SettingsSheet({
                   <section>
                     <SectionTitle
                       icon={<ShieldCheck className="h-3.5 w-3.5 text-neon-green" />}
-                      label="Accès Linux — module officiel"
+                      label={
+                        hardwarePermissions?.platform === 'windows'
+                          ? 'Diagnostic Windows — module officiel'
+                          : 'Accès Linux — module officiel'
+                      }
                       color="text-neon-green"
                     />
                     <div className="space-y-2 rounded-lg border border-border/20 bg-surface-2/50 p-3">
@@ -426,8 +430,14 @@ export default function SettingsSheet({
                             label="Port série officiel"
                             state={hardwarePermissions.serial}
                           />
-                          <PermissionStateRow label="Règle udev" state={hardwarePermissions.rule} />
-                          {hardwarePermissions.installAction === 'available' &&
+                          {hardwarePermissions.platform === 'linux' && (
+                            <PermissionStateRow
+                              label="Règle udev"
+                              state={hardwarePermissions.rule}
+                            />
+                          )}
+                          {hardwarePermissions.platform === 'linux' &&
+                            hardwarePermissions.installAction === 'available' &&
                             hardwarePermissions.rule !== 'installed' && (
                               <button
                                 type="button"
@@ -440,7 +450,8 @@ export default function SettingsSheet({
                                   : 'Installer la règle udev…'}
                               </button>
                             )}
-                          {hardwarePermissions.installAction === 'unavailable' &&
+                          {hardwarePermissions.platform === 'linux' &&
+                            hardwarePermissions.installAction === 'unavailable' &&
                             hardwarePermissions.rule !== 'installed' && (
                               <div className="space-y-1.5">
                                 <p className="text-[11px] leading-relaxed text-neon-orange/80">
@@ -1072,10 +1083,18 @@ function PermissionStateRow({
   state
 }: {
   label: string
-  state: 'accessible' | 'permission-denied' | 'not-detected' | 'installed' | 'missing' | 'different'
+  state:
+    | 'accessible'
+    | 'detected'
+    | 'permission-denied'
+    | 'not-detected'
+    | 'installed'
+    | 'missing'
+    | 'different'
 }): React.JSX.Element {
   const display = {
     accessible: { label: 'Accessible', color: 'text-neon-green' },
+    detected: { label: 'Détecté (accès non testé)', color: 'text-neon-green' },
     'permission-denied': { label: 'Accès refusé', color: 'text-neon-orange' },
     'not-detected': { label: 'Non détecté', color: 'text-muted-foreground/70' },
     installed: { label: 'Installée', color: 'text-neon-green' },

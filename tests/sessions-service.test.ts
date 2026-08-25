@@ -4,6 +4,7 @@ const fakes = vi.hoisted(() => ({
   run: vi.fn(),
   sliderListener: undefined as ((sliders: Record<string, number>) => void) | undefined,
   subscriptionStart: vi.fn(),
+  subscriptionStop: vi.fn(),
   getConfig: vi.fn(),
   error: vi.fn()
 }))
@@ -15,6 +16,7 @@ vi.mock('@main/services/audio-command', async (importOriginal) => {
 vi.mock('@main/services/audio-subscription', () => ({
   PactlSubscription: class {
     start = fakes.subscriptionStart
+    stop = fakes.subscriptionStop
   }
 }))
 vi.mock('@main/services/slider.service', () => ({
@@ -73,6 +75,17 @@ test('discovers PipeWire clients, deduplicates names, and reads configured OS vo
   expect(fakes.subscriptionStart).toHaveBeenCalledOnce()
   expect(fakes.run).toHaveBeenCalledWith('pw-dump', ['--no-colors'], 5000)
   vi.clearAllTimers()
+})
+
+test('stops the subscription and scheduled refresh work during shutdown', async () => {
+  const { sessionsService } = await import('@main/services/sessions.service')
+  await sessionsService.getAllSessions()
+  expect(vi.getTimerCount()).toBeGreaterThan(0)
+
+  sessionsService.shutdown()
+
+  expect(fakes.subscriptionStop).toHaveBeenCalledOnce()
+  expect(vi.getTimerCount()).toBe(0)
 })
 
 test('falls back to pactl discovery and master volume when PipeWire commands fail', async () => {

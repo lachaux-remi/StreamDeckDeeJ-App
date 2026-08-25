@@ -7,14 +7,15 @@ import { registerSettingsHandlers } from './settings.handlers'
 import { registerStreamdeckHandlers } from './streamdeck.handlers'
 import { registerUpdateHandlers } from './update.handlers'
 import type { WebContents } from 'electron'
+import type { PlatformRuntime } from '@main/platform-runtime'
 
-export function registerAllHandlers(trustedSender: WebContents): void {
+export function registerAllHandlers(trustedSender: WebContents, platform: PlatformRuntime): void {
   registerSettingsHandlers(trustedSender)
   registerSerialHandlers(trustedSender)
   registerStreamdeckHandlers(trustedSender)
-  registerDeejHandlers(trustedSender)
-  registerHardwarePermissionsHandlers(trustedSender)
+  registerDeejHandlers(trustedSender, platform.audio.sessions)
+  registerHardwarePermissionsHandlers(trustedSender, platform.hardwarePermissions)
   registerAppHandlers(trustedSender)
-  registerConditionsHandlers(trustedSender)
-  registerUpdateHandlers(trustedSender)
+  registerConditionsHandlers(trustedSender, platform.audio.microphone)
+  registerUpdateHandlers(trustedSender, platform.updater)
 }
