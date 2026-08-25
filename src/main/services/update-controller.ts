@@ -1,10 +1,10 @@
 import { gt, valid } from 'semver'
 import { isAbsolute } from 'path'
-import type { LinuxReleaseInfo, LinuxUpdateMode, LinuxUpdateState } from '../types/update.types'
+import type { UpdateMode, UpdateReleaseInfo, UpdateState } from '../types/update.types'
 
 type UpdaterEvent = 'available' | 'not-available' | 'download-progress' | 'downloaded' | 'error'
 
-export interface AppImageUpdateAdapter {
+export interface InstallableUpdateAdapter {
   configure(): void
   on(event: UpdaterEvent, listener: (value?: unknown) => void): void
   check(): Promise<unknown>
@@ -12,11 +12,11 @@ export interface AppImageUpdateAdapter {
   install(): Promise<void>
 }
 
-interface LinuxUpdateControllerOptions {
-  mode: LinuxUpdateMode
+interface UpdateControllerOptions {
+  mode: UpdateMode
   currentVersion: string
-  updater?: AppImageUpdateAdapter
-  releaseChecker?: () => Promise<LinuxReleaseInfo | null>
+  updater?: InstallableUpdateAdapter
+  releaseChecker?: () => Promise<UpdateReleaseInfo | null>
   openOfficialRelease?: () => Promise<void>
 }
 
@@ -28,7 +28,7 @@ interface ModeDetectionOptions {
   unpacked?: boolean
 }
 
-export function detectLinuxUpdateMode(options: ModeDetectionOptions): LinuxUpdateMode {
+export function detectLinuxUpdateMode(options: ModeDetectionOptions): UpdateMode {
   if (!options.packaged || options.platform !== 'linux' || options.unpacked) {
     return 'disabled'
   }
@@ -38,7 +38,7 @@ export function detectLinuxUpdateMode(options: ModeDetectionOptions): LinuxUpdat
   return options.packageType === 'pacman' ? 'package-manager' : 'disabled'
 }
 
-function isReleaseInfo(value: unknown): value is LinuxReleaseInfo {
+function isReleaseInfo(value: unknown): value is UpdateReleaseInfo {
   if (typeof value !== 'object' || value === null) {
     return false
   }
@@ -50,21 +50,21 @@ function isReleaseInfo(value: unknown): value is LinuxReleaseInfo {
   )
 }
 
-export class LinuxUpdateController {
-  private state: LinuxUpdateState
-  private readonly listeners = new Set<(state: LinuxUpdateState) => void>()
-  private readonly options: LinuxUpdateControllerOptions
+export class UpdateController {
+  private state: UpdateState
+  private readonly listeners = new Set<(state: UpdateState) => void>()
+  private readonly options: UpdateControllerOptions
 
-  constructor(options: LinuxUpdateControllerOptions) {
+  constructor(options: UpdateControllerOptions) {
     this.options = options
     this.state =
       options.mode === 'disabled'
         ? { mode: 'disabled', status: 'disabled' }
         : { mode: options.mode, status: 'idle', currentVersion: options.currentVersion }
 
-    if (options.mode === 'appimage') {
+    if (options.mode === 'appimage' || options.mode === 'nsis') {
       if (!options.updater) {
-        throw new Error('AppImage updater adapter is required')
+        throw new Error('Installable updater adapter is required')
       }
       options.updater.configure()
       options.updater.on('available', (value) => this.onAvailable(value))
@@ -75,11 +75,11 @@ export class LinuxUpdateController {
     }
   }
 
-  getState(): LinuxUpdateState {
+  getState(): UpdateState {
     return { ...this.state }
   }
 
-  onStateChanged(listener: (state: LinuxUpdateState) => void): () => void {
+  onStateChanged(listener: (state: UpdateState) => void): () => void {
     this.listeners.add(listener)
     return () => this.listeners.delete(listener)
   }
@@ -100,7 +100,7 @@ export class LinuxUpdateController {
       currentVersion: this.options.currentVersion
     })
     try {
-      if (this.options.mode === 'appimage') {
+      if (this.options.mode === 'appimage' || this.options.mode === 'nsis') {
         await this.options.updater?.check()
         return
       }
@@ -116,8 +116,8 @@ export class LinuxUpdateController {
   }
 
   async download(): Promise<void> {
-    if (this.options.mode !== 'appimage') {
-      throw new Error('Downloads are only available for AppImage')
+    if (this.options.mode !== 'appimage' && this.options.mode !== 'nsis') {
+      throw new Error('Downloads are only available for installable updates')
     }
     if (this.state.status !== 'available') {
       throw new Error('Update is not available')
@@ -131,8 +131,8 @@ export class LinuxUpdateController {
   }
 
   async install(): Promise<void> {
-    if (this.options.mode !== 'appimage') {
-      throw new Error('Installation is only available for AppImage')
+    if (this.options.mode !== 'appimage' && this.options.mode !== 'nsis') {
+      throw new Error('Installation is only available for installable updates')
     }
     if (this.state.status !== 'downloaded') {
       throw new Error('Update is not downloaded')
@@ -179,7 +179,7 @@ export class LinuxUpdateController {
     this.setState({ ...this.state, status: 'downloaded', progress: 100 })
   }
 
-  private setAvailable(release: LinuxReleaseInfo): void {
+  private setAvailable(release: UpdateReleaseInfo): void {
     if (this.options.mode === 'disabled') {
       return
     }
@@ -222,7 +222,7 @@ export class LinuxUpdateController {
     )
   }
 
-  private setState(state: LinuxUpdateState): void {
+  private setState(state: UpdateState): void {
     this.state = state
     for (const listener of this.listeners) {
       listener(this.getState())

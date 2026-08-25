@@ -1,9 +1,9 @@
 import { expect, test } from 'vitest'
 import {
-  configureSecureAppImageUpdater,
+  configureSecureUpdater,
   OFFICIAL_GITHUB_RELEASE_API,
   OFFICIAL_GITHUB_RELEASE_PAGE
-} from '@main/services/linux-update-policy'
+} from '@main/services/update-policy'
 
 test('hardcodes the official HTTPS GitHub release endpoints', () => {
   expect(OFFICIAL_GITHUB_RELEASE_API).toBe(
@@ -14,7 +14,7 @@ test('hardcodes the official HTTPS GitHub release endpoints', () => {
   )
 })
 
-test('configures AppImage updates without automatic download, install, downgrade, or token', () => {
+test('configures installable updates without automatic download, install, downgrade, or token', () => {
   const feedConfigurations: unknown[] = []
   const target = {
     autoDownload: true,
@@ -25,7 +25,7 @@ test('configures AppImage updates without automatic download, install, downgrade
     setFeedURL: (configuration: unknown): void => void feedConfigurations.push(configuration)
   }
 
-  configureSecureAppImageUpdater(target)
+  configureSecureUpdater(target)
 
   expect(target).toEqual({
     autoDownload: false,

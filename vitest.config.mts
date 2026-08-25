@@ -33,11 +33,13 @@ export default defineConfig({
         'src/main/services/config-transfer.ts',
         'src/main/services/discord.service.ts',
         'src/main/services/discord-rpc-codec.ts',
+        'src/main/services/electron-update-adapter.ts',
         'src/main/services/hardware-permissions-core.ts',
         'src/main/services/home-assistant-state-sync.ts',
         'src/main/services/linux-autostart.ts',
-        'src/main/services/linux-update-controller.ts',
-        'src/main/services/linux-update-policy.ts',
+        'src/main/services/update-controller.ts',
+        'src/main/services/update-policy.ts',
+        'src/main/services/windows-update.service.ts',
         'src/main/services/linux-update.service.ts',
         'src/main/services/led.service.ts',
         'src/main/services/renderer-settings.ts',
@@ -59,7 +61,7 @@ export default defineConfig({
       ],
       reporter: ['text', 'html'],
       thresholds: {
-        '{scripts/linux-permissions.mjs,src/shared/input-limits.ts,src/main/handlers/{hardware-permissions.contract,streamdeck.handlers,trusted-ipc-core}.ts,src/main/services/{app-quit-coordinator,audio-command,audio-subscription,config-transfer,discord-rpc-codec,hardware-permissions-core,home-assistant-state-sync,linux-autostart,linux-update-controller,linux-update-policy,renderer-settings,secret-storage,serial-port-discovery,serial-protocol,settings-defaults,update-command,window-close-handler}.ts,src/main/types/{settings,update}.types.ts,src/renderer/src/lib/icon-file.ts,src/renderer/src/types/settings.types.ts,src/renderer/src/stores/settings.defaults.ts}':
+        '{scripts/linux-permissions.mjs,src/shared/input-limits.ts,src/main/handlers/{hardware-permissions.contract,streamdeck.handlers,trusted-ipc-core}.ts,src/main/services/{app-quit-coordinator,audio-command,audio-subscription,config-transfer,discord-rpc-codec,hardware-permissions-core,home-assistant-state-sync,linux-autostart,renderer-settings,secret-storage,serial-port-discovery,serial-protocol,settings-defaults,update-command,update-controller,update-policy,window-close-handler}.ts,src/main/types/{settings,update}.types.ts,src/renderer/src/lib/icon-file.ts,src/renderer/src/types/settings.types.ts,src/renderer/src/stores/settings.defaults.ts}':
           {
             branches: 86.26,
             functions: 92.85,
@@ -205,13 +207,13 @@ export default defineConfig({
           lines: 100,
           statements: 100
         },
-        'src/main/services/linux-update-controller.ts': {
+        'src/main/services/update-controller.ts': {
           branches: 76.71,
           functions: 69.56,
           lines: 81.81,
           statements: 72.09
         },
-        'src/main/services/linux-update-policy.ts': {
+        'src/main/services/update-policy.ts': {
           branches: 100,
           functions: 100,
           lines: 100,

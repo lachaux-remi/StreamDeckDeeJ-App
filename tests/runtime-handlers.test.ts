@@ -111,7 +111,7 @@ vi.mock('@main/services/linux-update.service', () => ({
 }))
 vi.mock('@main/services/update-command', () => ({
   createSerialCommandExecutor: () => async (command: () => Promise<void>) => command(),
-  executeLinuxUpdateCommand: fakes.executeUpdate
+  executeUpdateCommand: fakes.executeUpdate
 }))
 
 const trustedSender = { mainFrame: {}, toggleDevTools: fakes.toggleDevTools }
@@ -260,6 +260,31 @@ test('validates hardware and update command arity before invoking privileged ada
     status: 'idle'
   })
   expect(fakes.executeUpdate).toHaveBeenCalledWith('check', expect.anything(), expect.any(Function))
+
+  const confirm = fakes.executeUpdate.mock.calls.at(-1)?.[2] as (
+    consent: 'download' | 'install'
+  ) => Promise<boolean>
+  await expect(confirm('download')).rejects.toThrow('Updater window is unavailable')
+
+  fakes.parentWindow = {}
+  fakes.getUpdateState.mockReturnValue({ mode: 'nsis', status: 'downloaded' })
+  fakes.showMessageBox.mockResolvedValue({ response: 0 })
+  await expect(confirm('install')).resolves.toBe(true)
+  expect(fakes.showMessageBox).toHaveBeenLastCalledWith(
+    fakes.parentWindow,
+    expect.objectContaining({
+      message: expect.stringContaining('programme d’installation Windows'),
+      detail: expect.stringContaining('NSIS vérifié')
+    })
+  )
+
+  fakes.getUpdateState.mockReturnValue({ mode: 'appimage', status: 'available' })
+  fakes.showMessageBox.mockResolvedValue({ response: 1 })
+  await expect(confirm('download')).resolves.toBe(false)
+  expect(fakes.showMessageBox).toHaveBeenLastCalledWith(
+    fakes.parentWindow,
+    expect.objectContaining({ message: expect.stringContaining('mise à jour AppImage') })
+  )
 })
 
 test('registers the complete main-process handler surface for one trusted renderer', async () => {

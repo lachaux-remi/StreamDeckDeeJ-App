@@ -8,6 +8,7 @@ import {
   fetchSignedUpdateManifest,
   parseAndVerifyUpdateManifest,
   requireSignedAppImage,
+  requireSignedWindowsSetup,
   verifyDownloadedUpdateArtifact,
   type SignedUpdateManifest
 } from '@main/services/signed-update'
@@ -73,6 +74,38 @@ test('accepts a canonical Ed25519-signed manifest and matching updater metadata'
       }))
     })
   ).toEqual(manifest.artifacts[0])
+})
+
+test('selects only the exact signed Windows x64 setup matching updater metadata', () => {
+  const setup = {
+    name: 'streamdeck-deej-4.1.0-windows-x64.exe',
+    size: 12,
+    sha512: createHash('sha512').update('windows exe').digest('base64')
+  }
+  const manifest = signedManifest({ artifacts: [setup] }).manifest
+  const metadata = {
+    version: manifest.version,
+    files: [{ url: setup.name, size: setup.size, sha512: setup.sha512 }]
+  }
+
+  expect(requireSignedWindowsSetup(manifest, metadata)).toEqual(setup)
+
+  for (const invalidManifest of [
+    { ...manifest, artifacts: [{ ...setup, name: 'streamdeck-deej-4.1.0.AppImage' }] },
+    { ...manifest, artifacts: [{ ...setup, name: 'other-4.1.0-windows-x64.exe' }] },
+    { ...manifest, version: '4.2.0' }
+  ]) {
+    expect(() => requireSignedWindowsSetup(invalidManifest, metadata)).toThrow()
+  }
+  for (const invalidFile of [
+    { ...metadata.files[0], url: 'other.exe' },
+    { ...metadata.files[0], size: setup.size + 1 },
+    { ...metadata.files[0], sha512: `${setup.sha512.slice(0, -1)}A` }
+  ]) {
+    expect(() =>
+      requireSignedWindowsSetup(manifest, { ...metadata, files: [invalidFile] })
+    ).toThrow(/does not match/)
+  }
 })
 
 describe('fails closed for untrusted or altered manifests', () => {
@@ -183,6 +216,13 @@ test('verifies artifact name, size, and SHA-512 and detects later tampering', as
   await expect(
     verifyDownloadedUpdateArtifact(path, fixture.manifest.artifacts[0])
   ).resolves.toBeUndefined()
+
+  await expect(
+    verifyDownloadedUpdateArtifact(
+      join(directory, 'renamed.AppImage'),
+      fixture.manifest.artifacts[0]
+    )
+  ).rejects.toThrow(/filename/)
 
   await writeFile(path, 'tampered AppImage')
   await expect(verifyDownloadedUpdateArtifact(path, fixture.manifest.artifacts[0])).rejects.toThrow(

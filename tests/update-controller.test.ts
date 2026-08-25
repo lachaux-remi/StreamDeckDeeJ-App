@@ -1,8 +1,5 @@
 import { expect, test } from 'vitest'
-import {
-  LinuxUpdateController,
-  detectLinuxUpdateMode
-} from '@main/services/linux-update-controller'
+import { UpdateController, detectLinuxUpdateMode } from '@main/services/update-controller'
 
 const update = {
   version: '4.1.0',
@@ -65,7 +62,7 @@ test('detects AppImage, package-manager, and disabled modes without trusting ren
 
 test('AppImage never downloads or installs before separate explicit commands', async () => {
   const fake = createUpdater()
-  const controller = new LinuxUpdateController({
+  const controller = new UpdateController({
     mode: 'appimage',
     currentVersion: '4.0.6',
     updater: fake.updater
@@ -88,7 +85,7 @@ test('AppImage never downloads or installs before separate explicit commands', a
 
 test('rejects downgrade metadata and invalid transitions', async () => {
   const fake = createUpdater()
-  const controller = new LinuxUpdateController({
+  const controller = new UpdateController({
     mode: 'appimage',
     currentVersion: '4.0.6',
     updater: fake.updater
@@ -103,7 +100,7 @@ test('rejects downgrade metadata and invalid transitions', async () => {
 
 test('reports AppImage progress, completion, and updater failures to subscribers', async () => {
   const fake = createUpdater()
-  const controller = new LinuxUpdateController({
+  const controller = new UpdateController({
     mode: 'appimage',
     currentVersion: '4.0.6',
     updater: fake.updater
@@ -138,7 +135,7 @@ test('reports AppImage progress, completion, and updater failures to subscribers
 
 test('package-manager mode only checks and opens the fixed official release page', async () => {
   const calls: string[] = []
-  const controller = new LinuxUpdateController({
+  const controller = new UpdateController({
     mode: 'package-manager',
     currentVersion: '4.0.6',
     releaseChecker: async () => update,
@@ -149,14 +146,14 @@ test('package-manager mode only checks and opens the fixed official release page
 
   await controller.check()
   expect(controller.getState().status).toBe('available')
-  await expect(controller.download()).rejects.toThrow(/AppImage/)
-  await expect(controller.install()).rejects.toThrow(/AppImage/)
+  await expect(controller.download()).rejects.toThrow(/installable/)
+  await expect(controller.install()).rejects.toThrow(/installable/)
   await controller.openRelease()
   expect(calls).toEqual(['open'])
 })
 
 test('disabled mode performs no network or updater operation', async () => {
-  const controller = new LinuxUpdateController({ mode: 'disabled', currentVersion: '4.0.6' })
+  const controller = new UpdateController({ mode: 'disabled', currentVersion: '4.0.6' })
   await controller.check()
   expect(controller.getState()).toEqual({ mode: 'disabled', status: 'disabled' })
 })

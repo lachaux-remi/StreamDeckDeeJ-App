@@ -6,7 +6,7 @@ import Header from '@renderer/components/header/Header'
 import SettingsSheet from '@renderer/components/settings/SettingsSheet'
 import StreamdeckConfigDialog from '@renderer/components/streamdeck/StreamdeckConfigDialog'
 import StreamdeckPanel from '@renderer/components/streamdeck/StreamdeckPanel'
-import LinuxUpdateNotice from '@renderer/components/update/LinuxUpdateNotice'
+import UpdateNotice from '@renderer/components/update/UpdateNotice'
 import { useIpcHydration } from '@renderer/hooks/useIpc'
 
 export default function App(): React.JSX.Element {
@@ -19,7 +19,7 @@ export default function App(): React.JSX.Element {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <Header onOpenSettings={() => setSettingsOpen(true)} />
-      <LinuxUpdateNotice />
+      <UpdateNotice />
 
       <div className="gradient-line-h shrink-0" />
 

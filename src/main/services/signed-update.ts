@@ -200,13 +200,38 @@ export function requireSignedAppImage(
   manifest: SignedUpdateManifest,
   metadata: UpdateMetadata
 ): SignedUpdateArtifact {
+  return requireSignedArtifact(
+    manifest,
+    metadata,
+    `streamdeck-deej-${manifest.version}.AppImage`,
+    '.AppImage'
+  )
+}
+
+export function requireSignedWindowsSetup(
+  manifest: SignedUpdateManifest,
+  metadata: UpdateMetadata
+): SignedUpdateArtifact {
+  return requireSignedArtifact(
+    manifest,
+    metadata,
+    `streamdeck-deej-${manifest.version}-windows-x64.exe`,
+    '-windows-x64.exe'
+  )
+}
+
+function requireSignedArtifact(
+  manifest: SignedUpdateManifest,
+  metadata: UpdateMetadata,
+  expectedName: string,
+  suffix: string
+): SignedUpdateArtifact {
   if (metadata.version !== manifest.version || !Array.isArray(metadata.files)) {
     throw new Error('Update metadata does not match signed manifest')
   }
-  const expectedName = `streamdeck-deej-${manifest.version}.AppImage`
-  const artifacts = manifest.artifacts.filter(({ name }) => name.endsWith('.AppImage'))
+  const artifacts = manifest.artifacts.filter(({ name }) => name.endsWith(suffix))
   if (artifacts.length !== 1 || artifacts[0].name !== expectedName) {
-    throw new Error('Signed manifest does not contain the expected AppImage')
+    throw new Error(`Signed manifest does not contain the expected artifact: ${expectedName}`)
   }
   const artifact = artifacts[0]
   const matchingFiles = metadata.files.filter(({ url }) => url === artifact.name)
@@ -215,7 +240,7 @@ export function requireSignedAppImage(
     matchingFiles[0].size !== artifact.size ||
     matchingFiles[0].sha512 !== artifact.sha512
   ) {
-    throw new Error('Updater metadata does not match the signed AppImage')
+    throw new Error('Updater metadata does not match the signed artifact')
   }
   return artifact
 }
