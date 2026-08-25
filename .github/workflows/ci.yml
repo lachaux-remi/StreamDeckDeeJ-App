@@ -87,7 +87,7 @@ jobs:
           /tmp/actionlint -color
 
       - name: Check formatting
-        run: pnpm exec prettier --check .github/workflows/*.yml electron-builder.yml package.json scripts/*.mjs tests/*.ts
+        run: pnpm exec prettier --check .github/workflows/*.yml electron-builder.yml package.json packages/windows-audio-native/package.json packages/windows-audio-native/index.cjs scripts/*.cjs scripts/*.mjs tests/*.ts
 
       - name: Validate shell scripts
         run: bash -n scripts/*.sh

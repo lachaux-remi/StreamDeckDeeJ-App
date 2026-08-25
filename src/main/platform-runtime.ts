@@ -47,6 +47,7 @@ export interface PlatformRuntime {
 
 interface PlatformRuntimeDependencies {
   loadLinux: () => Promise<PlatformRuntime>
+  loadWindowsAudio: () => Promise<AudioSessionsCapability>
   diagnoseWindowsHardware: () => Promise<Extract<HardwareDiagnostic, { platform: 'windows' }>>
   setLoginItemSettings: (settings: { openAtLogin: boolean }) => void
 }
@@ -63,16 +64,6 @@ class UnavailableMicrophone extends EventEmitter implements MicrophoneCapability
   }
 }
 
-const unavailableSessions: AudioSessionsCapability = {
-  async getAllSessions() {
-    return []
-  },
-  async getOsVolumes() {
-    return {}
-  },
-  shutdown: () => Promise.resolve()
-}
-
 const disabledUpdater: UpdateCapability = {
   init: () => undefined,
   getState: () => ({ mode: 'disabled', status: 'disabled' }),
@@ -85,6 +76,8 @@ const disabledUpdater: UpdateCapability = {
 
 const defaultDependencies: PlatformRuntimeDependencies = {
   loadLinux: async () => (await import('./platform-linux')).createLinuxPlatformRuntime(),
+  loadWindowsAudio: async () =>
+    (await import('./services/windows-audio.service')).createWindowsAudioSessions(),
   diagnoseWindowsHardware: async () =>
     (await import('./services/windows-hardware.service')).diagnoseWindowsHardware(),
   setLoginItemSettings: () => {
@@ -105,8 +98,9 @@ export async function createPlatformRuntime(
   }
 
   const microphone = new UnavailableMicrophone()
+  const sessions = await adapters.loadWindowsAudio()
   return {
-    audio: { available: false, sessions: unavailableSessions, microphone },
+    audio: { available: true, sessions, microphone },
     hardwarePermissions: {
       diagnose: adapters.diagnoseWindowsHardware,
       async install() {
@@ -118,7 +112,7 @@ export async function createPlatformRuntime(
       adapters.setLoginItemSettings({ openAtLogin: enabled })
     },
     async shutdown() {
-      await Promise.all([unavailableSessions.shutdown(), microphone.shutdown()])
+      await Promise.all([sessions.shutdown(), microphone.shutdown()])
     }
   }
 }

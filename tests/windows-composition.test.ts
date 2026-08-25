@@ -21,4 +21,7 @@ test('keeps Linux-only services behind the lazy platform composition boundary', 
   }
   expect(platformRuntime).toContain("await import('./platform-linux')")
   expect(platformRuntime).not.toMatch(/from ['"]\.\/platform-linux['"]/)
+  expect(main).not.toContain('windows-audio.service')
+  expect(linuxRuntime).not.toContain('windows-audio.service')
+  expect(platformRuntime).toContain("await import('./services/windows-audio.service')")
 })

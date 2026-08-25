@@ -30,6 +30,7 @@
     "start": "env -u ELECTRON_RUN_AS_NODE electron-vite preview",
     "dev": "env -u ELECTRON_RUN_AS_NODE electron-vite dev",
     "build": "pnpm typecheck && electron-vite build",
+    "build:windows-audio": "pnpm --filter @streamdeck-deej/windows-audio-native build:electron",
     "postinstall": "electron-builder install-app-deps",
     "package:linux": "electron-vite build && node scripts/prepare-package.mjs linux && electron-builder --linux --publish never",
     "package:windows": "electron-vite build && node scripts/prepare-package.mjs windows && electron-builder --win nsis --x64 --publish never",
@@ -49,6 +50,9 @@
     "serialport": "^13.0.0",
     "tailwind-merge": "^3.6.0",
     "zustand": "^5.0.15"
+  },
+  "optionalDependencies": {
+    "@streamdeck-deej/windows-audio-native": "workspace:*"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",

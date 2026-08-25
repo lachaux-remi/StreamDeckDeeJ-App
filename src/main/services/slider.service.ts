@@ -29,8 +29,9 @@ class SliderService extends EventEmitter {
     return this.sliders[sliderKey] || 0
   }
 
-  public onUpdated(listener: (sliders: Record<string, number>) => void): void {
+  public onUpdated(listener: (sliders: Record<string, number>) => void): () => void {
     this.on('sliders:batch', listener)
+    return () => this.off('sliders:batch', listener)
   }
 
   private setConfig(config: Partial<AppSettings>): void {
