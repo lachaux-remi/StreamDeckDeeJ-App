@@ -30,7 +30,7 @@ test('orders shutdown resolution before updater launch and allows its before-qui
     exit: () => calls.push('exit')
   })
 
-  const launch = coordinator.installUpdate(() => calls.push('quit-and-install'))
+  const launch = coordinator.installUpdate(() => void calls.push('quit-and-install'))
   expect(calls).toEqual(['shutdown'])
   let prematureQuitPrevented = false
   coordinator.handleBeforeQuit({
@@ -57,9 +57,9 @@ test('does not launch the updater or allow quit when shutdown fails', async () =
     exit: () => calls.push('exit')
   })
 
-  await expect(coordinator.installUpdate(() => calls.push('quit-and-install'))).rejects.toThrow(
-    /LED shutdown failed/
-  )
+  await expect(
+    coordinator.installUpdate(() => void calls.push('quit-and-install'))
+  ).rejects.toThrow(/LED shutdown failed/)
   expect(calls).toEqual(['shutdown'])
 
   let prevented = false
@@ -68,6 +68,20 @@ test('does not launch the updater or allow quit when shutdown fails', async () =
   await Promise.resolve()
   expect(prevented).toBe(true)
   expect(calls).toEqual(['shutdown', 'exit'])
+})
+
+test('waits for asynchronous update verification and blocks quit again if it fails', async () => {
+  const coordinator = new AppQuitCoordinator({ shutdown: async () => {}, exit: () => {} })
+  await expect(
+    coordinator.installUpdate(async () => {
+      await Promise.resolve()
+      throw new Error('update verification failed')
+    })
+  ).rejects.toThrow(/verification failed/)
+
+  let prevented = false
+  coordinator.handleBeforeQuit({ preventDefault: () => void (prevented = true) })
+  expect(prevented).toBe(true)
 })
 
 test('rejects update installation after an ordinary quit has started', async () => {
@@ -116,7 +130,7 @@ test('continues update installation after a bounded shutdown deadline without do
     onShutdownTimeout: () => calls.push('shutdown-timeout')
   })
 
-  const install = coordinator.installUpdate(() => calls.push('quit-and-install'))
+  const install = coordinator.installUpdate(() => void calls.push('quit-and-install'))
   await vi.advanceTimersByTimeAsync(1_999)
   expect(calls).toEqual(['shutdown'])
   await vi.advanceTimersByTimeAsync(1)

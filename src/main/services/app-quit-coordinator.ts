@@ -17,7 +17,7 @@ export class AppQuitCoordinator {
 
   constructor(private readonly options: AppQuitCoordinatorOptions) {}
 
-  async installUpdate(quitAndInstall: () => void): Promise<void> {
+  async installUpdate(quitAndInstall: () => void | Promise<void>): Promise<void> {
     if (this.ordinaryQuitStarted) {
       throw new Error('Application quit is already in progress')
     }
@@ -30,7 +30,12 @@ export class AppQuitCoordinator {
     }
     this.updateQuitAllowed = true
     this.updateInstallPreparing = false
-    quitAndInstall()
+    try {
+      await quitAndInstall()
+    } catch (error) {
+      this.updateQuitAllowed = false
+      throw error
+    }
   }
 
   handleBeforeQuit(event: BeforeQuitEvent): void {
