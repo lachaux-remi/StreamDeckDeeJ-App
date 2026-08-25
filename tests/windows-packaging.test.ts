@@ -40,7 +40,7 @@ test('Windows CI packages and smokes without credentials or hardware', async () 
 
   expect(workflow).toContain('runs-on: windows-latest')
   expect(workflow).toContain('pnpm install --frozen-lockfile --strict-peer-dependencies')
-  expect(workflow).toContain('pnpm test:coverage')
+  expect(workflow).toContain('pnpm test:windows')
   expect(workflow).toContain('pnpm package:windows')
   expect(workflow).toContain('dist/win-unpacked/streamdeck-deej.exe')
   expect(workflow).not.toMatch(/secrets\./)

@@ -78,7 +78,9 @@ test.each([
 
   expect(service.getConfig()).toEqual(defaultSettings)
   expect(readFileSync(configPath, 'utf8')).toBe(originalFile)
-  expect(statSync(configPath).mode & 0o777).toBe(0o600)
+  if (process.platform !== 'win32') {
+    expect(statSync(configPath).mode & 0o777).toBe(0o600)
+  }
   expect(() => service.setConfig({ closeToTray: false })).toThrow(
     'Config persistence is unavailable'
   )

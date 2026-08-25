@@ -21,6 +21,7 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:windows": "vitest run --exclude=tests/linux-*.test.ts --exclude=tests/ci-validation-scope.test.ts",
     "test:watch": "vitest",
     "typecheck:test": "tsc --project tsconfig.test.json",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",

@@ -95,7 +95,9 @@ beforeEach(() => {
     }
   })
   fakes.lstat.mockResolvedValue({ isSocket: () => true, uid: 1000, mode: 0o600 })
-  vi.spyOn(process, 'getuid').mockReturnValue(1000)
+  if (process.getuid) {
+    vi.spyOn(process, 'getuid').mockReturnValue(1000)
+  }
 })
 
 test('uses Discord named pipes on Windows instead of Unix filesystem paths', async () => {
