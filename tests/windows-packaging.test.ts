@@ -45,3 +45,11 @@ test('Windows CI packages and smokes without credentials or hardware', async () 
   expect(workflow).toContain('dist/win-unpacked/streamdeck-deej.exe')
   expect(workflow).not.toMatch(/secrets\./)
 })
+
+test('Git checkouts keep Prettier inputs on LF without treating images as text', async () => {
+  const attributes = await readFile('.gitattributes', 'utf8')
+
+  expect(attributes).toContain('* text=auto eol=lf')
+  expect(attributes).toContain('*.png binary')
+  expect(attributes).toContain('*.ico binary')
+})
