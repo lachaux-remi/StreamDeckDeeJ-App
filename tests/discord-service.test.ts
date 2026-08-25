@@ -175,6 +175,13 @@ test('connects only to a trusted socket, authenticates, subscribes, updates stat
 
 test('bounds endpoint discovery and coalesces reconnect when no connection succeeds', async () => {
   fakes.lstat.mockResolvedValue({ isSocket: () => false, uid: 1000, mode: 0o600 })
+  if (process.platform === 'win32') {
+    fakes.createConnection.mockImplementation(() => {
+      const socket = fakeSocket()
+      queueMicrotask(() => socket.emit('error', new Error('fixture connection failure')))
+      return socket
+    })
+  }
   const { discordService } = await import('@main/services/discord.service')
 
   await discordService.init()
