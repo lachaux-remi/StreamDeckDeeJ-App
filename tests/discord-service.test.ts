@@ -185,7 +185,11 @@ test('bounds endpoint discovery and coalesces reconnect when no connection succe
   const { discordService } = await import('@main/services/discord.service')
 
   await discordService.init()
-  await settleUntil(() => vi.getTimerCount() === 1)
+  await settleUntil(
+    () =>
+      vi.getTimerCount() === 1 &&
+      (process.platform !== 'win32' || fakes.createConnection.mock.calls.length === 10)
+  )
 
   if (process.platform === 'win32') {
     expect(fakes.lstat).not.toHaveBeenCalled()
