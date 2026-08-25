@@ -173,15 +173,20 @@ test('connects only to a trusted socket, authenticates, subscribes, updates stat
   vi.clearAllTimers()
 })
 
-test('bounds socket discovery and coalesces reconnect when no trusted endpoint exists', async () => {
+test('bounds endpoint discovery and coalesces reconnect when no connection succeeds', async () => {
   fakes.lstat.mockResolvedValue({ isSocket: () => false, uid: 1000, mode: 0o600 })
   const { discordService } = await import('@main/services/discord.service')
 
   await discordService.init()
   await settleUntil(() => vi.getTimerCount() === 1)
 
-  expect(fakes.lstat).toHaveBeenCalledTimes(process.env['XDG_RUNTIME_DIR'] ? 30 : 10)
-  expect(fakes.createConnection).not.toHaveBeenCalled()
+  if (process.platform === 'win32') {
+    expect(fakes.lstat).not.toHaveBeenCalled()
+    expect(fakes.createConnection).toHaveBeenCalledTimes(10)
+  } else {
+    expect(fakes.lstat).toHaveBeenCalledTimes(process.env['XDG_RUNTIME_DIR'] ? 30 : 10)
+    expect(fakes.createConnection).not.toHaveBeenCalled()
+  }
   expect(vi.getTimerCount()).toBe(1)
   vi.clearAllTimers()
 })
