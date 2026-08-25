@@ -46,3 +46,12 @@ test('publishes and verifies the signed manifest and signature with the release 
   expect(publishJob.match(/release-artifacts\/update-manifest-v1\.json/g)).toHaveLength(1)
   expect(publishJob.match(/release-artifacts\/update-manifest-v1\.sig/g)).toHaveLength(1)
 })
+
+test('does not publish unsigned Windows artifacts before the Authenticode integration exists', () => {
+  const publishJob = workflow.slice(workflow.indexOf('  publish-release:'))
+  expect(publishJob).not.toMatch(/windows-x64|latest\.yml/)
+  const packageManifest = JSON.parse(readFileSync('package.json', 'utf8')) as {
+    scripts: Record<string, string>
+  }
+  expect(packageManifest.scripts['package:windows']).toContain('--publish never')
+})

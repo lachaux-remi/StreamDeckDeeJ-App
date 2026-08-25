@@ -60,6 +60,9 @@ jobs:
       - name: Package Windows x64 NSIS
         run: pnpm package:windows
 
+      - name: Verify Windows update metadata
+        run: pnpm verify:update-metadata:windows
+
       - name: Verify package and native modules
         shell: pwsh
         run: |
@@ -70,6 +73,9 @@ jobs:
           if (!(Test-Path 'dist/win-unpacked/resources/app.asar.unpacked/node_modules/@streamdeck-deej/windows-audio-native/build/Release/windows_audio.node')) { throw 'Missing Windows audio module outside ASAR' }
           $installer = Get-ChildItem 'dist/streamdeck-deej-*-windows-x64.exe' | Select-Object -First 1
           if (!$installer) { throw 'Missing stable NSIS installer artifact' }
+          $blockmap = Get-ChildItem 'dist/streamdeck-deej-*-windows-x64.exe.blockmap' | Select-Object -First 1
+          if (!$blockmap) { throw 'Missing NSIS blockmap artifact' }
+          if (!(Test-Path 'dist/latest.yml')) { throw 'Missing Windows updater metadata' }
 
       - name: Smoke unpacked Windows application
         shell: pwsh

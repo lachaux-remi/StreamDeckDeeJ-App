@@ -35,7 +35,8 @@
     "package:linux": "electron-vite build && node scripts/prepare-package.mjs linux && electron-builder --linux --publish never",
     "package:windows": "electron-vite build && node scripts/prepare-package.mjs windows && electron-builder --win nsis --x64 --publish never",
     "build:linux": "pnpm typecheck && pnpm package:linux",
-    "verify:update-metadata": "node scripts/verify-linux-update-metadata.mjs"
+    "verify:update-metadata": "node scripts/verify-linux-update-metadata.mjs",
+    "verify:update-metadata:windows": "node scripts/verify-windows-update-metadata.mjs"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

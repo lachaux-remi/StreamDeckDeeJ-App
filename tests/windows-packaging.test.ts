@@ -43,6 +43,9 @@ test('configures a stable per-user Windows 10/11 x64 NSIS package', async () => 
   expect(config.files).toContain('!**/node_modules/@streamdeck-deej/windows-audio-native/**/*')
   expect(pkg.scripts['package:windows']).toContain('electron-builder --win nsis --x64')
   expect(pkg.optionalDependencies?.['@streamdeck-deej/windows-audio-native']).toBe('workspace:*')
+  expect(pkg.scripts['verify:update-metadata:windows']).toContain(
+    'verify-windows-update-metadata.mjs'
+  )
   await expect(readFile('resources/icon.ico')).resolves.toBeInstanceOf(Buffer)
 })
 
@@ -58,7 +61,10 @@ test('Windows CI packages and smokes without credentials or hardware', async () 
     'app.asar.unpacked/node_modules/@streamdeck-deej/windows-audio-native/build/Release/windows_audio.node'
   )
   expect(workflow).toContain('pnpm package:windows')
+  expect(workflow).toContain('pnpm verify:update-metadata:windows')
   expect(workflow).toContain('dist/win-unpacked/streamdeck-deej.exe')
+  expect(workflow).toContain('windows-x64.exe.blockmap')
+  expect(workflow).toContain('dist/latest.yml')
   expect(workflow).not.toMatch(/secrets\./)
 })
 
