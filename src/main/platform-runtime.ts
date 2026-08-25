@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events'
+import type { HardwareDiagnostic } from '../shared/hardware-diagnostic'
 import type { LinuxUpdateState } from './types/update.types'
 
 export interface AudioSessionsCapability {
@@ -13,21 +14,6 @@ export interface MicrophoneCapability {
   on(event: 'change', listener: () => void): this
   shutdown(): void | Promise<void>
 }
-
-export type HardwareDiagnostic =
-  | {
-      platform: 'linux'
-      hid: 'accessible' | 'permission-denied' | 'not-detected'
-      serial: 'accessible' | 'permission-denied' | 'not-detected'
-      rule: 'installed' | 'missing' | 'different'
-      installAction: 'available' | 'unavailable'
-      manualCommand?: string
-    }
-  | {
-      platform: 'windows'
-      hid: 'detected' | 'not-detected'
-      serial: 'detected' | 'not-detected'
-    }
 
 export interface HardwarePermissionsCapability {
   diagnose(): Promise<HardwareDiagnostic>

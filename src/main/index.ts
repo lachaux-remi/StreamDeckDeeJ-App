@@ -237,7 +237,9 @@ app.whenReady().then(async () => {
   // Config sync
   let prevDevTools = config.devTools
   let prevDiscordClientId = config.discord?.clientId
-  await setAutostart(config.runOnStartup)
+  if (process.platform === 'win32') {
+    await setAutostart(config.runOnStartup)
+  }
   configService.onUpdated((newConfig) => {
     void setAutostart(newConfig.runOnStartup)
     ledService.updateOverrides(newConfig.streamdeck)

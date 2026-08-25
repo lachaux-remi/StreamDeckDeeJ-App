@@ -3,8 +3,8 @@ interface UsbPortIdentity {
   productId: string | undefined
 }
 
-const OFFICIAL_VENDOR_ID = 0x5239
-const OFFICIAL_PRODUCT_ID = 0x0001
+export const OFFICIAL_VENDOR_ID = 0x5239
+export const OFFICIAL_PRODUCT_ID = 0x0001
 
 export function linuxUsbProductLink(
   platform: NodeJS.Platform,

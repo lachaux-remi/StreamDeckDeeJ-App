@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { HardwareDiagnostic } from '../shared/hardware-diagnostic'
 
 const api = {
   settings: {
@@ -114,21 +115,6 @@ interface ConfigTransferResult {
   status: 'success' | 'cancelled' | 'error'
   message: string
 }
-
-type HardwareDiagnostic =
-  | {
-      platform: 'linux'
-      hid: 'accessible' | 'permission-denied' | 'not-detected'
-      serial: 'accessible' | 'permission-denied' | 'not-detected'
-      rule: 'installed' | 'missing' | 'different'
-      installAction: 'available' | 'unavailable'
-      manualCommand?: string
-    }
-  | {
-      platform: 'windows'
-      hid: 'detected' | 'not-detected'
-      serial: 'detected' | 'not-detected'
-    }
 
 export type StreamDeckDeeJAPI = typeof api
 

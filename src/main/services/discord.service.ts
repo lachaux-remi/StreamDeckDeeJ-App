@@ -12,6 +12,7 @@ const DISCORD_REDIRECT_URI = 'https://discord.com/api/oauth2/authorize'
 
 const OP_HANDSHAKE = 0
 const OP_FRAME = 1
+const WINDOWS_DISCORD_PIPE_PREFIX = '\\\\?\\pipe\\discord-ipc-'
 
 interface RpcMessage {
   cmd?: string
@@ -26,7 +27,7 @@ export function discordSocketPaths(
   environment: NodeJS.ProcessEnv
 ): string[] {
   if (platform === 'win32') {
-    return [`\\\\?\\pipe\\discord-ipc-${index}`]
+    return [`${WINDOWS_DISCORD_PIPE_PREFIX}${index}`]
   }
   const paths: string[] = []
   const xdg = environment['XDG_RUNTIME_DIR']
@@ -102,7 +103,7 @@ class DiscordService extends EventEmitter {
 
   private async isTrustedSocket(path: string): Promise<boolean> {
     if (process.platform === 'win32') {
-      return /^\\\\\?\\pipe\\discord-ipc-\d+$/.test(path)
+      return path.startsWith(WINDOWS_DISCORD_PIPE_PREFIX)
     }
     const uid = process.getuid?.()
     if (uid === undefined) {

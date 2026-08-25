@@ -1,10 +1,11 @@
 import HID from 'node-hid'
 import { SerialPort } from 'serialport'
-import { isOfficialFirmwarePort } from './serial-port-discovery'
-import type { HardwareDiagnostic } from '../platform-runtime'
-
-const OFFICIAL_VENDOR_ID = 0x5239
-const OFFICIAL_PRODUCT_ID = 0x0001
+import type { HardwareDiagnostic } from '../../shared/hardware-diagnostic'
+import {
+  isOfficialFirmwarePort,
+  OFFICIAL_PRODUCT_ID,
+  OFFICIAL_VENDOR_ID
+} from './serial-port-discovery'
 
 export function buildWindowsHardwareDiagnostic(
   hidDevices: { path?: string; interface?: number; usage?: number }[],
