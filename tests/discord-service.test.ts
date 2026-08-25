@@ -178,7 +178,14 @@ test('bounds endpoint discovery and coalesces reconnect when no connection succe
   if (process.platform === 'win32') {
     fakes.createConnection.mockImplementation(() => {
       const socket = fakeSocket()
-      queueMicrotask(() => socket.emit('error', new Error('fixture connection failure')))
+      const once = socket.once
+      socket.once = (event, listener) => {
+        const result = once(event, listener)
+        if (event === 'error') {
+          listener(new Error('fixture connection failure'))
+        }
+        return result
+      }
       return socket
     })
   }
