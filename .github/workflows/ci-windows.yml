@@ -35,8 +35,15 @@ jobs:
       - name: Install dependencies and rebuild native modules
         run: pnpm install --frozen-lockfile --strict-peer-dependencies
 
+      - name: Compile and load Windows audio module
+        shell: pwsh
+        run: |
+          pnpm build:windows-audio
+          $env:ELECTRON_RUN_AS_NODE = '1'
+          pnpm exec electron scripts/smoke-windows-audio.cjs
+
       - name: Check formatting
-        run: pnpm exec prettier --check .github/workflows/*.yml electron-builder.yml package.json scripts/*.mjs tests/*.ts
+        run: pnpm exec prettier --check .github/workflows/*.yml electron-builder.yml package.json packages/windows-audio-native/package.json packages/windows-audio-native/index.cjs scripts/*.cjs scripts/*.mjs tests/*.ts
 
       - name: Typecheck tests
         run: pnpm typecheck:test
@@ -60,6 +67,7 @@ jobs:
           if (!(Test-Path $exe)) { throw "Missing unpacked executable: $exe" }
           if (!(Test-Path 'dist/win-unpacked/resources/app.asar.unpacked/node_modules/node-hid/build/Release/HID.node')) { throw 'Missing rebuilt node-hid module' }
           if (!(Test-Path 'dist/win-unpacked/resources/app.asar.unpacked/node_modules/@serialport/bindings-cpp/build/Release/bindings.node')) { throw 'Missing rebuilt serialport module' }
+          if (!(Test-Path 'dist/win-unpacked/resources/app.asar.unpacked/node_modules/@streamdeck-deej/windows-audio-native/build/Release/windows_audio.node')) { throw 'Missing Windows audio module outside ASAR' }
           $installer = Get-ChildItem 'dist/streamdeck-deej-*-windows-x64.exe' | Select-Object -First 1
           if (!$installer) { throw 'Missing stable NSIS installer artifact' }
 

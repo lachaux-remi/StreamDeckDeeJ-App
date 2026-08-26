@@ -1,4 +1,8 @@
+packages:
+  - packages/*
+
 allowBuilds:
+  '@streamdeck-deej/windows-audio-native': true
   '@serialport/bindings-cpp': true
   electron: true
   electron-winstaller: true

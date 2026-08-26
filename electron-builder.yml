@@ -20,6 +20,8 @@ files:
   - '!**/{test,tests,__tests__}/**/*'
   - '!coverage/**/*'
   - '!scripts/*'
+  - '!packages/**/*'
+  - '!**/node_modules/@streamdeck-deej/windows-audio-native/**/*'
   - '!dist/*'
   - '!electron.vite.config.*'
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.json,tsconfig.json,tsconfig.node.json,tsconfig.web.json,tsconfig.test.json,vitest.config.mts}'
@@ -57,6 +59,13 @@ win:
         - x64
   icon: resources/icon.ico
   artifactName: streamdeck-deej-${version}-windows-x64.${ext}
+  extraResources:
+    - from: node_modules/@streamdeck-deej/windows-audio-native
+      to: app.asar.unpacked/node_modules/@streamdeck-deej/windows-audio-native
+      filter:
+        - index.cjs
+        - package.json
+        - build/Release/windows_audio.node
 nsis:
   oneClick: false
   perMachine: false

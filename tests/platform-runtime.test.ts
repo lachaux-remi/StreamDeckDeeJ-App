@@ -4,6 +4,12 @@ import { buildWindowsHardwareDiagnostic } from '@main/services/windows-hardware.
 
 test('uses explicit Windows capabilities without loading Linux services', async () => {
   const loadLinux = vi.fn()
+  const windowsSessions = {
+    getAllSessions: vi.fn().mockResolvedValue(['master', 'spotify.exe']),
+    getOsVolumes: vi.fn().mockResolvedValue({ '0': 0.5 }),
+    shutdown: vi.fn()
+  }
+  const loadWindowsAudio = vi.fn().mockResolvedValue(windowsSessions)
   const diagnoseWindowsHardware = vi.fn().mockResolvedValue({
     platform: 'windows',
     hid: 'not-detected',
@@ -13,14 +19,16 @@ test('uses explicit Windows capabilities without loading Linux services', async 
 
   const runtime = await createPlatformRuntime('win32', {
     loadLinux,
+    loadWindowsAudio,
     diagnoseWindowsHardware,
     setLoginItemSettings
   })
 
   expect(loadLinux).not.toHaveBeenCalled()
-  expect(runtime.audio.available).toBe(false)
-  await expect(runtime.audio.sessions.getAllSessions()).resolves.toEqual([])
-  await expect(runtime.audio.sessions.getOsVolumes()).resolves.toEqual({})
+  expect(loadWindowsAudio).toHaveBeenCalledOnce()
+  expect(runtime.audio.available).toBe(true)
+  await expect(runtime.audio.sessions.getAllSessions()).resolves.toEqual(['master', 'spotify.exe'])
+  await expect(runtime.audio.sessions.getOsVolumes()).resolves.toEqual({ '0': 0.5 })
   expect(runtime.updater.getState()).toEqual({ mode: 'disabled', status: 'disabled' })
   await expect(runtime.hardwarePermissions.diagnose()).resolves.toEqual({
     platform: 'windows',
@@ -30,6 +38,8 @@ test('uses explicit Windows capabilities without loading Linux services', async 
 
   await runtime.setAutostart(true)
   expect(setLoginItemSettings).toHaveBeenCalledWith({ openAtLogin: true })
+  await runtime.shutdown()
+  expect(windowsSessions.shutdown).toHaveBeenCalledOnce()
 })
 
 test('delegates Linux unchanged to the Linux runtime loader', async () => {

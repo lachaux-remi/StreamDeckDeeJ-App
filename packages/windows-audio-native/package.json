@@ -1,0 +1,25 @@
+{
+  "name": "@streamdeck-deej/windows-audio-native",
+  "version": "0.0.0",
+  "private": true,
+  "description": "App-owned Windows Core Audio Node-API binding",
+  "main": "index.cjs",
+  "gypfile": true,
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "scripts": {
+    "install": "node -e \"console.log('Native build is owned by the Electron app workspace')\"",
+    "build:electron": "node-gyp rebuild --arch=x64 --target=42.9.3 --dist-url=https://electronjs.org/headers"
+  },
+  "devDependencies": {
+    "node-addon-api": "8.9.2",
+    "node-gyp": "13.0.1"
+  },
+  "engines": {
+    "node": ">=24.15.0"
+  }
+}

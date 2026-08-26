@@ -13,6 +13,7 @@ export default defineConfig({
           'electron-updater',
           'serialport',
           '@serialport/bindings-cpp',
+          '@streamdeck-deej/windows-audio-native',
           'node-hid'
         ]
       }
