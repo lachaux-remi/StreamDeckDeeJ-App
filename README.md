@@ -99,7 +99,10 @@ pnpm build:linux
 Sous Windows x64, `pnpm package:windows` produit un installateur NSIS par utilisateur nommé
 `streamdeck-deej-<version>-windows-x64.exe`. Cette commande doit être exécutée sous Windows pour que
 `node-hid` et `serialport` soient reconstruits pour Windows ; un cross-build depuis Linux ne valide
-pas ces binaires natifs.
+pas ces binaires natifs. L’installateur est volontairement non signé nativement : au premier lancement,
+SmartScreen peut afficher **Windows a protégé votre ordinateur**. Vérifier que le fichier provient de
+la release GitHub officielle avant de choisir **Informations complémentaires**, puis **Exécuter quand
+même**.
 
 ### Validation Windows restante
 
@@ -114,8 +117,8 @@ le propriétaire doit donc vérifier sur sa VM Windows 10/11 x64 :
 - détection puis ouverture HID et commande des LEDs avec le module officiel `5239:0001`.
 
 Le diagnostic Windows affiche uniquement **Détecté (accès non testé)** tant qu’aucune ouverture du
-périphérique n’a confirmé son accès. Cette tranche n’ajoute ni signature Authenticode, ni updater
-Windows, ni backend audio Windows. macOS n’est pas pris en charge.
+périphérique n’a confirmé son accès. Le backend audio Windows n’est pas encore pris en charge. macOS
+n’est pas pris en charge.
 
 ## Releases
 
@@ -133,7 +136,10 @@ Chaque release publie `update-manifest-v1.json` et `update-manifest-v1.sig`. Le 
 JSON (UTF-8, une ligne compacte terminée par LF) lie sa version de schéma, la version applicative, le
 SHA Git complet du commit de release, le key ID et, pour chaque artefact publié, son nom, sa taille et
 son SHA-512 en base64. Les artefacts sont triés par nom. La signature Ed25519 porte sur les octets
-exacts du manifeste.
+exacts du manifeste. Il couvre ensemble les paquets Linux et les trois artefacts Windows (`latest.yml`,
+le setup NSIS `.exe` et sa blockmap) ; l’absence de l’un d’eux interrompt la publication. Sous Windows,
+l’updater vérifie obligatoirement la signature Ed25519, la version, le nom exact, la taille et le SHA-512
+du setup téléchargé avant toute installation.
 
 L’environnement GitHub `release-signing`, limité à `main` et protégé par une approbation obligatoire,
 doit fournir :

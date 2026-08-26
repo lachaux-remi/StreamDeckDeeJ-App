@@ -212,6 +212,17 @@ export function requireSignedWindowsSetup(
   manifest: SignedUpdateManifest,
   metadata: UpdateMetadata
 ): SignedUpdateArtifact {
+  const requiredMetadataNames = [
+    'latest.yml',
+    `streamdeck-deej-${manifest.version}-windows-x64.exe.blockmap`
+  ]
+  if (
+    requiredMetadataNames.some(
+      (requiredName) => manifest.artifacts.filter(({ name }) => name === requiredName).length !== 1
+    )
+  ) {
+    throw new Error('Signed manifest does not contain the complete Windows update artifact set')
+  }
   return requireSignedArtifact(
     manifest,
     metadata,

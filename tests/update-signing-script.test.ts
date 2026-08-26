@@ -120,6 +120,19 @@ test('rejects a partial Windows artifact set instead of signing incomplete metad
   )
 })
 
+test('requires the complete Windows set for every release manifest', async () => {
+  const directory = await releaseDirectory()
+  await Promise.all([
+    rm(join(directory, `streamdeck-deej-${version}-windows-x64.exe`)),
+    rm(join(directory, `streamdeck-deej-${version}-windows-x64.exe.blockmap`)),
+    rm(join(directory, 'latest.yml'))
+  ])
+
+  await expect(createUpdateManifest(directory, version, commit)).rejects.toThrow(
+    /requires the Windows setup, blockmap, and latest\.yml/
+  )
+})
+
 test('detects a release artifact altered after manifest signing', async () => {
   const directory = await releaseDirectory()
   const { privateKey, publicKey } = generateKeyPairSync('ed25519')

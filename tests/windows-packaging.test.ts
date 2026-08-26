@@ -4,7 +4,7 @@ import { load } from 'js-yaml'
 
 interface BuilderConfig {
   appId?: string
-  win?: unknown
+  win?: Record<string, unknown>
   nsis?: unknown
   asarUnpack?: string[]
   files?: string[]
@@ -29,8 +29,11 @@ test('configures a stable per-user Windows 10/11 x64 NSIS package', async () => 
         from: 'node_modules/@streamdeck-deej/windows-audio-native',
         to: 'app.asar.unpacked/node_modules/@streamdeck-deej/windows-audio-native'
       }
-    ]
+    ],
+    signExecutable: false,
+    verifyUpdateCodeSignature: false
   })
+  expect(config.win).not.toHaveProperty('publisherName')
   expect(config.nsis).toMatchObject({
     oneClick: false,
     perMachine: false,
@@ -52,6 +55,9 @@ test('configures a stable per-user Windows 10/11 x64 NSIS package', async () => 
 test('Windows CI packages and smokes without credentials or hardware', async () => {
   const workflow = await readFile('.github/workflows/ci-windows.yml', 'utf8')
 
+  expect(workflow).toContain('workflow_call:')
+  expect(workflow).toContain('checkout_ref:')
+  expect(workflow).toContain('artifact_name:')
   expect(workflow).toContain('runs-on: windows-latest')
   expect(workflow).toContain('pnpm install --frozen-lockfile --strict-peer-dependencies')
   expect(workflow).toContain('pnpm test:windows')
@@ -65,7 +71,17 @@ test('Windows CI packages and smokes without credentials or hardware', async () 
   expect(workflow).toContain('dist/win-unpacked/streamdeck-deej.exe')
   expect(workflow).toContain('windows-x64.exe.blockmap')
   expect(workflow).toContain('dist/latest.yml')
+  expect(workflow).toContain('actions/upload-artifact@')
+  expect(workflow).toContain('name: ${{ inputs.artifact_name }}')
   expect(workflow).not.toMatch(/secrets\./)
+})
+
+test('documents the accepted SmartScreen warning for unsigned Windows packages', async () => {
+  const readme = await readFile('README.md', 'utf8')
+
+  expect(readme).toContain('Windows a protégé votre ordinateur')
+  expect(readme).toContain('non signé nativement')
+  expect(readme).toContain('Ed25519')
 })
 
 test('Git checkouts keep Prettier inputs on LF without treating images as text', async () => {

@@ -35,23 +35,44 @@ test('release signing is approval-gated and receives only the expected environme
     'UPDATE_SIGNING_KEY_PASSPHRASE: ${{ secrets.UPDATE_SIGNING_KEY_PASSPHRASE }}'
   )
   expect(signingJob).toContain('node scripts/update-signing.mjs sign')
+  expect(signingJob).toContain("name: ${{ format('consolidated-release-{0}'")
   expect(workflow.indexOf('  sign-release-artifacts:')).toBeLessThan(
     workflow.indexOf('  create-release:')
   )
 })
 
-test('publishes and verifies the signed manifest and signature with the release artifacts', () => {
+test('builds Windows before signing and publishes only the Ed25519-verified consolidated set', () => {
+  const validationJob = workflow.slice(
+    workflow.indexOf('  validate-release-artifacts:'),
+    workflow.indexOf('  sign-release-artifacts:')
+  )
   const publishJob = workflow.slice(workflow.indexOf('  publish-release:'))
+
+  expect(workflow).toContain('  build-windows-release:')
+  expect(workflow.indexOf('  build-windows-release:')).toBeLessThan(
+    workflow.indexOf('  validate-release-artifacts:')
+  )
+  expect(validationJob).toContain('windows-release-${{ needs.release-candidate.outputs.sha }}')
+  expect(validationJob).toContain('sha256sum --check --strict SHA256SUMS')
+  expect(validationJob).toContain('$artifact_base-windows-x64.exe')
+  expect(validationJob).toContain('$artifact_base-windows-x64.exe.blockmap')
+  expect(validationJob).toContain('latest.yml')
   expect(publishJob).toContain('node scripts/update-signing.mjs verify')
+  expect(publishJob).toContain('$artifact_base-windows-x64.exe')
+  expect(publishJob).toContain('$artifact_base-windows-x64.exe.blockmap')
+  expect(publishJob).toContain('release-artifacts/latest.yml')
   expect(publishJob.match(/release-artifacts\/update-manifest-v1\.json/g)).toHaveLength(1)
   expect(publishJob.match(/release-artifacts\/update-manifest-v1\.sig/g)).toHaveLength(1)
 })
 
-test('does not publish unsigned Windows artifacts before the Authenticode integration exists', () => {
-  const publishJob = workflow.slice(workflow.indexOf('  publish-release:'))
-  expect(publishJob).not.toMatch(/windows-x64|latest\.yml/)
-  const packageManifest = JSON.parse(readFileSync('package.json', 'utf8')) as {
-    scripts: Record<string, string>
-  }
-  expect(packageManifest.scripts['package:windows']).toContain('--publish never')
+test('cannot publish Windows artifacts without the signed manifest gate', () => {
+  const sign = workflow.indexOf('  sign-release-artifacts:')
+  const attest = workflow.indexOf('  attest-release:')
+  const release = workflow.indexOf('  create-release:')
+  const publish = workflow.indexOf('  publish-release:')
+
+  expect(sign).toBeLessThan(attest)
+  expect(attest).toBeLessThan(release)
+  expect(release).toBeLessThan(publish)
+  expect(workflow.slice(publish)).toContain('verify release-artifacts')
 })

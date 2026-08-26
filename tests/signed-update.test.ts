@@ -82,7 +82,17 @@ test('selects only the exact signed Windows x64 setup matching updater metadata'
     size: 12,
     sha512: createHash('sha512').update('windows exe').digest('base64')
   }
-  const manifest = signedManifest({ artifacts: [setup] }).manifest
+  const blockmap = {
+    name: `${setup.name}.blockmap`,
+    size: 8,
+    sha512: createHash('sha512').update('blockmap').digest('base64')
+  }
+  const latest = {
+    name: 'latest.yml',
+    size: 10,
+    sha512: createHash('sha512').update('latest.yml').digest('base64')
+  }
+  const manifest = signedManifest({ artifacts: [latest, setup, blockmap] }).manifest
   const metadata = {
     version: manifest.version,
     files: [{ url: setup.name, size: setup.size, sha512: setup.sha512 }]
@@ -91,8 +101,16 @@ test('selects only the exact signed Windows x64 setup matching updater metadata'
   expect(requireSignedWindowsSetup(manifest, metadata)).toEqual(setup)
 
   for (const invalidManifest of [
-    { ...manifest, artifacts: [{ ...setup, name: 'streamdeck-deej-4.1.0.AppImage' }] },
-    { ...manifest, artifacts: [{ ...setup, name: 'other-4.1.0-windows-x64.exe' }] },
+    {
+      ...manifest,
+      artifacts: [latest, { ...setup, name: 'streamdeck-deej-4.1.0.AppImage' }, blockmap]
+    },
+    {
+      ...manifest,
+      artifacts: [latest, { ...setup, name: 'other-4.1.0-windows-x64.exe' }, blockmap]
+    },
+    { ...manifest, artifacts: [setup, blockmap] },
+    { ...manifest, artifacts: [latest, setup] },
     { ...manifest, version: '4.2.0' }
   ]) {
     expect(() => requireSignedWindowsSetup(invalidManifest, metadata)).toThrow()

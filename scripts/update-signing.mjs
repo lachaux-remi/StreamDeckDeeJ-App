@@ -61,12 +61,12 @@ export async function createUpdateManifest(
   ]
   const windowsArtifactCount = windowsNames.filter((name) => names.includes(name)).length
   assert.ok(
-    windowsArtifactCount === 0 || windowsArtifactCount === windowsNames.length,
-    'Windows release artifacts must be supplied as setup, blockmap, and latest.yml together'
+    windowsArtifactCount === windowsNames.length,
+    windowsArtifactCount === 0
+      ? 'Release signing requires the Windows setup, blockmap, and latest.yml'
+      : 'Windows release artifacts must be supplied as setup, blockmap, and latest.yml together'
   )
-  if (windowsArtifactCount > 0) {
-    expectedNames.push(...windowsNames)
-  }
+  expectedNames.push(...windowsNames)
   const blockmapName = `streamdeck-deej-${version}.AppImage.blockmap`
   if (names.includes(blockmapName)) {
     expectedNames.push(blockmapName)
