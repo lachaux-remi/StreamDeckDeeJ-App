@@ -66,6 +66,8 @@ win:
         - index.cjs
         - package.json
         - build/Release/windows_audio.node
+  signExecutable: false
+  verifyUpdateCodeSignature: false
 nsis:
   oneClick: false
   perMachine: false

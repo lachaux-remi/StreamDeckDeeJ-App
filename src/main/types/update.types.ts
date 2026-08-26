@@ -1,33 +1,33 @@
-export type LinuxUpdateMode = 'disabled' | 'appimage' | 'package-manager'
-export type LinuxUpdateCommand = 'check' | 'download' | 'install' | 'open-release'
+export type UpdateMode = 'disabled' | 'appimage' | 'package-manager' | 'nsis'
+export type UpdateCommand = 'check' | 'download' | 'install' | 'open-release'
 
-export interface LinuxReleaseInfo {
+export interface UpdateReleaseInfo {
   version: string
   releaseName: string
   releaseNotes: string
 }
 
-export type LinuxUpdateState =
+export type UpdateState =
   | { mode: 'disabled'; status: 'disabled' }
-  | { mode: Exclude<LinuxUpdateMode, 'disabled'>; status: 'idle'; currentVersion: string }
-  | { mode: Exclude<LinuxUpdateMode, 'disabled'>; status: 'checking'; currentVersion: string }
-  | { mode: Exclude<LinuxUpdateMode, 'disabled'>; status: 'up-to-date'; currentVersion: string }
+  | { mode: Exclude<UpdateMode, 'disabled'>; status: 'idle'; currentVersion: string }
+  | { mode: Exclude<UpdateMode, 'disabled'>; status: 'checking'; currentVersion: string }
+  | { mode: Exclude<UpdateMode, 'disabled'>; status: 'up-to-date'; currentVersion: string }
   | ({
-      mode: Exclude<LinuxUpdateMode, 'disabled'>
+      mode: Exclude<UpdateMode, 'disabled'>
       status: 'available' | 'downloading' | 'downloaded'
       currentVersion: string
-    } & LinuxReleaseInfo & { progress?: number })
+    } & UpdateReleaseInfo & { progress?: number })
   | {
-      mode: Exclude<LinuxUpdateMode, 'disabled'>
+      mode: Exclude<UpdateMode, 'disabled'>
       status: 'error'
       currentVersion: string
       message: string
     }
 
-const COMMANDS: readonly LinuxUpdateCommand[] = ['check', 'download', 'install', 'open-release']
+const COMMANDS: readonly UpdateCommand[] = ['check', 'download', 'install', 'open-release']
 
-export function isLinuxUpdateCommand(value: unknown): value is LinuxUpdateCommand {
-  return typeof value === 'string' && COMMANDS.includes(value as LinuxUpdateCommand)
+export function isUpdateCommand(value: unknown): value is UpdateCommand {
+  return typeof value === 'string' && COMMANDS.includes(value as UpdateCommand)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -38,14 +38,14 @@ function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): b
   return Object.keys(value).every((key) => keys.includes(key))
 }
 
-export function isLinuxUpdateState(value: unknown): value is LinuxUpdateState {
+export function isUpdateState(value: unknown): value is UpdateState {
   if (!isRecord(value) || typeof value.mode !== 'string' || typeof value.status !== 'string') {
     return false
   }
   if (value.mode === 'disabled') {
     return value.status === 'disabled' && hasOnlyKeys(value, ['mode', 'status'])
   }
-  if (value.mode !== 'appimage' && value.mode !== 'package-manager') {
+  if (value.mode !== 'appimage' && value.mode !== 'package-manager' && value.mode !== 'nsis') {
     return false
   }
   if (typeof value.currentVersion !== 'string') {

@@ -3,7 +3,7 @@ export const OFFICIAL_GITHUB_RELEASE_API =
 export const OFFICIAL_GITHUB_RELEASE_PAGE =
   'https://github.com/lachaux-remi/StreamDeckDeeJ-App/releases/latest'
 
-interface AppImageUpdaterPolicyTarget {
+interface UpdaterPolicyTarget {
   autoDownload: boolean
   autoInstallOnAppQuit: boolean
   allowDowngrade: boolean
@@ -17,7 +17,7 @@ interface AppImageUpdaterPolicyTarget {
   }): void
 }
 
-export function configureSecureAppImageUpdater(target: AppImageUpdaterPolicyTarget): void {
+export function configureSecureUpdater(target: UpdaterPolicyTarget): void {
   target.autoDownload = false
   target.autoInstallOnAppQuit = false
   target.allowDowngrade = false

@@ -7,6 +7,7 @@ import {
   UPDATE_KEY_ID,
   UPDATE_MANIFEST_NAME,
   UPDATE_PUBLIC_KEY,
+  createUpdateManifest,
   encryptedEd25519PrivateKey,
   verifySignedReleaseDirectory,
   writeSignedUpdateManifest
@@ -29,7 +30,10 @@ async function releaseDirectory(): Promise<string> {
   await Promise.all([
     writeFile(join(directory, `streamdeck-deej-${version}.AppImage`), 'appimage'),
     writeFile(join(directory, `streamdeck-deej-${version}.pkg.tar.xz`), 'pacman'),
-    writeFile(join(directory, 'latest-linux.yml'), 'version: 4.1.0\n')
+    writeFile(join(directory, 'latest-linux.yml'), 'version: 4.1.0\n'),
+    writeFile(join(directory, `streamdeck-deej-${version}-windows-x64.exe`), 'nsis setup'),
+    writeFile(join(directory, `streamdeck-deej-${version}-windows-x64.exe.blockmap`), 'blockmap'),
+    writeFile(join(directory, 'latest.yml'), 'version: 4.1.0\n')
   ])
   return directory
 }
@@ -77,7 +81,16 @@ test('creates and verifies a canonical manifest with an encrypted PKCS#8 Ed25519
       schemaVersion: 1,
       version,
       releaseCommit: commit,
-      keyId: 'test-key'
+      keyId: 'test-key',
+      artifacts: expect.arrayContaining([
+        expect.objectContaining({ name: `streamdeck-deej-${version}.AppImage` }),
+        expect.objectContaining({ name: `streamdeck-deej-${version}-windows-x64.exe` }),
+        expect.objectContaining({
+          name: `streamdeck-deej-${version}-windows-x64.exe.blockmap`
+        }),
+        expect.objectContaining({ name: 'latest-linux.yml' }),
+        expect.objectContaining({ name: 'latest.yml' })
+      ])
     })
   )
 })
@@ -96,6 +109,28 @@ test('rejects unencrypted keys and incorrect passphrases without writing secret 
     })
     .toString()
   expect(() => encryptedEd25519PrivateKey(encrypted, 'incorrect')).toThrow()
+})
+
+test('rejects a partial Windows artifact set instead of signing incomplete metadata', async () => {
+  const directory = await releaseDirectory()
+  await rm(join(directory, 'latest.yml'))
+
+  await expect(createUpdateManifest(directory, version, commit)).rejects.toThrow(
+    /setup, blockmap, and latest\.yml together/
+  )
+})
+
+test('requires the complete Windows set for every release manifest', async () => {
+  const directory = await releaseDirectory()
+  await Promise.all([
+    rm(join(directory, `streamdeck-deej-${version}-windows-x64.exe`)),
+    rm(join(directory, `streamdeck-deej-${version}-windows-x64.exe.blockmap`)),
+    rm(join(directory, 'latest.yml'))
+  ])
+
+  await expect(createUpdateManifest(directory, version, commit)).rejects.toThrow(
+    /requires the Windows setup, blockmap, and latest\.yml/
+  )
 })
 
 test('detects a release artifact altered after manifest signing', async () => {

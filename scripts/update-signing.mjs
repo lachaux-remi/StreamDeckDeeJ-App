@@ -48,13 +48,27 @@ export async function createUpdateManifest(
   assert.match(version, /^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/)
   assert.match(releaseCommit, /^[0-9a-f]{40}$/)
   assert.match(keyId, /^[a-z0-9][a-z0-9-]{2,63}$/)
+  const names = await readdir(directory)
   const expectedNames = [
     `streamdeck-deej-${version}.AppImage`,
     `streamdeck-deej-${version}.pkg.tar.xz`,
     'latest-linux.yml'
   ]
+  const windowsNames = [
+    `streamdeck-deej-${version}-windows-x64.exe`,
+    `streamdeck-deej-${version}-windows-x64.exe.blockmap`,
+    'latest.yml'
+  ]
+  const windowsArtifactCount = windowsNames.filter((name) => names.includes(name)).length
+  assert.ok(
+    windowsArtifactCount === windowsNames.length,
+    windowsArtifactCount === 0
+      ? 'Release signing requires the Windows setup, blockmap, and latest.yml'
+      : 'Windows release artifacts must be supplied as setup, blockmap, and latest.yml together'
+  )
+  expectedNames.push(...windowsNames)
   const blockmapName = `streamdeck-deej-${version}.AppImage.blockmap`
-  if ((await readdir(directory)).includes(blockmapName)) {
+  if (names.includes(blockmapName)) {
     expectedNames.push(blockmapName)
   }
   expectedNames.sort()

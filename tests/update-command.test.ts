@@ -1,11 +1,11 @@
 import { expect, test } from 'vitest'
 import {
   createSerialCommandExecutor,
-  executeLinuxUpdateCommand,
-  type LinuxUpdateActions
+  executeUpdateCommand,
+  type UpdateActions
 } from '@main/services/update-command'
 
-function actions(calls: string[]): LinuxUpdateActions {
+function actions(calls: string[]): UpdateActions {
   return {
     check: async () => void calls.push('check'),
     download: async () => void calls.push('download'),
@@ -14,19 +14,15 @@ function actions(calls: string[]): LinuxUpdateActions {
   }
 }
 
-test('requires main-process consent before AppImage download and installation', async () => {
+test('requires main-process consent before update download and installation', async () => {
   const calls: string[] = []
   const fakeActions = actions(calls)
-  await executeLinuxUpdateCommand('download', fakeActions, async () => false)
-  await executeLinuxUpdateCommand('install', fakeActions, async () => false)
+  await executeUpdateCommand('download', fakeActions, async () => false)
+  await executeUpdateCommand('install', fakeActions, async () => false)
   expect(calls).toEqual([])
 
-  await executeLinuxUpdateCommand(
-    'download',
-    fakeActions,
-    async (consent) => consent === 'download'
-  )
-  await executeLinuxUpdateCommand('install', fakeActions, async (consent) => consent === 'install')
+  await executeUpdateCommand('download', fakeActions, async (consent) => consent === 'download')
+  await executeUpdateCommand('install', fakeActions, async (consent) => consent === 'install')
   expect(calls).toEqual(['download', 'install'])
 })
 
@@ -36,8 +32,8 @@ test('checks and opens the fixed release without a destructive-action prompt', a
     calls.push('unexpected-confirmation')
     return false
   }
-  await executeLinuxUpdateCommand('check', actions(calls), confirm)
-  await executeLinuxUpdateCommand('open-release', actions(calls), confirm)
+  await executeUpdateCommand('check', actions(calls), confirm)
+  await executeUpdateCommand('open-release', actions(calls), confirm)
   expect(calls).toEqual(['check', 'open-release'])
 })
 

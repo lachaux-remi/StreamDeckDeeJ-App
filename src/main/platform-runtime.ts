@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events'
 import type { HardwareDiagnostic } from '../shared/hardware-diagnostic'
-import type { LinuxUpdateState } from './types/update.types'
+import type { UpdateState } from './types/update.types'
 
 export interface AudioSessionsCapability {
   getAllSessions(): Promise<string[]>
@@ -25,8 +25,8 @@ export interface HardwarePermissionsCapability {
 
 export interface UpdateCapability {
   init(installUpdate: (quitAndInstall: () => void | Promise<void>) => Promise<void>): void
-  getState(): LinuxUpdateState
-  onStateChanged(listener: (state: LinuxUpdateState) => void): void
+  getState(): UpdateState
+  onStateChanged(listener: (state: UpdateState) => void): void
   check(): Promise<void>
   download(): Promise<void>
   install(): Promise<void>
@@ -48,6 +48,7 @@ export interface PlatformRuntime {
 interface PlatformRuntimeDependencies {
   loadLinux: () => Promise<PlatformRuntime>
   loadWindowsAudio: () => Promise<AudioSessionsCapability>
+  loadWindowsUpdater: () => Promise<UpdateCapability>
   diagnoseWindowsHardware: () => Promise<Extract<HardwareDiagnostic, { platform: 'windows' }>>
   setLoginItemSettings: (settings: { openAtLogin: boolean }) => void
 }
@@ -64,20 +65,12 @@ class UnavailableMicrophone extends EventEmitter implements MicrophoneCapability
   }
 }
 
-const disabledUpdater: UpdateCapability = {
-  init: () => undefined,
-  getState: () => ({ mode: 'disabled', status: 'disabled' }),
-  onStateChanged: () => undefined,
-  check: () => Promise.resolve(),
-  download: () => Promise.resolve(),
-  install: () => Promise.resolve(),
-  openRelease: () => Promise.resolve()
-}
-
 const defaultDependencies: PlatformRuntimeDependencies = {
   loadLinux: async () => (await import('./platform-linux')).createLinuxPlatformRuntime(),
   loadWindowsAudio: async () =>
     (await import('./services/windows-audio.service')).createWindowsAudioSessions(),
+  loadWindowsUpdater: async () =>
+    (await import('./services/windows-update.service')).windowsUpdateService,
   diagnoseWindowsHardware: async () =>
     (await import('./services/windows-hardware.service')).diagnoseWindowsHardware(),
   setLoginItemSettings: () => {
@@ -98,7 +91,10 @@ export async function createPlatformRuntime(
   }
 
   const microphone = new UnavailableMicrophone()
-  const sessions = await adapters.loadWindowsAudio()
+  const [sessions, updater] = await Promise.all([
+    adapters.loadWindowsAudio(),
+    adapters.loadWindowsUpdater()
+  ])
   return {
     audio: { available: true, sessions, microphone },
     hardwarePermissions: {
@@ -107,7 +103,7 @@ export async function createPlatformRuntime(
         throw new Error('Hardware permission installation is not applicable on Windows')
       }
     },
-    updater: disabledUpdater,
+    updater,
     async setAutostart(enabled) {
       adapters.setLoginItemSettings({ openAtLogin: enabled })
     },

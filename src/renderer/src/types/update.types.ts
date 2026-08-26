@@ -1,14 +1,14 @@
-export type LinuxUpdateCommand = 'check' | 'download' | 'install' | 'open-release'
+export type UpdateCommand = 'check' | 'download' | 'install' | 'open-release'
 
-export type LinuxUpdateState =
+export type UpdateState =
   | { mode: 'disabled'; status: 'disabled' }
   | {
-      mode: 'appimage' | 'package-manager'
+      mode: 'appimage' | 'package-manager' | 'nsis'
       status: 'idle' | 'checking' | 'up-to-date'
       currentVersion: string
     }
   | {
-      mode: 'appimage' | 'package-manager'
+      mode: 'appimage' | 'package-manager' | 'nsis'
       status: 'available' | 'downloading' | 'downloaded'
       currentVersion: string
       version: string
@@ -17,7 +17,7 @@ export type LinuxUpdateState =
       progress?: number
     }
   | {
-      mode: 'appimage' | 'package-manager'
+      mode: 'appimage' | 'package-manager' | 'nsis'
       status: 'error'
       currentVersion: string
       message: string
@@ -31,14 +31,14 @@ function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): b
   return Object.keys(value).every((key) => keys.includes(key))
 }
 
-export function isLinuxUpdateState(value: unknown): value is LinuxUpdateState {
+export function isUpdateState(value: unknown): value is UpdateState {
   if (!isRecord(value) || typeof value.mode !== 'string' || typeof value.status !== 'string') {
     return false
   }
   if (value.mode === 'disabled') {
     return value.status === 'disabled' && hasOnlyKeys(value, ['mode', 'status'])
   }
-  if (value.mode !== 'appimage' && value.mode !== 'package-manager') {
+  if (value.mode !== 'appimage' && value.mode !== 'package-manager' && value.mode !== 'nsis') {
     return false
   }
   if (typeof value.currentVersion !== 'string') {

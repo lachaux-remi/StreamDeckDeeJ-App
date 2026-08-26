@@ -2,6 +2,20 @@ name: Windows CI
 
 on:
   pull_request:
+  workflow_call:
+    inputs:
+      checkout_ref:
+        description: Immutable ref to check out
+        type: string
+        default: ''
+      expected_version:
+        description: Package version expected for a release build
+        type: string
+        default: ''
+      artifact_name:
+        description: Name used to transfer verified Windows release artifacts
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -13,6 +27,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ inputs.checkout_ref || github.sha }}
           persist-credentials: false
 
       - name: Install pnpm
@@ -58,7 +73,18 @@ jobs:
         run: pnpm build
 
       - name: Package Windows x64 NSIS
-        run: pnpm package:windows
+        shell: pwsh
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        run: |
+          if ($env:EXPECTED_VERSION) {
+            $version = node --print 'require("./package.json").version'
+            if ($version -ne $env:EXPECTED_VERSION) { throw "Expected version $env:EXPECTED_VERSION, found $version" }
+          }
+          pnpm package:windows
+
+      - name: Verify Windows update metadata
+        run: pnpm verify:update-metadata:windows
 
       - name: Verify package and native modules
         shell: pwsh
@@ -70,6 +96,9 @@ jobs:
           if (!(Test-Path 'dist/win-unpacked/resources/app.asar.unpacked/node_modules/@streamdeck-deej/windows-audio-native/build/Release/windows_audio.node')) { throw 'Missing Windows audio module outside ASAR' }
           $installer = Get-ChildItem 'dist/streamdeck-deej-*-windows-x64.exe' | Select-Object -First 1
           if (!$installer) { throw 'Missing stable NSIS installer artifact' }
+          $blockmap = Get-ChildItem 'dist/streamdeck-deej-*-windows-x64.exe.blockmap' | Select-Object -First 1
+          if (!$blockmap) { throw 'Missing NSIS blockmap artifact' }
+          if (!(Test-Path 'dist/latest.yml')) { throw 'Missing Windows updater metadata' }
 
       - name: Smoke unpacked Windows application
         shell: pwsh
@@ -78,3 +107,33 @@ jobs:
           Start-Sleep -Seconds 8
           if ($process.HasExited) { throw "Application exited during smoke test with code $($process.ExitCode)" }
           Stop-Process -Id $process.Id -Force
+
+      - name: Stage verified Windows release artifacts
+        if: ${{ inputs.artifact_name != '' }}
+        shell: pwsh
+        run: |
+          $version = node --print 'require("./package.json").version'
+          $setup = "streamdeck-deej-$version-windows-x64.exe"
+          $expected = @($setup, "$setup.blockmap", 'latest.yml')
+          $actual = @(Get-ChildItem dist -File | Where-Object { $_.Name -eq 'latest.yml' -or $_.Name -like 'streamdeck-deej-*-windows-x64.exe*' } | ForEach-Object Name)
+          if (@(Compare-Object ($expected | Sort-Object) ($actual | Sort-Object)).Count -ne 0) { throw 'Unexpected Windows release artifact set' }
+
+          New-Item -ItemType Directory -Force windows-release | Out-Null
+          foreach ($name in $expected) { Copy-Item "dist/$name" "windows-release/$name" }
+          [IO.File]::WriteAllText("$PWD/windows-release/RELEASE_VERSION", "$version`n", [Text.UTF8Encoding]::new($false))
+          Push-Location windows-release
+          $checksums = Get-ChildItem -File | Sort-Object Name | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant(), $_.Name
+          }
+          [IO.File]::WriteAllText("$PWD/SHA256SUMS", ($checksums -join "`n") + "`n", [Text.UTF8Encoding]::new($false))
+          Pop-Location
+
+      - name: Transfer verified Windows release artifacts
+        if: ${{ inputs.artifact_name != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: windows-release/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

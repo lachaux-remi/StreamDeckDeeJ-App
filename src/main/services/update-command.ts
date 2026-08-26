@@ -1,8 +1,8 @@
-import type { LinuxUpdateCommand } from '../types/update.types'
+import type { UpdateCommand } from '../types/update.types'
 
 export type UpdateConsent = 'download' | 'install'
 
-export interface LinuxUpdateActions {
+export interface UpdateActions {
   check(): Promise<void>
   download(): Promise<void>
   install(): Promise<void>
@@ -18,9 +18,9 @@ export function createSerialCommandExecutor(): (task: () => Promise<void>) => Pr
   }
 }
 
-export async function executeLinuxUpdateCommand(
-  command: LinuxUpdateCommand,
-  actions: LinuxUpdateActions,
+export async function executeUpdateCommand(
+  command: UpdateCommand,
+  actions: UpdateActions,
   confirm: (consent: UpdateConsent) => Promise<boolean>
 ): Promise<void> {
   if (command === 'check') {

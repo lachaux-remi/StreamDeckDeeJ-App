@@ -10,6 +10,20 @@ test('uses explicit Windows capabilities without loading Linux services', async 
     shutdown: vi.fn()
   }
   const loadWindowsAudio = vi.fn().mockResolvedValue(windowsSessions)
+  const windowsUpdater = {
+    init: vi.fn(),
+    getState: vi.fn(() => ({
+      mode: 'nsis' as const,
+      status: 'idle' as const,
+      currentVersion: '4.0.6'
+    })),
+    onStateChanged: vi.fn(),
+    check: vi.fn(),
+    download: vi.fn(),
+    install: vi.fn(),
+    openRelease: vi.fn()
+  }
+  const loadWindowsUpdater = vi.fn().mockResolvedValue(windowsUpdater)
   const diagnoseWindowsHardware = vi.fn().mockResolvedValue({
     platform: 'windows',
     hid: 'not-detected',
@@ -20,6 +34,7 @@ test('uses explicit Windows capabilities without loading Linux services', async 
   const runtime = await createPlatformRuntime('win32', {
     loadLinux,
     loadWindowsAudio,
+    loadWindowsUpdater,
     diagnoseWindowsHardware,
     setLoginItemSettings
   })
@@ -29,7 +44,8 @@ test('uses explicit Windows capabilities without loading Linux services', async 
   expect(runtime.audio.available).toBe(true)
   await expect(runtime.audio.sessions.getAllSessions()).resolves.toEqual(['master', 'spotify.exe'])
   await expect(runtime.audio.sessions.getOsVolumes()).resolves.toEqual({ '0': 0.5 })
-  expect(runtime.updater.getState()).toEqual({ mode: 'disabled', status: 'disabled' })
+  expect(loadWindowsUpdater).toHaveBeenCalledOnce()
+  expect(runtime.updater).toBe(windowsUpdater)
   await expect(runtime.hardwarePermissions.diagnose()).resolves.toEqual({
     platform: 'windows',
     hid: 'not-detected',

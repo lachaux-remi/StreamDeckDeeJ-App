@@ -1,31 +1,27 @@
 import { useEffect, useState } from 'react'
 import { Download, ExternalLink, RefreshCw } from 'lucide-react'
-import {
-  isLinuxUpdateState,
-  type LinuxUpdateCommand,
-  type LinuxUpdateState
-} from '@renderer/types/update.types'
+import { isUpdateState, type UpdateCommand, type UpdateState } from '@renderer/types/update.types'
 
-async function sendCommand(command: LinuxUpdateCommand): Promise<LinuxUpdateState> {
+async function sendCommand(command: UpdateCommand): Promise<UpdateState> {
   const state: unknown = await window.api.update.command(command)
-  if (!isLinuxUpdateState(state)) {
+  if (!isUpdateState(state)) {
     throw new TypeError('Invalid update state received from main')
   }
   return state
 }
 
-export default function LinuxUpdateNotice(): React.JSX.Element | null {
-  const [state, setState] = useState<LinuxUpdateState | null>(null)
+export default function UpdateNotice(): React.JSX.Element | null {
+  const [state, setState] = useState<UpdateState | null>(null)
 
   useEffect(() => {
     let active = true
     void window.api.update.getState().then((value) => {
-      if (active && isLinuxUpdateState(value)) {
+      if (active && isUpdateState(value)) {
         setState(value)
       }
     })
     const unsubscribe = window.api.update.onStateChanged((value) => {
-      if (isLinuxUpdateState(value)) {
+      if (isUpdateState(value)) {
         setState(value)
       }
     })
@@ -35,7 +31,7 @@ export default function LinuxUpdateNotice(): React.JSX.Element | null {
     }
   }, [])
 
-  const execute = async (command: LinuxUpdateCommand): Promise<void> => {
+  const execute = async (command: UpdateCommand): Promise<void> => {
     setState(await sendCommand(command))
   }
 
@@ -93,22 +89,24 @@ export default function LinuxUpdateNotice(): React.JSX.Element | null {
                 <ExternalLink className="h-4 w-4" /> Voir la release officielle
               </button>
             )}
-            {state.mode === 'appimage' && state.status === 'available' && (
-              <button
-                className="flex items-center gap-2 rounded-md bg-neon-blue/15 px-3 py-2 text-sm text-neon-blue hover:bg-neon-blue/25"
-                onClick={() => void execute('download')}
-              >
-                <Download className="h-4 w-4" /> Télécharger
-              </button>
-            )}
-            {state.mode === 'appimage' && state.status === 'downloaded' && (
-              <button
-                className="rounded-md bg-neon-green/15 px-3 py-2 text-sm text-neon-green hover:bg-neon-green/25"
-                onClick={() => void execute('install')}
-              >
-                Installer et redémarrer
-              </button>
-            )}
+            {(state.mode === 'appimage' || state.mode === 'nsis') &&
+              state.status === 'available' && (
+                <button
+                  className="flex items-center gap-2 rounded-md bg-neon-blue/15 px-3 py-2 text-sm text-neon-blue hover:bg-neon-blue/25"
+                  onClick={() => void execute('download')}
+                >
+                  <Download className="h-4 w-4" /> Télécharger
+                </button>
+              )}
+            {(state.mode === 'appimage' || state.mode === 'nsis') &&
+              state.status === 'downloaded' && (
+                <button
+                  className="rounded-md bg-neon-green/15 px-3 py-2 text-sm text-neon-green hover:bg-neon-green/25"
+                  onClick={() => void execute('install')}
+                >
+                  Installer et redémarrer
+                </button>
+              )}
           </div>
         </div>
       </section>
