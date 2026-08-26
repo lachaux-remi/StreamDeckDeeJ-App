@@ -95,7 +95,35 @@ beforeEach(() => {
     }
   })
   fakes.lstat.mockResolvedValue({ isSocket: () => true, uid: 1000, mode: 0o600 })
-  vi.spyOn(process, 'getuid').mockReturnValue(1000)
+  if (process.getuid) {
+    vi.spyOn(process, 'getuid').mockReturnValue(1000)
+  }
+})
+
+test('uses Discord named pipes on Windows instead of Unix filesystem paths', async () => {
+  const { discordSocketPaths } = await import('@main/services/discord.service')
+
+  expect(discordSocketPaths('win32', 3, {})).toEqual(['\\\\?\\pipe\\discord-ipc-3'])
+  expect(discordSocketPaths('linux', 3, { XDG_RUNTIME_DIR: '/run/user/1000' })).toEqual([
+    '/run/user/1000/discord-ipc-3',
+    '/run/user/1000/app/com.discordapp.Discord/discord-ipc-3',
+    '/tmp/discord-ipc-3'
+  ])
+})
+
+test('shuts down the Discord socket without scheduling another reconnect', async () => {
+  const socket = fakeSocket()
+  fakes.createConnection.mockReturnValue(socket)
+  const { discordService } = await import('@main/services/discord.service')
+
+  await discordService.init()
+  await Promise.resolve()
+  socket.emit('connect')
+  await discordService.shutdown()
+  socket.emit('close')
+
+  expect(socket.destroy).toHaveBeenCalled()
+  expect(vi.getTimerCount()).toBe(0)
 })
 
 test('connects only to a trusted socket, authenticates, subscribes, updates state, and resets it on close', async () => {
@@ -145,15 +173,38 @@ test('connects only to a trusted socket, authenticates, subscribes, updates stat
   vi.clearAllTimers()
 })
 
-test('bounds socket discovery and coalesces reconnect when no trusted endpoint exists', async () => {
+test('bounds endpoint discovery and coalesces reconnect when no connection succeeds', async () => {
   fakes.lstat.mockResolvedValue({ isSocket: () => false, uid: 1000, mode: 0o600 })
+  if (process.platform === 'win32') {
+    fakes.createConnection.mockImplementation(() => {
+      const socket = fakeSocket()
+      const once = socket.once
+      socket.once = (event, listener) => {
+        const result = once(event, listener)
+        if (event === 'error') {
+          listener(new Error('fixture connection failure'))
+        }
+        return result
+      }
+      return socket
+    })
+  }
   const { discordService } = await import('@main/services/discord.service')
 
   await discordService.init()
-  await settleUntil(() => vi.getTimerCount() === 1)
+  await settleUntil(
+    () =>
+      vi.getTimerCount() === 1 &&
+      (process.platform !== 'win32' || fakes.createConnection.mock.calls.length === 10)
+  )
 
-  expect(fakes.lstat).toHaveBeenCalledTimes(process.env['XDG_RUNTIME_DIR'] ? 30 : 10)
-  expect(fakes.createConnection).not.toHaveBeenCalled()
+  if (process.platform === 'win32') {
+    expect(fakes.lstat).not.toHaveBeenCalled()
+    expect(fakes.createConnection).toHaveBeenCalledTimes(10)
+  } else {
+    expect(fakes.lstat).toHaveBeenCalledTimes(process.env['XDG_RUNTIME_DIR'] ? 30 : 10)
+    expect(fakes.createConnection).not.toHaveBeenCalled()
+  }
   expect(vi.getTimerCount()).toBe(1)
   vi.clearAllTimers()
 })

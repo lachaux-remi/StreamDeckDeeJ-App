@@ -21,6 +21,7 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:windows": "vitest run --exclude=tests/linux-*.test.ts --exclude=tests/ci-validation-scope.test.ts",
     "test:watch": "vitest",
     "typecheck:test": "tsc --project tsconfig.test.json",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
@@ -30,7 +31,8 @@
     "dev": "env -u ELECTRON_RUN_AS_NODE electron-vite dev",
     "build": "pnpm typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
-    "package:linux": "electron-vite build && node scripts/prepare-package.mjs && electron-builder --linux --publish never",
+    "package:linux": "electron-vite build && node scripts/prepare-package.mjs linux && electron-builder --linux --publish never",
+    "package:windows": "electron-vite build && node scripts/prepare-package.mjs windows && electron-builder --win nsis --x64 --publish never",
     "build:linux": "pnpm typecheck && pnpm package:linux",
     "verify:update-metadata": "node scripts/verify-linux-update-metadata.mjs"
   },

@@ -99,7 +99,9 @@ test('exports readable, versioned JSON without any stored integration secret', (
   ]) {
     expect(raw, `export contains ${forbidden}`).not.toContain(forbidden)
   }
-  expect(statSync(exportPath).mode & 0o777).toBe(0o600)
+  if (process.platform !== 'win32') {
+    expect(statSync(exportPath).mode & 0o777).toBe(0o600)
+  }
 })
 
 test('imports a valid export and preserves all currently stored secrets', () => {
@@ -207,7 +209,9 @@ test('creates a private atomic redacted backup before applying an import', () =>
   const backup = readFileSync(backupPath, 'utf8')
   expect(JSON.parse(backup).settings.comPort).toBe(rendererSettings.comPort)
   expect(backup).not.toContain('tokenConfigured')
-  expect(statSync(backupPath).mode & 0o777).toBe(0o600)
+  if (process.platform !== 'win32') {
+    expect(statSync(backupPath).mode & 0o777).toBe(0o600)
+  }
   expect(adapter.updates).toHaveLength(1)
 })
 

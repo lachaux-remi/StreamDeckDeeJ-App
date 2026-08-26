@@ -1,17 +1,19 @@
 # StreamDeck DeeJ
 
-Application Electron pour Linux qui pilote les boutons d’un Stream Deck et les curseurs audio DeeJ reliés à un Arduino.
+Application Electron pour Linux et Windows x64 qui pilote les boutons d’un Stream Deck et les
+curseurs DeeJ reliés à un Arduino. Le socle Windows couvre actuellement le matériel et le lifecycle ;
+le contrôle audio Windows reste volontairement désactivé jusqu’à l’intégration du backend natif.
 
 ## Fonctionnalités
 
 - configuration d’une grille Stream Deck et d’actions appui/appui long ;
-- contrôle du volume principal et des sessions PipeWire/PulseAudio ;
+- contrôle du volume principal et des sessions PipeWire/PulseAudio sous Linux ;
 - animations RGB et couleurs conditionnelles ;
 - intégrations Home Assistant et Discord RPC ;
 - connexion série à l’Arduino avec reconnexion automatique ;
 - démarrage automatique et réduction dans la zone de notification.
 
-## Prérequis
+## Prérequis Linux
 
 - Linux avec PipeWire ou PulseAudio ;
 - Node.js 24 et pnpm 11 (voir `.nvmrc` et `packageManager` dans `package.json`) ;
@@ -93,6 +95,27 @@ pnpm build:linux
 ```
 
 `pnpm build:linux` produit un AppImage et un paquet Arch Linux dans `dist/`.
+
+Sous Windows x64, `pnpm package:windows` produit un installateur NSIS par utilisateur nommé
+`streamdeck-deej-<version>-windows-x64.exe`. Cette commande doit être exécutée sous Windows pour que
+`node-hid` et `serialport` soient reconstruits pour Windows ; un cross-build depuis Linux ne valide
+pas ces binaires natifs.
+
+### Validation Windows restante
+
+La CI Windows construit l’installateur, vérifie les modules natifs dépaquetés et lance un smoke sans
+secret ni matériel. Elle ne prouve pas le fonctionnement d’un périphérique absent. Avant diffusion,
+le propriétaire doit donc vérifier sur sa VM Windows 10/11 x64 :
+
+- installation et désinstallation NSIS par utilisateur, sans élévation ;
+- tray, fermeture vers le tray, lancement en arrière-plan et restauration par seconde instance ;
+- autostart après fermeture de session ou redémarrage ;
+- détection puis ouverture réelle du port COM, échange du protocole série et reconnexion ;
+- détection puis ouverture HID et commande des LEDs avec le module officiel `5239:0001`.
+
+Le diagnostic Windows affiche uniquement **Détecté (accès non testé)** tant qu’aucune ouverture du
+périphérique n’a confirmé son accès. Cette tranche n’ajoute ni signature Authenticode, ni updater
+Windows, ni backend audio Windows. macOS n’est pas pris en charge.
 
 ## Releases
 

@@ -31,13 +31,12 @@ files:
   - '!**/node_modules/@serialport/bindings-cpp/prebuilds/{android-*,darwin-*,linux-arm,linux-arm64,win32-*}/**/*'
 asarUnpack:
   - resources/**
+  - '**/node_modules/**/*.node'
 extraResources:
   - from: resources/logo.png
     to: logo.png
-  - from: build/linux/70-streamdeck-deej.rules
-    to: linux/70-streamdeck-deej.rules
-  - from: build/linux/install-udev-rule
-    to: linux/install-udev-rule
+  - from: resources/icon.ico
+    to: icon.ico
 linux:
   target:
     - AppImage
@@ -46,6 +45,26 @@ linux:
   category: Utility
   icon: resources/logo.png
   syncDesktopName: true
+  extraResources:
+    - from: build/linux/70-streamdeck-deej.rules
+      to: linux/70-streamdeck-deej.rules
+    - from: build/linux/install-udev-rule
+      to: linux/install-udev-rule
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: resources/icon.ico
+  artifactName: streamdeck-deej-${version}-windows-x64.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico
 appImage:
   artifactName: ${name}-${version}.${ext}
 pacman:

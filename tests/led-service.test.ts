@@ -70,7 +70,7 @@ beforeEach(() => {
 
 test('writes a bounded 64-byte HID packet with condition and override precedence', async () => {
   const { ledService } = await import('@main/services/led.service')
-  await ledService.init()
+  await ledService.init(fakes.mic as never)
   await Promise.resolve()
 
   const packet = fakes.device.write.mock.calls.at(-1)?.[0] as number[]
@@ -86,7 +86,7 @@ test('writes a bounded 64-byte HID packet with condition and override precedence
 
 test('does not reopen HID after a failed write is followed by shutdown', async () => {
   const { ledService } = await import('@main/services/led.service')
-  await ledService.init()
+  await ledService.init(fakes.mic as never)
   fakes.device.write.mockRejectedValueOnce(new Error('device removed'))
 
   await ledService.flush()
@@ -100,7 +100,7 @@ test('does not reopen HID after a failed write is followed by shutdown', async (
 
 test('applies runtime profile, override, Home Assistant, and config updates', async () => {
   const { ledService } = await import('@main/services/led.service')
-  await ledService.init()
+  await ledService.init(fakes.mic as never)
   fakes.device.write.mockClear()
 
   ledService.updateProfile({
@@ -125,13 +125,13 @@ test('handles missing and failing HID devices without starting animation work', 
     throw new Error('permission denied')
   })
   const first = await import('@main/services/led.service')
-  await first.ledService.init()
+  await first.ledService.init(fakes.mic as never)
   expect(vi.getTimerCount()).toBe(0)
   await first.ledService.shutdown()
 
   vi.resetModules()
   const second = await import('@main/services/led.service')
-  await second.ledService.init()
+  await second.ledService.init(fakes.mic as never)
   expect(vi.getTimerCount()).toBe(0)
   await second.ledService.shutdown()
 })

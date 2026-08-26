@@ -2,7 +2,9 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { generateLinuxPermissionAssets } from './linux-permissions.mjs'
 
-await generateLinuxPermissionAssets(fileURLToPath(new URL('../build/linux', import.meta.url)))
+if (process.argv[2] === 'linux') {
+  await generateLinuxPermissionAssets(fileURLToPath(new URL('../build/linux', import.meta.url)))
+}
 
 const mainBundle = new URL('../out/main/index.js', import.meta.url)
 const developmentCheck = 'process.env.NODE_ENV !== "production"'

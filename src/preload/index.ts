@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { HardwareDiagnostic } from '../shared/hardware-diagnostic'
 
 const api = {
   settings: {
@@ -14,22 +15,11 @@ const api = {
     status: (): Promise<{ connected: boolean; port: string }> => ipcRenderer.invoke('serial:status')
   },
   hardwarePermissions: {
-    diagnose: (): Promise<{
-      hid: 'accessible' | 'permission-denied' | 'not-detected'
-      serial: 'accessible' | 'permission-denied' | 'not-detected'
-      rule: 'installed' | 'missing' | 'different'
-      installAction: 'available' | 'unavailable'
-      manualCommand?: string
-    }> => ipcRenderer.invoke('hardware-permissions:diagnose'),
+    diagnose: (): Promise<HardwareDiagnostic> =>
+      ipcRenderer.invoke('hardware-permissions:diagnose'),
     install: (): Promise<{
       result: 'installed' | 'cancelled' | 'failed'
-      diagnostic: {
-        hid: 'accessible' | 'permission-denied' | 'not-detected'
-        serial: 'accessible' | 'permission-denied' | 'not-detected'
-        rule: 'installed' | 'missing' | 'different'
-        installAction: 'available' | 'unavailable'
-        manualCommand?: string
-      }
+      diagnostic: HardwareDiagnostic
     }> => ipcRenderer.invoke('hardware-permissions:install')
   },
   streamdeck: {

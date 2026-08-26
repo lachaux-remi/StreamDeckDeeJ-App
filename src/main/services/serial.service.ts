@@ -10,7 +10,11 @@ import {
   parseSerialFrame,
   type SerialRejectionReason
 } from './serial-protocol'
-import { isOfficialFirmwarePort, preferOfficialFirmwarePorts } from './serial-port-discovery'
+import {
+  isOfficialFirmwarePort,
+  linuxUsbProductLink,
+  preferOfficialFirmwarePorts
+} from './serial-port-discovery'
 
 const SERVICE = 'SerialService'
 const REJECTION_LOG_INTERVAL_MS = 5_000
@@ -55,9 +59,11 @@ class SerialService extends EventEmitter {
   }
 
   private async getUsbProduct(portPath: string): Promise<string | undefined> {
+    const sysLink = linuxUsbProductLink(process.platform, portPath)
+    if (!sysLink) {
+      return undefined
+    }
     try {
-      const ttyName = portPath.replace('/dev/', '')
-      const sysLink = `/sys/class/tty/${ttyName}/device`
       const devicePath = await realpath(sysLink)
       const product = await readFile(`${devicePath}/../product`, 'utf-8')
       return product.trim()

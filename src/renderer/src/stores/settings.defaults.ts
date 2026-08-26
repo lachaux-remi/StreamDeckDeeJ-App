@@ -1,7 +1,11 @@
 import type { RendererSettings } from '../types/settings.types'
+import { defaultSerialPort } from '../../../shared/platform-defaults'
+
+const serialPlatform =
+  typeof navigator !== 'undefined' && navigator.userAgent.includes('Windows') ? 'windows' : 'linux'
 
 export const defaultSettings: RendererSettings = {
-  comPort: '/dev/ttyACM0',
+  comPort: defaultSerialPort(serialPlatform),
   baudRate: 115200,
   gridCols: 4,
   gridRows: 4,

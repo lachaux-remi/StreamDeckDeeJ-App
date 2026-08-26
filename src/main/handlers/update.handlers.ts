@@ -1,14 +1,17 @@
 import { BrowserWindow, dialog, type WebContents } from 'electron'
+import type { UpdateCapability } from '@main/platform-runtime'
 import {
   createSerialCommandExecutor,
   executeLinuxUpdateCommand,
   type UpdateConsent
 } from '@main/services/update-command'
-import { linuxUpdateService } from '@main/services/linux-update.service'
 import { isLinuxUpdateCommand } from '@main/types/update.types'
 import { handleIpc } from './trusted-ipc'
 
-export function registerUpdateHandlers(trustedSender: WebContents): void {
+export function registerUpdateHandlers(
+  trustedSender: WebContents,
+  updater: UpdateCapability
+): void {
   const runCommand = createSerialCommandExecutor()
 
   const confirm = async (consent: UpdateConsent): Promise<boolean> => {
@@ -38,14 +41,14 @@ export function registerUpdateHandlers(trustedSender: WebContents): void {
     if (args.length !== 0) {
       throw new TypeError('Invalid update state request')
     }
-    return linuxUpdateService.getState()
+    return updater.getState()
   })
   handleIpc(trustedSender, 'update:command', async (...args: unknown[]) => {
     if (args.length !== 1 || !isLinuxUpdateCommand(args[0])) {
       throw new TypeError('Invalid update command')
     }
     const command = args[0]
-    await runCommand(() => executeLinuxUpdateCommand(command, linuxUpdateService, confirm))
-    return linuxUpdateService.getState()
+    await runCommand(() => executeLinuxUpdateCommand(command, updater, confirm))
+    return updater.getState()
   })
 }

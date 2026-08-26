@@ -78,6 +78,26 @@ class SessionsService extends EventEmitter {
     return ['master', ...names]
   }
 
+  public shutdown(): void {
+    this.subscription.stop()
+    if (this.isStaleTask) {
+      clearTimeout(this.isStaleTask)
+    }
+    if (this.isFreshTask) {
+      clearTimeout(this.isFreshTask)
+    }
+    if (this.recentlySetTimer) {
+      clearTimeout(this.recentlySetTimer)
+    }
+    for (const timer of this.reapplyTimers) {
+      clearTimeout(timer)
+    }
+    this.isStaleTask = null
+    this.isFreshTask = null
+    this.recentlySetTimer = null
+    this.reapplyTimers = []
+  }
+
   private refreshSessions(): Promise<void> {
     if (this.refreshPromise) {
       return this.refreshPromise

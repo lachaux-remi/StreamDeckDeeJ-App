@@ -1,7 +1,8 @@
 import type { AppSettings } from '@main/types/settings.types'
+import { defaultSerialPort } from '../../shared/platform-defaults'
 
 export const defaultSettings: AppSettings = {
-  comPort: '/dev/ttyACM0',
+  comPort: defaultSerialPort(process.platform),
   baudRate: 115200,
   gridCols: 4,
   gridRows: 4,

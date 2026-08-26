@@ -1,7 +1,7 @@
 import { BrowserWindow, Menu, Tray, app, protocol, shell } from 'electron'
 import { join } from 'path'
-import { homedir } from 'os'
 import { registerAllHandlers } from '@main/handlers'
+import { createPlatformRuntime, type PlatformRuntime } from '@main/platform-runtime'
 import { RENDERER_URL, registerRendererProtocol } from '@main/renderer-protocol'
 import { conditionService } from '@main/services/condition.service'
 import { AppQuitCoordinator } from '@main/services/app-quit-coordinator'
@@ -10,13 +10,12 @@ import { deckService } from '@main/services/deck.service'
 import { discordService } from '@main/services/discord.service'
 import { ledService } from '@main/services/led.service'
 import { loggerService } from '@main/services/logger.service'
-import { linuxUpdateService } from '@main/services/linux-update.service'
-import { setLinuxAutostart } from '@main/services/linux-autostart'
-import { micService } from '@main/services/mic.service'
 import { serialService } from '@main/services/serial.service'
 import { sliderService } from '@main/services/slider.service'
 import { createWindowCloseHandler } from '@main/services/window-close-handler'
-import '@main/services/sessions.service'
+import { restoreAndFocusWindow } from '@main/services/window-lifecycle'
+
+const APP_ID = 'fr.remi-lachaux.streamdeck-deej'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -30,18 +29,32 @@ if (!app.requestSingleInstanceLock()) {
   process.exit(0)
 }
 
+if (process.platform === 'win32') {
+  app.setAppUserModelId(APP_ID)
+}
+
 const isDev = !app.isPackaged
 const devRendererUrl = isDev ? process.env['ELECTRON_RENDERER_URL'] : undefined
 
-const AUTOSTART_DIR = join(homedir(), '.config', 'autostart')
-const AUTOSTART_FILE = join(AUTOSTART_DIR, 'streamdeck-deej.desktop')
+const iconName = process.platform === 'win32' ? 'icon.ico' : 'logo.png'
 const APP_ICON = isDev
-  ? join(__dirname, '../../resources/logo.png')
-  : join(process.resourcesPath, 'logo.png')
+  ? join(__dirname, `../../resources/${iconName}`)
+  : join(process.resourcesPath, iconName)
+let mainWindow: BrowserWindow | null = null
+let tray: Tray | null = null
+let platformRuntime: PlatformRuntime | null = null
+let isQuitting = false
 const appQuitCoordinator = new AppQuitCoordinator({
   shutdown: async () => {
     deckService.shutdown()
-    await Promise.all([ledService.shutdown(), serialService.shutdown()])
+    tray?.destroy()
+    tray = null
+    await Promise.all([
+      ledService.shutdown(),
+      serialService.shutdown(),
+      discordService.shutdown(),
+      platformRuntime?.shutdown()
+    ])
   },
   exit: () => app.exit(),
   shutdownTimeoutMs: 3_000,
@@ -69,17 +82,9 @@ async function setAutostart(enabled: boolean): Promise<void> {
     return
   }
   try {
-    await setLinuxAutostart({
-      enabled,
-      appName: app.getName(),
-      autostartFile: AUTOSTART_FILE,
-      executablePath: process.execPath,
-      appImagePath: process.env.APPIMAGE,
-      packagedIconPath: APP_ICON,
-      persistentIconPath: join(app.getPath('userData'), 'autostart-icon.png')
-    })
+    await platformRuntime?.setAutostart(enabled)
     if (enabled) {
-      loggerService.info(`Autostart enabled: ${AUTOSTART_FILE}`, 'Main')
+      loggerService.info('Autostart enabled', 'Main')
     } else {
       loggerService.info('Autostart disabled', 'Main')
     }
@@ -88,21 +93,31 @@ async function setAutostart(enabled: boolean): Promise<void> {
   }
 }
 
+app.on('second-instance', () => {
+  if (mainWindow) {
+    restoreAndFocusWindow(mainWindow)
+  }
+})
+
 app.whenReady().then(async () => {
   if (!devRendererUrl) {
     registerRendererProtocol(join(__dirname, '../renderer'))
   }
 
   configService.init()
-  await micService.init()
+  platformRuntime = await createPlatformRuntime(process.platform, {
+    setLoginItemSettings: (settings) => app.setLoginItemSettings(settings)
+  })
+  const { microphone } = platformRuntime.audio
+  await microphone.init()
   await discordService.init()
-  conditionService.init(micService, discordService)
-  await ledService.init()
-  linuxUpdateService.init((quitAndInstall) => appQuitCoordinator.installUpdate(quitAndInstall))
+  conditionService.init(microphone, discordService)
+  await ledService.init(microphone)
+  platformRuntime.updater.init((quitAndInstall) => appQuitCoordinator.installUpdate(quitAndInstall))
 
   const config = configService.getConfig()
 
-  const mainWindow = new BrowserWindow({
+  const window = new BrowserWindow({
     width: 1280,
     height: 800,
     show: false,
@@ -115,31 +130,33 @@ app.whenReady().then(async () => {
       sandbox: true
     }
   })
+  mainWindow = window
 
-  registerAllHandlers(mainWindow.webContents)
-  mainWindow.webContents.session.setPermissionCheckHandler(() => false)
-  mainWindow.webContents.session.setPermissionRequestHandler(
-    (_webContents, _permission, callback) => callback(false)
+  registerAllHandlers(window.webContents, platformRuntime)
+  window.webContents.session.setPermissionCheckHandler(() => false)
+  window.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) =>
+    callback(false)
   )
 
-  mainWindow.setMenu(null)
+  window.setMenu(null)
 
-  mainWindow.on('ready-to-show', () => {
+  window.on('ready-to-show', () => {
     if (!config.runInBackground) {
-      mainWindow.show()
+      window.show()
     }
   })
 
-  mainWindow.on(
+  window.on(
     'close',
     createWindowCloseHandler(
       () => configService.getConfig().closeToTray,
-      () => mainWindow.hide()
+      () => isQuitting,
+      () => window.hide()
     )
   )
 
   // System tray
-  const tray = new Tray(APP_ICON)
+  tray = new Tray(APP_ICON)
   tray.setToolTip(app.getName())
   tray.setContextMenu(
     Menu.buildFromTemplate([
@@ -147,10 +164,10 @@ app.whenReady().then(async () => {
         type: 'normal',
         label: 'Afficher / Masquer',
         click: (): void => {
-          if (mainWindow.isVisible()) {
-            mainWindow.hide()
+          if (window.isVisible()) {
+            window.hide()
           } else {
-            mainWindow.show()
+            window.show()
           }
         }
       },
@@ -164,10 +181,10 @@ app.whenReady().then(async () => {
       }
     ])
   )
-  tray.on('click', () => mainWindow.show())
+  tray.on('click', () => restoreAndFocusWindow(window))
 
   // Wire service events to renderer
-  const { webContents } = mainWindow
+  const { webContents } = window
 
   deckService.onUpdated((key, value) => webContents.send('streamdeck:update', key, value))
 
@@ -189,10 +206,10 @@ app.whenReady().then(async () => {
 
   serialService.on('status', (status) => webContents.send('serial:status', status))
   loggerService.on('log', (log) => webContents.send('electron:log', log))
-  linuxUpdateService.onStateChanged((state) => webContents.send('update:state', state))
+  platformRuntime.updater.onStateChanged((state) => webContents.send('update:state', state))
 
-  micService.on('change', () =>
-    webContents.send('conditions:change', { micMuted: micService.isMuted() })
+  microphone.on('change', () =>
+    webContents.send('conditions:change', { micMuted: microphone.isMuted() })
   )
   discordService.on('change', () =>
     webContents.send('conditions:change', {
@@ -214,14 +231,17 @@ app.whenReady().then(async () => {
 
   // Open devTools on launch if enabled
   if (config.devTools) {
-    mainWindow.webContents.openDevTools()
+    window.webContents.openDevTools()
   }
 
   // Config sync
   let prevDevTools = config.devTools
   let prevDiscordClientId = config.discord?.clientId
+  if (process.platform === 'win32') {
+    await setAutostart(config.runOnStartup)
+  }
   configService.onUpdated((newConfig) => {
-    setAutostart(newConfig.runOnStartup)
+    void setAutostart(newConfig.runOnStartup)
     ledService.updateOverrides(newConfig.streamdeck)
 
     if (newConfig.discord?.clientId !== prevDiscordClientId) {
@@ -232,25 +252,26 @@ app.whenReady().then(async () => {
     if (newConfig.devTools !== prevDevTools) {
       prevDevTools = newConfig.devTools
       if (newConfig.devTools) {
-        mainWindow.webContents.openDevTools()
+        window.webContents.openDevTools()
       } else {
-        mainWindow.webContents.closeDevTools()
+        window.webContents.closeDevTools()
       }
     }
   })
 
   // Load renderer
   if (devRendererUrl) {
-    mainWindow.loadURL(devRendererUrl)
+    window.loadURL(devRendererUrl)
   } else {
-    mainWindow.loadURL(RENDERER_URL)
+    window.loadURL(RENDERER_URL)
   }
 
   loggerService.info('Application started', 'Main')
-  void linuxUpdateService.check()
+  void platformRuntime.updater.check()
 })
 
 app.on('before-quit', (event) => {
+  isQuitting = true
   appQuitCoordinator.handleBeforeQuit(event)
 })
 
