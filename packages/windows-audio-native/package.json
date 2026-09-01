@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "node-addon-api": "8.9.2",
-    "node-gyp": "13.0.1"
+    "node-gyp": "13.0.2"
   },
   "engines": {
     "node": ">=24.15.0"
