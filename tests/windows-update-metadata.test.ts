@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -8,7 +9,9 @@ import { afterEach, expect, test } from 'vitest'
 
 const execute = promisify(execFile)
 const temporaryDirectories: string[] = []
-const version = '4.1.0'
+// The verifier derives the expected setup name from package.json, so the
+// fixture must follow release-please version bumps.
+const version: string = JSON.parse(readFileSync('package.json', 'utf8')).version
 const setupName = `streamdeck-deej-${version}-windows-x64.exe`
 
 async function fixture(): Promise<{ dist: string; latest: string }> {
