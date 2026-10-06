@@ -1,5 +1,20 @@
 # Changelog
 
+## [4.2.0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.1.0...v4.2.0) (2026-10-06)
+
+
+### Fonctionnalités
+
+* **electron:** upgrade to Electron 44.5.1 while keeping the Linux tray working on KDE Wayland ([#62](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/62)) ([d5fb45f](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/d5fb45f1a855e0c2196aa663da97cca9ead7c58a))
+* **updater:** add verified Windows NSIS updates ([#50](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/50)) ([1c9c5bb](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/1c9c5bbb4d7de9c6105e666fb797e6dd80de0fe5))
+* **windows:** add native audio backend ([#49](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/49)) ([884fbf3](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/884fbf338ea088c03a9984171c50b269a55af05a))
+* **windows:** add x64 platform foundation ([#48](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/48)) ([9d31f29](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/9d31f2999bb8e36259c1241f3ee5d3a4b45ccb88))
+
+
+### Corrections de bugs
+
+* **ci:** run release signing from main ([#46](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/46)) ([479bc10](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/479bc1068d6d579031ed421edab0cb1d41f10ced))
+
 ## [4.1.0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.0.6...v4.1.0) (2026-08-25)
 
 
