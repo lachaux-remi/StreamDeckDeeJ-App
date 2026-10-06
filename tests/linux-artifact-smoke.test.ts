@@ -21,6 +21,13 @@ async function runSmoke(
   const executable = join(directory, 'fake-app')
   const log = join(directory, 'smoke.log')
   await writeFile(executable, `#!/bin/bash\nset -eu\n${body}\n`, { mode: 0o700 })
+  // Stand-in for xvfb-run: distribution builds differ (Arch sleeps 3s before
+  // starting the command), and these tests only cover the script's own logic.
+  await writeFile(
+    join(directory, 'xvfb-run'),
+    '#!/bin/bash\nset -eu\n[[ "$1" == -a ]] && shift\nexec "$@"\n',
+    { mode: 0o700 }
+  )
 
   try {
     const { stdout, stderr } = await execFileAsync(
@@ -29,6 +36,7 @@ async function runSmoke(
       {
         env: {
           ...process.env,
+          PATH: `${directory}:${process.env.PATH}`,
           SMOKE_POLL_INTERVAL_SECONDS: '0.05',
           SMOKE_TIMEOUT_SECONDS: timeoutSeconds
         }

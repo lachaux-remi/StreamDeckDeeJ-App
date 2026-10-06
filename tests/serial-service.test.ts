@@ -37,6 +37,12 @@ const fakes = vi.hoisted(() => ({
 
 vi.mock('serialport', () => ({ SerialPort: FakeSerialPort }))
 
+// Keep USB product lookups away from the host's real /sys/class/tty entries.
+vi.mock('node:fs/promises', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('node:fs/promises')>()),
+  realpath: vi.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
+}))
+
 vi.mock('@main/services/config.service', () => ({
   configService: {
     onUpdated: vi.fn((listener: (config: Record<string, unknown>) => void) => {
