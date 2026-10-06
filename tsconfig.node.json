@@ -6,9 +6,8 @@
     "noEmit": false,
     "outDir": "./dist",
     "moduleResolution": "bundler",
-    "baseUrl": ".",
     "paths": {
-      "@main/*": ["src/main/*"]
+      "@main/*": ["./src/main/*"]
     }
   }
 }

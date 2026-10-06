@@ -9,14 +9,8 @@ allowBuilds:
   esbuild: true
   node-hid: true
 blockExoticSubdeps: false
-overrides:
-  '@xmldom/xmldom@<0.8.13': ^0.8.13
-  brace-expansion@<1.1.18: ^1.1.18
-  brace-expansion@>=2.0.0 <2.1.4: ^2.1.4
-  form-data@>=4.0.0 <4.0.6: ^4.0.6
-  js-yaml@>=4.0.0 <4.3.1: ^4.3.1
-  lodash@>=4.0.0 <=4.17.23: ^4.17.24
-  minimatch@<3.1.4: ^3.1.4
-  minimatch@>=5.0.0 <5.1.8: ^5.1.8
-  minimatch@>=9.0.0 <9.0.7: ^9.0.7
-  tmp@<0.2.6: ^0.2.6
+auditConfig:
+  ignoreGhsas:
+    # sprintf-js <=1.1.3 has no patched release yet; it is only reached at
+    # build time through electron-builder > @electron/get > global-agent > roarr.
+    - GHSA-hp3w-g68c-fv3c
