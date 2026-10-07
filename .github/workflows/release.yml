@@ -381,3 +381,12 @@ jobs:
             artifacts+=("$artifact_base.AppImage.blockmap")
           fi
           gh release upload "$RELEASE_TAG" --clobber -- "${artifacts[@]}"
+
+  publish-aur:
+    needs: [create-release, publish-release]
+    if: ${{ needs.create-release.outputs.release_created == 'true' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/aur.yml
+    with:
+      tag: ${{ needs.create-release.outputs.tag_name }}
