@@ -7,6 +7,7 @@ import {
 } from 'electron-updater'
 import type { UpdateReleaseInfo } from '../types/update.types'
 import type { InstallableUpdateAdapter } from './update-controller'
+import { formatReleaseNotes } from './release-notes'
 import { configureSecureUpdater } from './update-policy'
 import {
   fetchSignedUpdateManifest,
@@ -25,11 +26,11 @@ type SelectSignedArtifact = (
 
 function releaseNotes(info: UpdateInfo): string {
   if (typeof info.releaseNotes === 'string') {
-    return info.releaseNotes.slice(0, MAX_RELEASE_NOTES_LENGTH)
+    return formatReleaseNotes(info.releaseNotes).slice(0, MAX_RELEASE_NOTES_LENGTH)
   }
   if (Array.isArray(info.releaseNotes)) {
     return info.releaseNotes
-      .map((note) => `${note.version}\n${note.note ?? ''}`)
+      .map((note) => `${note.version}\n${formatReleaseNotes(note.note ?? '')}`)
       .join('\n\n')
       .slice(0, MAX_RELEASE_NOTES_LENGTH)
   }

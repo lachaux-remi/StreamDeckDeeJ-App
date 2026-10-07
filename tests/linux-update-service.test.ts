@@ -137,9 +137,14 @@ test('validates official release responses and opens only the fixed release page
   delete process.env['APPIMAGE']
   fakes.readFileSync.mockReturnValue('pacman\n')
   fakes.fetch.mockResolvedValue(
-    new Response(JSON.stringify({ tag_name: 'v4.2.0', name: null, body: 'Release notes' }), {
-      status: 200
-    })
+    new Response(
+      JSON.stringify({
+        tag_name: 'v4.2.0',
+        name: null,
+        body: '## [4.2.0](https://example.invalid) (2026-10-06)\n\n### Fixes\n\n* **tray:** keep icon ([#1](https://example.invalid))'
+      }),
+      { status: 200 }
+    )
   )
   const { linuxUpdateService } = await import('@main/services/linux-update.service')
   linuxUpdateService.init(fakes.installUpdate)
@@ -151,7 +156,7 @@ test('validates official release responses and opens only the fixed release page
       status: 'available',
       version: '4.2.0',
       releaseName: 'Version 4.2.0',
-      releaseNotes: 'Release notes'
+      releaseNotes: 'Fixes\n• tray: keep icon (#1)'
     })
   )
   expect(fakes.fetch).toHaveBeenCalledWith(
