@@ -9,8 +9,8 @@ allowBuilds:
   esbuild: true
   node-hid: true
 blockExoticSubdeps: false
-auditConfig:
-  ignoreGhsas:
-    # sprintf-js <=1.1.3 has no patched release yet; it is only reached at
-    # build time through electron-builder > @electron/get > global-agent > roarr.
-    - GHSA-hp3w-g68c-fv3c
+overrides:
+  # @electron/get 3 (electron-builder) optionally loads global-agent 3 for proxy
+  # downloads, which pulls roarr 2 and sprintf-js <=1.1.3 (GHSA-hp3w-g68c-fv3c,
+  # no patched release). global-agent 4 keeps the same bootstrap() API without them.
+  global-agent@<4: ^4.1.3
