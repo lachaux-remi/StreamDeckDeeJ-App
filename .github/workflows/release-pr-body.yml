@@ -11,6 +11,7 @@ jobs:
   validate-body:
     if: startsWith(github.head_ref, 'release-please--')
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Validate machine-generated release data
         env:
