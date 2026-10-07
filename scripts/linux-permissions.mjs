@@ -7,6 +7,8 @@ import { dirname, join } from 'node:path'
 const RULE_NAME = '70-streamdeck-deej.rules'
 const RULE_DESTINATION = `/etc/udev/rules.d/${RULE_NAME}`
 const RULE_SOURCE = new URL(`../resources/linux/${RULE_NAME}`, import.meta.url)
+// Executable and /opt directory name, both derived from productName in electron-builder.yml.
+export const INSTALL_NAME = 'streamdeck-deej'
 
 export const UDEV_RULE = readFileSync(RULE_SOURCE, 'utf8')
 
@@ -26,6 +28,24 @@ function reloadRulesScript() {
   udevadm trigger --subsystem-match=hidraw || true
   udevadm trigger --subsystem-match=tty || true
 fi`
+}
+
+// pacman runs post_upgrade, not post_install, when a package is upgraded, so
+// replay the install script then: it restores the chrome-sandbox mode, the
+// AppArmor profile and the udev rule. electron-builder only renders ${...}
+// variables in afterInstall/afterRemove, and this script is passed to fpm
+// directly, so render them here.
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export function renderUpgradeScript(afterInstallTemplate) {
+  const body = afterInstallTemplate
+    .replace(/^#!.*\n/, '')
+    .replaceAll('${executable}', INSTALL_NAME)
+    .replaceAll('${sanitizedProductName}', INSTALL_NAME)
+  const unrendered = body.match(/\$\{[A-Za-z_][\w.]*\}/)
+  if (unrendered) {
+    throw new Error(`Unrendered electron-builder variable in after-upgrade.sh: ${unrendered[0]}`)
+  }
+  return `#!/bin/bash\n${body}`
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -79,16 +99,20 @@ ${reloadRulesScript()}
 # END STREAMDECK DEEJ UDEV OWNERSHIP
 `
 
+  const afterUpgrade = renderUpgradeScript(afterInstall)
+
   await mkdir(outputDirectory, { recursive: true })
   await Promise.all([
     copyFile(RULE_SOURCE, join(outputDirectory, RULE_NAME)),
     writeFile(join(outputDirectory, 'install-udev-rule'), installer, { mode: 0o755 }),
     writeFile(join(outputDirectory, 'after-install.tpl'), afterInstall, { mode: 0o755 }),
-    writeFile(join(outputDirectory, 'after-remove.tpl'), afterRemove, { mode: 0o755 })
+    writeFile(join(outputDirectory, 'after-remove.tpl'), afterRemove, { mode: 0o755 }),
+    writeFile(join(outputDirectory, 'after-upgrade.sh'), afterUpgrade, { mode: 0o755 })
   ])
   await Promise.all([
     chmod(join(outputDirectory, 'install-udev-rule'), 0o755),
     chmod(join(outputDirectory, 'after-install.tpl'), 0o755),
-    chmod(join(outputDirectory, 'after-remove.tpl'), 0o755)
+    chmod(join(outputDirectory, 'after-remove.tpl'), 0o755),
+    chmod(join(outputDirectory, 'after-upgrade.sh'), 0o755)
   ])
 }

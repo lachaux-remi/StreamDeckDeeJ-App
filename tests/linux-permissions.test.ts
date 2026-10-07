@@ -1,10 +1,17 @@
 import { execFile } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { promisify } from 'node:util'
 import { access, chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { load } from 'js-yaml'
 import { expect, test } from 'vitest'
-import { generateLinuxPermissionAssets, UDEV_RULE } from '../scripts/linux-permissions.mjs'
+import {
+  generateLinuxPermissionAssets,
+  INSTALL_NAME,
+  renderUpgradeScript,
+  UDEV_RULE
+} from '../scripts/linux-permissions.mjs'
 
 const execFileAsync = promisify(execFile)
 
@@ -91,4 +98,46 @@ test('preserves an administrator-modified rule during uninstall', async () => {
   } finally {
     await rm(output, { recursive: true, force: true })
   }
+})
+
+test('replays the rendered install script when pacman upgrades the package', async () => {
+  const output = await mkdtemp(join(tmpdir(), 'streamdeck-deej-permissions-'))
+
+  try {
+    await generateLinuxPermissionAssets(output)
+    const afterInstall = await readFile(join(output, 'after-install.tpl'), 'utf8')
+    const afterUpgrade = await readFile(join(output, 'after-upgrade.sh'), 'utf8')
+
+    expect(afterUpgrade.startsWith('#!/bin/bash\n')).toBe(true)
+    expect(afterUpgrade).not.toMatch(/\$\{(?:executable|sanitizedProductName)\}/)
+    expect(afterUpgrade).toBe(renderUpgradeScript(afterInstall))
+    expect(afterUpgrade).toContain(
+      "'/opt/streamdeck-deej/resources/linux/install-udev-rule' install"
+    )
+    expect(afterUpgrade).toContain("chmod 4755 '/opt/streamdeck-deej/chrome-sandbox'")
+    await expect(
+      execFileAsync('bash', ['-n', join(output, 'after-upgrade.sh')])
+    ).resolves.toBeDefined()
+  } finally {
+    await rm(output, { recursive: true, force: true })
+  }
+})
+
+test('passes the upgrade script to fpm for the pacman package', () => {
+  const builder = load(readFileSync('electron-builder.yml', 'utf8')) as {
+    productName: string
+    pacman: { fpm?: string[] }
+  }
+
+  expect(builder.productName).toBe(INSTALL_NAME)
+  expect(builder.pacman.fpm).toEqual(['--after-upgrade', 'build/linux/after-upgrade.sh'])
+})
+
+test('refuses to ship an upgrade script with unrendered template variables', () => {
+  expect(
+    renderUpgradeScript("#!/bin/bash\nln -sf '/opt/${sanitizedProductName}/${executable}'\n")
+  ).toBe("#!/bin/bash\nln -sf '/opt/streamdeck-deej/streamdeck-deej'\n")
+  expect(() => renderUpgradeScript("echo '${productFilename}'\n")).toThrow(
+    'Unrendered electron-builder variable in after-upgrade.sh: ${productFilename}'
+  )
 })
