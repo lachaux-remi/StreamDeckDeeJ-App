@@ -3,6 +3,7 @@ import { readFileSync } from 'fs'
 import { basename, dirname, join } from 'path'
 import { loggerService } from './logger.service'
 import { createElectronUpdateAdapter, type InstallUpdate } from './electron-update-adapter'
+import { formatReleaseNotes } from './release-notes'
 import { UpdateController, detectLinuxUpdateMode } from './update-controller'
 import { OFFICIAL_GITHUB_RELEASE_API, OFFICIAL_GITHUB_RELEASE_PAGE } from './update-policy'
 import { requireSignedAppImage } from './signed-update'
@@ -53,7 +54,7 @@ async function checkOfficialRelease(): Promise<UpdateReleaseInfo> {
   return {
     version,
     releaseName: value.name || `Version ${version}`,
-    releaseNotes: (value.body || '').slice(0, MAX_RELEASE_NOTES_LENGTH)
+    releaseNotes: formatReleaseNotes(value.body || '').slice(0, MAX_RELEASE_NOTES_LENGTH)
   }
 }
 
