@@ -41,7 +41,9 @@ jobs:
       - name: Select validation scope
         id: validation-scope
         env:
-          EVENT_NAME: ${{ github.event_name }}
+          # A reusable workflow sees the caller's event (push for releases), so
+          # derive workflow_call from the input that only callers can set.
+          EVENT_NAME: ${{ inputs.package_linux == true && 'workflow_call' || github.event_name }}
           IS_RELEASE_PR: "${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release-please--') && contains(github.event.pull_request.labels.*.name, 'autorelease: pending') }}"
           REQUESTED_PACKAGE: ${{ inputs.package_linux }}
         run: |
