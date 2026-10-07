@@ -1,0 +1,213 @@
+name: Pacman repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Latest published release tag to serve from the pacman repository (for example v4.2.1)
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      tag:
+        description: Latest published release tag to serve from the pacman repository
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pacman-repository
+  cancel-in-progress: false
+
+env:
+  REPOSITORY_RELEASE_TAG: pacman
+  REPOSITORY_URL: https://github.com/lachaux-remi/StreamDeckDeeJ-App/releases/download/pacman
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Validate the requested release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          # Only the latest release may be served: never roll the repository back.
+          test "$(gh api "repos/$REPOSITORY/releases/latest" --jq .tag_name)" = "$RELEASE_TAG"
+          echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+
+      - name: Download and verify signed release artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          REPOSITORY: ${{ github.repository }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          test "$(node --print 'require("./package.json").version')" = "$VERSION"
+          gh release download "$RELEASE_TAG" --repo "$REPOSITORY" --dir release-artifacts
+          node scripts/update-signing.mjs verify release-artifacts "$VERSION" "$(git rev-parse HEAD)"
+          mkdir release-package
+          cp "release-artifacts/streamdeck-deej-$VERSION.pkg.tar.xz" release-package/
+
+      - name: Transfer verified release package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pacman-release-package
+          path: release-package/
+          if-no-files-found: error
+          retention-days: 7
+
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: pacman-repo
+    container: archlinux:base-devel@sha256:996c3a1d6b0d87b01242f6fcd8cfa3ad3eece1a67ab5c8f108e20af1d7b97bdd
+    steps:
+      - name: Checkout repository scripts and public key
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Download verified release package
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pacman-release-package
+          path: release-package
+
+      - name: Build and sign the repository
+        env:
+          PACMAN_REPO_GPG_PRIVATE_KEY: ${{ secrets.PACMAN_REPO_GPG_PRIVATE_KEY }}
+          PACMAN_REPO_GPG_PASSPHRASE: ${{ secrets.PACMAN_REPO_GPG_PASSPHRASE }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          test -n "$PACMAN_REPO_GPG_PRIVATE_KEY"
+          test -n "$PACMAN_REPO_GPG_PASSPHRASE"
+          fingerprint="$(cat packaging/pacman/streamdeck-deej.fingerprint)"
+          secrets_directory="$(mktemp -d)"
+          trap 'gpgconf --kill all 2>/dev/null || true; rm -rf "$secrets_directory"' EXIT
+          chmod 700 "$secrets_directory"
+          export GNUPGHOME="$secrets_directory/gnupg"
+          install -d -m 700 "$GNUPGHOME"
+          printf '%s' "$PACMAN_REPO_GPG_PASSPHRASE" > "$secrets_directory/passphrase"
+          printf '%s\n' "$PACMAN_REPO_GPG_PRIVATE_KEY" \
+            | gpg --batch --pinentry-mode loopback --passphrase-file "$secrets_directory/passphrase" --import
+          gpg --batch --list-secret-keys --with-colons | grep -Fxq "fpr:::::::::$fingerprint:"
+
+          scripts/build-pacman-repo.sh "release-package/streamdeck-deej-$VERSION.pkg.tar.xz" \
+            pacman-repository "$fingerprint" "$secrets_directory/passphrase"
+          scripts/verify-pacman-repo.sh pacman-repository "$VERSION" \
+            packaging/pacman/streamdeck-deej.asc "$fingerprint"
+
+      - name: Transfer signed repository
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pacman-repository
+          path: pacman-repository/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository scripts and public key
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Download signed repository
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pacman-repository
+          path: pacman-repository
+
+      - name: Publish to the pacman release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          scripts/verify-pacman-repo.sh pacman-repository "$VERSION" \
+            packaging/pacman/streamdeck-deej.asc "$(cat packaging/pacman/streamdeck-deej.fingerprint)"
+
+          # A prerelease that is never "latest", so the in-app update check and
+          # electron-updater (releases/latest, no prereleases) ignore it.
+          if ! gh release view "$REPOSITORY_RELEASE_TAG" --repo "$REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$REPOSITORY_RELEASE_TAG" --repo "$REPOSITORY" --prerelease --latest=false \
+              --target "$(gh api "repos/$REPOSITORY" --jq .default_branch)" --title 'Dépôt pacman' \
+              --notes "Dépôt pacman signé de StreamDeck DeeJ, mis à jour automatiquement à chaque release. Voir le README pour l'installation."
+          fi
+          gh release edit "$REPOSITORY_RELEASE_TAG" --repo "$REPOSITORY" --prerelease --latest=false
+          gh release view "$REPOSITORY_RELEASE_TAG" --repo "$REPOSITORY" --json isPrerelease,isDraft \
+            | jq -e '.isPrerelease == true and .isDraft == false' > /dev/null
+
+          package="pacman-repository/streamdeck-deej-$VERSION.pkg.tar.xz"
+          # Upload the package before the databases that reference it.
+          gh release upload "$REPOSITORY_RELEASE_TAG" --repo "$REPOSITORY" --clobber -- "$package" "$package.sig"
+          gh release upload "$REPOSITORY_RELEASE_TAG" --repo "$REPOSITORY" --clobber -- \
+            pacman-repository/streamdeck-deej.db pacman-repository/streamdeck-deej.db.sig \
+            pacman-repository/streamdeck-deej.files pacman-repository/streamdeck-deej.files.sig
+
+          mapfile -t keep < <(find pacman-repository -mindepth 1 -maxdepth 1 -printf '%f\n')
+          gh release view "$REPOSITORY_RELEASE_TAG" --repo "$REPOSITORY" --json assets --jq '.assets[].name' \
+            | while read -r asset; do
+                if ! printf '%s\n' "${keep[@]}" | grep -Fxq -- "$asset"; then
+                  gh release delete-asset "$REPOSITORY_RELEASE_TAG" "$asset" --repo "$REPOSITORY" --yes
+                fi
+              done
+
+  smoke:
+    needs: [prepare, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container: archlinux:base-devel@sha256:996c3a1d6b0d87b01242f6fcd8cfa3ad3eece1a67ab5c8f108e20af1d7b97bdd
+    steps:
+      - name: Checkout public key
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: packaging/pacman
+
+      - name: Install from the published repository
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          fingerprint="$(cat packaging/pacman/streamdeck-deej.fingerprint)"
+          pacman-key --init
+          pacman-key --add packaging/pacman/streamdeck-deej.asc
+          pacman-key --lsign-key "$fingerprint"
+          printf '\n[streamdeck-deej]\nSigLevel = Required DatabaseRequired\nServer = %s\n' "$REPOSITORY_URL" >> /etc/pacman.conf
+          pacman -Sy --noconfirm
+          test "$(pacman -Si streamdeck-deej | sed -n 's/^Version *: //p')" = "$VERSION-1"
+          # The udev scriptlet reports an error without udevd in a container, which
+          # pacman tolerates; any other installation failure fails this step.
+          pacman -S --noconfirm streamdeck-deej
+          test "$(pacman -Q streamdeck-deej)" = "streamdeck-deej $VERSION-1"

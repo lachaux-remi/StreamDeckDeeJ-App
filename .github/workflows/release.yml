@@ -388,3 +388,12 @@ jobs:
             artifacts+=("$artifact_base.AppImage.blockmap")
           fi
           gh release upload "$RELEASE_TAG" --clobber -- "${artifacts[@]}"
+
+  publish-pacman-repository:
+    needs: [create-release, publish-release]
+    if: ${{ needs.create-release.outputs.release_created == 'true' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/pacman-repo.yml
+    with:
+      tag: ${{ needs.create-release.outputs.tag_name }}
