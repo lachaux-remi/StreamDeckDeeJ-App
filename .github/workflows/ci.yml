@@ -165,12 +165,10 @@ jobs:
           package_root="$(mktemp -d)"
           bsdtar -xf "$pacman_package" -C "$package_root"
           cat /tmp/PKGINFO
-          for dependency in c-ares ffmpeg gtk3 http-parser libevent libvpx libxslt libxss minizip nss re2 snappy libnotify libappindicator-gtk3; do
-            grep -Fx "depend = $dependency" /tmp/PKGINFO
-          done
-          for dependency in dbus libpulse pipewire wireplumber; do
-            grep -Fx "depend = $dependency" /tmp/PKGINFO
-          done
+          expected_dependencies=(alsa-lib at-spi2-core cairo dbus expat glib2 gtk3 libcups libusb libx11 libxcb libxcomposite libxdamage libxext libxfixes libxkbcommon libxrandr mesa nspr nss pango systemd-libs libpulse pipewire wireplumber)
+          mapfile -t declared_sorted < <(sed -n 's/^depend = //p' /tmp/PKGINFO | LC_ALL=C sort)
+          mapfile -t expected_sorted < <(printf '%s\n' "${expected_dependencies[@]}" | LC_ALL=C sort)
+          [[ "${declared_sorted[*]}" = "${expected_sorted[*]}" ]]
 
           cmp build/linux/70-streamdeck-deej.rules "$package_root/opt/streamdeck-deej/resources/linux/70-streamdeck-deej.rules"
           test -x "$package_root/opt/streamdeck-deej/resources/linux/install-udev-rule"

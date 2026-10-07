@@ -84,21 +84,31 @@ pacman:
   afterInstall: build/linux/after-install.tpl
   afterRemove: build/linux/after-remove.tpl
   depends:
-    - c-ares
-    - ffmpeg
-    - gtk3
-    - http-parser
-    - libevent
-    - libvpx
-    - libxslt
-    - libxss
-    - minizip
-    - nss
-    - re2
-    - snappy
-    - libnotify
-    - libappindicator-gtk3
+    # Shared libraries linked by Electron and the native HID/serial modules (readelf
+    # NEEDED), then the audio and D-Bus commands the app runs: pactl, pw-dump,
+    # wpctl and dbus-send.
+    - alsa-lib
+    - at-spi2-core
+    - cairo
     - dbus
+    - expat
+    - glib2
+    - gtk3
+    - libcups
+    - libusb
+    - libx11
+    - libxcb
+    - libxcomposite
+    - libxdamage
+    - libxext
+    - libxfixes
+    - libxkbcommon
+    - libxrandr
+    - mesa
+    - nspr
+    - nss
+    - pango
+    - systemd-libs
     - libpulse
     - pipewire
     - wireplumber
