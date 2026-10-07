@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { promisify } from 'node:util'
 import { expect, test } from 'vitest'
 
@@ -28,4 +29,12 @@ test('fully packages a strictly recognized Release Please pull request', async (
 test('honors explicit reusable workflow package modes', async () => {
   await expect(selectScope('workflow_call', true, false)).resolves.toBe('true')
   await expect(selectScope('workflow_call', false, false)).resolves.toBe('false')
+})
+
+test('treats reusable calls as workflow_call even when the caller was a push', () => {
+  // Release builds call ci.yml from a push, so github.event_name alone is 'push'.
+  const workflow = readFileSync('.github/workflows/ci.yml', 'utf8')
+  expect(workflow).toContain(
+    "EVENT_NAME: ${{ inputs.package_linux == true && 'workflow_call' || github.event_name }}"
+  )
 })
