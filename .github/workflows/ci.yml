@@ -173,6 +173,8 @@ jobs:
           cmp build/linux/70-streamdeck-deej.rules "$package_root/opt/streamdeck-deej/resources/linux/70-streamdeck-deej.rules"
           test -x "$package_root/opt/streamdeck-deej/resources/linux/install-udev-rule"
           grep -F "install-udev-rule' install" "$package_root/.INSTALL"
+          grep -Fx 'post_upgrade() {' "$package_root/.INSTALL"
+          test "$(grep -c "install-udev-rule' install" "$package_root/.INSTALL")" -eq 2
           rule_hash="$(sha256sum build/linux/70-streamdeck-deej.rules | cut -d ' ' -f 1)"
           grep -F "if [ \"\$installed_hash\" = '$rule_hash' ]; then" "$package_root/.INSTALL"
           grep -F "rm -f '/etc/udev/rules.d/70-streamdeck-deej.rules'" "$package_root/.INSTALL"

@@ -83,6 +83,10 @@ pacman:
   compression: xz
   afterInstall: build/linux/after-install.tpl
   afterRemove: build/linux/after-remove.tpl
+  # Rendered by scripts/linux-permissions.mjs; becomes post_upgrade in .INSTALL.
+  fpm:
+    - --after-upgrade
+    - build/linux/after-upgrade.sh
   depends:
     # Shared libraries linked by Electron and the native HID/serial modules (readelf
     # NEEDED), then the audio and D-Bus commands the app runs: pactl, pw-dump,
