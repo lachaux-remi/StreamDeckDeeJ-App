@@ -5,7 +5,10 @@ updates:
     schedule:
       interval: weekly
     ignore:
+      # Electron majors need a manual KDE Wayland tray check (see #35).
       - dependency-name: electron
+        update-types:
+          - version-update:semver-major
       - dependency-name: '@types/node'
         update-types:
           - version-update:semver-major
@@ -20,6 +23,10 @@ updates:
           - patch
       development-dependencies:
         dependency-type: development
+        # Electron gets its own pull request: it changes the runtime and the
+        # native module ABI, and the Windows addon pins its headers version.
+        exclude-patterns:
+          - electron
         update-types:
           - minor
           - patch
