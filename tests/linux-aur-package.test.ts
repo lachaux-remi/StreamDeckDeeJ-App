@@ -177,3 +177,9 @@ test('the release workflow publishes to the AUR after the GitHub release', () =>
   expect(job).toContain('uses: ./.github/workflows/aur.yml')
   expect(job).toContain('tag: ${{ needs.create-release.outputs.tag_name }}')
 })
+
+test('keeps the official post_upgrade when the release package already has one', () => {
+  const withUpgrade = `${officialInstall}post_upgrade() {\n    :\n'/opt/streamdeck-deej/resources/linux/install-udev-rule' install\n}\n`
+  expect(renderInstallScript(withUpgrade)).toBe(withUpgrade)
+  expect(renderInstallScript(withUpgrade).match(/^post_upgrade\(\)/gm)).toHaveLength(1)
+})

@@ -96,11 +96,14 @@ package() {
 }
 
 // Reuse the official package scriptlets so the udev rule, binary link and
-// AppArmor handling stay identical, and also run them on upgrade.
+// AppArmor handling stay identical. Packages built before post_upgrade was
+// generated (up to 4.2.0) only had post_install, so run it on upgrade too.
 export function renderInstallScript(officialInstall) {
   assert.match(officialInstall, /^post_install\(\) \{/m, 'Missing post_install in .INSTALL')
   assert.match(officialInstall, /^post_remove\(\) \{/m, 'Missing post_remove in .INSTALL')
-  assert.doesNotMatch(officialInstall, /^post_upgrade\(\)/m, 'Unexpected post_upgrade in .INSTALL')
+  if (/^post_upgrade\(\) \{/m.test(officialInstall)) {
+    return `${officialInstall.trimEnd()}\n`
+  }
   return `${officialInstall.trimEnd()}
 post_upgrade() {
   post_install
