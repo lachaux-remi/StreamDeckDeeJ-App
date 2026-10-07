@@ -77,6 +77,45 @@ fermer et rouvrir sa session. L’application ne modifie jamais les groupes ou u
 
 ## Installation
 
+### Arch Linux / CachyOS (dépôt pacman)
+
+Les releases sont publiées dans un dépôt pacman signé, mis à jour automatiquement : l'application se
+met ensuite à jour avec le reste du système (`pacman -Syu`, gestionnaire de mises à jour CachyOS).
+
+1. Importer la clé de signature du dépôt et vérifier son empreinte,
+   `EE6224CB55E1920B9792396AA9A7B25BC4DCAF85` :
+
+   ```bash
+   curl -fsSLO https://raw.githubusercontent.com/lachaux-remi/StreamDeckDeeJ-App/main/packaging/pacman/streamdeck-deej.asc
+   ```
+
+   ```bash
+   sudo pacman-key --add streamdeck-deej.asc
+   ```
+
+   ```bash
+   sudo pacman-key --lsign-key EE6224CB55E1920B9792396AA9A7B25BC4DCAF85
+   ```
+
+2. Ajouter le dépôt à la fin de `/etc/pacman.conf` :
+
+   ```ini
+   [streamdeck-deej]
+   SigLevel = Required DatabaseRequired
+   Server = https://github.com/lachaux-remi/StreamDeckDeeJ-App/releases/download/pacman
+   ```
+
+3. Installer l'application :
+
+   ```bash
+   sudo pacman -Syu streamdeck-deej
+   ```
+
+Le paquet remplace une installation faite auparavant avec `pacman -U`. Les fichiers du dépôt sont
+servis par la pré-release GitHub `pacman`, qui n'est jamais marquée comme dernière release.
+
+### Depuis les sources
+
 ```bash
 git clone https://github.com/lachaux-remi/StreamDeckDeeJ-App.git
 cd StreamDeckDeeJ-App
@@ -129,6 +168,26 @@ puis attend l’approbation de l’environnement GitHub `release-signing` avant 
 `vX.Y.Z` et la GitHub Release.
 
 Le workflow utilise le secret Actions `RELEASE_PLEASE_TOKEN`, configuré avec un personal access token du propriétaire autorisé à écrire le contenu, les issues et les pull requests du dépôt. Ce token permet aux pull requests créées par Release Please de déclencher normalement la CI.
+
+### Dépôt pacman
+
+Après chaque release, le workflow `pacman-repo.yml` vérifie le paquet publié avec le manifeste signé
+Ed25519, le signe avec la clé GPG du dépôt, reconstruit la base `streamdeck-deej.db` avec `repo-add`
+dans un conteneur Arch Linux épinglé, vérifie toutes les signatures avec la seule clé publique
+`packaging/pacman/streamdeck-deej.asc`, puis publie les fichiers dans la pré-release `pacman` et
+installe le paquet depuis l'URL publique pour le contrôler. Seule la dernière release peut être
+publiée : le dépôt ne revient jamais en arrière. Il peut être relancé pour une release existante avec
+`gh workflow run pacman-repo.yml -f tag=vX.Y.Z`.
+
+L'environnement GitHub `pacman-repo`, limité à `main`, doit fournir :
+
+- `PACMAN_REPO_GPG_PRIVATE_KEY` : clé privée GPG du dépôt, exportée en ASCII armor et protégée par
+  passphrase ;
+- `PACMAN_REPO_GPG_PASSPHRASE` : passphrase de cette clé.
+
+Cette clé est distincte de la clé Ed25519 des mises à jour. Pour la changer, publier la nouvelle clé
+publique et son empreinte dans `packaging/pacman/`, mettre à jour les secrets, et prévenir les
+utilisateurs : ils doivent importer la nouvelle clé avec `pacman-key` avant la release suivante.
 
 ### Signature des mises à jour
 
