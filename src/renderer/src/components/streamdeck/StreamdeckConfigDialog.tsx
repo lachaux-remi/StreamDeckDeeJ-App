@@ -267,7 +267,8 @@ export default function StreamdeckConfigDialog({
     .find((entityId) => entityId)
   const conditionsComplete = ledConditions.every(isConditionComplete)
   const conditionInputClass =
-    'w-full rounded-lg border border-border/40 bg-surface-2 px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/30 outline-none transition-colors focus:border-neon-pink/50'
+    // Same box as CustomSelect so the attribute row lines up with the selects.
+    'w-full rounded-lg border border-border/40 bg-surface-2 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 outline-none transition-colors focus:border-neon-pink/50'
 
   const handleSave = useCallback(() => {
     if (buttonIndex === null || !ledConditions.every(isConditionComplete)) {
