@@ -50,3 +50,21 @@ test('validates every cross-platform updater state shape and its guards', () => 
   ).toBe(true)
   expect(isUpdateState({ mode: 'appimage', status: 'unknown', currentVersion: '1' })).toBe(false)
 })
+
+test('main and renderer accept only a boolean pacman repository flag', async () => {
+  const { isUpdateState: isRendererUpdateState } = await import('@renderer/types/update.types')
+  const available = {
+    mode: 'package-manager',
+    status: 'available',
+    currentVersion: '4.2.0',
+    version: '4.3.0',
+    releaseName: 'Version 4.3.0',
+    releaseNotes: 'Notes'
+  }
+  for (const validate of [isUpdateState, isRendererUpdateState]) {
+    expect(validate(available)).toBe(true)
+    expect(validate({ ...available, pacmanRepository: true })).toBe(true)
+    expect(validate({ ...available, pacmanRepository: false })).toBe(true)
+    expect(validate({ ...available, pacmanRepository: 'yes' })).toBe(false)
+  }
+})

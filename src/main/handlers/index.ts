@@ -13,7 +13,11 @@ export function registerAllHandlers(trustedSender: WebContents, platform: Platfo
   registerSettingsHandlers(trustedSender)
   registerSerialHandlers(trustedSender)
   registerStreamdeckHandlers(trustedSender)
-  registerDeejHandlers(trustedSender, platform.audio.sessions)
+  registerDeejHandlers(
+    trustedSender,
+    platform.audio.sessions,
+    platform.audio.levelMeter !== undefined
+  )
   registerHardwarePermissionsHandlers(trustedSender, platform.hardwarePermissions)
   registerAppHandlers(trustedSender)
   registerConditionsHandlers(trustedSender, platform.audio.microphone)

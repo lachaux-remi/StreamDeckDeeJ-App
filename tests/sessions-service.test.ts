@@ -6,7 +6,8 @@ const fakes = vi.hoisted(() => ({
   subscriptionStart: vi.fn(),
   subscriptionStop: vi.fn(),
   getConfig: vi.fn(),
-  error: vi.fn()
+  error: vi.fn(),
+  onSubscriptionData: undefined as ((chunk: Buffer) => void) | undefined
 }))
 
 vi.mock('@main/services/audio-command', async (importOriginal) => {
@@ -17,6 +18,9 @@ vi.mock('@main/services/audio-subscription', () => ({
   PactlSubscription: class {
     start = fakes.subscriptionStart
     stop = fakes.subscriptionStop
+    constructor(options: { onData(chunk: Buffer): void }) {
+      fakes.onSubscriptionData = options.onData
+    }
   }
 }))
 vi.mock('@main/services/slider.service', () => ({
@@ -164,4 +168,51 @@ test('filters unrelated PipeWire objects and reads direct node properties', asyn
 
   await expect(sessionsService.getAllSessions()).resolves.toEqual(['master', 'directplayer'])
   vi.clearAllTimers()
+})
+
+test('reapplies slider volumes when pactl reports a new sink input', async () => {
+  fakes.getConfig.mockReturnValue({ deej: { '0': ['Spotify'] } })
+  await import('@main/services/sessions.service')
+  await vi.advanceTimersByTimeAsync(0)
+  fakes.run.mockClear()
+
+  fakes.onSubscriptionData?.(
+    Buffer.from("Event 'change' on server #0\nEvent 'new' on sink-input #12\n")
+  )
+  fakes.onSubscriptionData?.(Buffer.from("Event 'new' on sink-input #13\n"))
+  await vi.advanceTimersByTimeAsync(1_200)
+
+  const volumeSets = fakes.run.mock.calls.filter(
+    ([file, args]) => file === 'wpctl' && (args as string[])[0] === 'set-volume'
+  )
+  expect(volumeSets).toHaveLength(3)
+  expect(volumeSets[0]).toEqual(['wpctl', ['set-volume', '42', '40%'], 2000])
+})
+
+test('falls back to the MPRIS volume of a player without a PipeWire stream', async () => {
+  fakes.getConfig.mockReturnValue({ deej: { '0': ['vlc'] } })
+  fakes.run.mockImplementation(async (file: string, args: string[]) => {
+    if (file === 'pw-dump') {
+      return pipeWireDump
+    }
+    if (file === 'dbus-send' && args.includes('org.freedesktop.DBus.ListNames')) {
+      return 'array [\n string "org.freedesktop.DBus"\n string "org.mpris.MediaPlayer2.vlc.instance42"\n]'
+    }
+    return ''
+  })
+  await import('@main/services/sessions.service')
+  await vi.advanceTimersByTimeAsync(0)
+
+  fakes.sliderListener?.({ '0': 0.3 })
+  await vi.advanceTimersByTimeAsync(0)
+
+  expect(fakes.run).toHaveBeenCalledWith(
+    'dbus-send',
+    expect.arrayContaining([
+      '--dest=org.mpris.MediaPlayer2.vlc.instance42',
+      'string:Volume',
+      'variant:double:0.3'
+    ]),
+    2000
+  )
 })
