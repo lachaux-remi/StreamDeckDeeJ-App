@@ -68,6 +68,7 @@ test('exposes request methods on their exact main-process channels', async () =>
     [() => api.deej.hasLevelMeter(), 'deej:level-meter-available'],
     [() => api.homeAssistant.getEntities(), 'ha:entities'],
     [() => api.homeAssistant.getServices(), 'ha:services'],
+    [() => api.homeAssistant.getAttributes('light.desk'), 'ha:attributes', 'light.desk'],
     [() => api.app.getVersions(), 'electron:versions'],
     [() => api.app.getLogs(), 'electron:logs'],
     [() => api.update.getState(), 'update:state'],

@@ -112,10 +112,10 @@ test('applies runtime profile, override, Home Assistant, and config updates', as
     direction: 'horizontal'
   })
   ledService.updateOverrides({ '2': { color: { r: 4, g: 5, b: 6 } } })
-  ledService.setHAButtonState('1', 'on')
+  ledService.setHAButtonState('1', 'on', { brightness: 120 })
   await Promise.resolve()
 
-  expect(fakes.resolveColor).toHaveBeenCalledWith(expect.any(Array), 'on')
+  expect(fakes.resolveColor).toHaveBeenCalledWith(expect.any(Array), 'on', { brightness: 120 })
   fakes.configListener?.({ streamdeck: {}, ledProfile: undefined, gridCols: undefined })
   await ledService.shutdown()
 })

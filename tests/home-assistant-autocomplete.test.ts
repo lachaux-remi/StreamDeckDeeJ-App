@@ -1,14 +1,19 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { filterSuggestions } from '@renderer/lib/autocomplete'
-import { isEntitySuggestions, isServiceNames } from '@renderer/types/home-assistant.types'
+import {
+  isAttributeSuggestions,
+  isEntitySuggestions,
+  isServiceNames
+} from '@renderer/types/home-assistant.types'
 
-const api = { getEntities: vi.fn(), getServices: vi.fn() }
+const api = { getEntities: vi.fn(), getServices: vi.fn(), getAttributes: vi.fn() }
 
 beforeEach(() => {
   vi.resetModules()
   vi.useFakeTimers()
   api.getEntities.mockReset()
   api.getServices.mockReset()
+  api.getAttributes.mockReset()
   vi.stubGlobal('window', { api: { homeAssistant: api } })
 })
 
@@ -70,4 +75,23 @@ test('caches loaded catalogs for a minute and retries after an empty answer', as
   expect(domainOf('light.toggle')).toBe('light')
   expect(domainOf('nodot')).toBeUndefined()
   expect(domainOf(undefined)).toBeUndefined()
+})
+
+test('loads attributes of one entity on demand and validates them', async () => {
+  const { loadHomeAssistantAttributes } = await import('@renderer/lib/home-assistant-catalog')
+  expect(isAttributeSuggestions([{ name: 'brightness', preview: '120' }])).toBe(true)
+  expect(isAttributeSuggestions([{ name: 'brightness', preview: '1', value: 1 }])).toBe(false)
+  expect(isAttributeSuggestions([{ name: '', preview: '' }])).toBe(false)
+
+  await expect(loadHomeAssistantAttributes(undefined)).resolves.toEqual([])
+  expect(api.getAttributes).not.toHaveBeenCalled()
+  api.getAttributes.mockResolvedValueOnce([{ name: 'brightness', preview: '120' }])
+  await expect(loadHomeAssistantAttributes('light.desk')).resolves.toEqual([
+    { name: 'brightness', preview: '120' }
+  ])
+  expect(api.getAttributes).toHaveBeenCalledWith('light.desk')
+  api.getAttributes.mockResolvedValueOnce([{ secret: 'x' }])
+  await expect(loadHomeAssistantAttributes('light.desk')).resolves.toEqual([])
+  api.getAttributes.mockRejectedValueOnce(new Error('IPC failed'))
+  await expect(loadHomeAssistantAttributes('light.desk')).resolves.toEqual([])
 })

@@ -1,7 +1,8 @@
 export enum ModuleEnum {
   HomeAssistant = 'home-assistant',
   Ir = 'ir',
-  Macro = 'macro'
+  Macro = 'macro',
+  Automation = 'automation'
 }
 
 export enum KeyUsageEnum {

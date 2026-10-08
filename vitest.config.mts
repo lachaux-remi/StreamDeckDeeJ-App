@@ -50,6 +50,7 @@ export default defineConfig({
         'src/main/services/sessions.service.ts',
         'src/main/services/audio-level.ts',
         'src/main/services/audio-meter.service.ts',
+        'src/main/services/condition.service.ts',
         'src/main/services/home-assistant-catalog.ts',
         'src/main/handlers/home-assistant.handlers.ts',
         'src/main/services/home-assistant-live-states.ts',
@@ -138,7 +139,7 @@ export default defineConfig({
           lines: 81.67,
           statements: 79.86
         },
-        '{src/main/handlers/home-assistant.handlers.ts,src/main/services/home-assistant-catalog.ts,src/renderer/src/lib/{autocomplete,home-assistant-catalog}.ts,src/renderer/src/types/home-assistant.types.ts}':
+        '{src/main/handlers/home-assistant.handlers.ts,src/main/services/{condition.service,home-assistant-catalog}.ts,src/renderer/src/lib/{autocomplete,home-assistant-catalog}.ts,src/renderer/src/types/home-assistant.types.ts}':
           {
             branches: 100,
             functions: 100,

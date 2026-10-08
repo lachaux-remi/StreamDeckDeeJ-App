@@ -38,6 +38,7 @@ class LedService {
   private gridCols = 4
   private isShuttingDown = false
   private haButtonStates: Record<string, string> = {}
+  private haButtonAttributes: Record<string, Record<string, unknown>> = {}
 
   async init(microphone: MicrophoneCapability): Promise<void> {
     const config = configService.getConfig()
@@ -63,8 +64,11 @@ class LedService {
     })
   }
 
-  setHAButtonState(buttonKey: string, state: string): void {
+  setHAButtonState(buttonKey: string, state: string, attributes?: Record<string, unknown>): void {
     this.haButtonStates[buttonKey] = state
+    if (attributes) {
+      this.haButtonAttributes[buttonKey] = attributes
+    }
     void this.flush()
   }
 
@@ -97,7 +101,11 @@ class LedService {
         const btnCfg = this.buttonConfigs[String(i)]
         if (btnCfg?.ledConditions?.length) {
           const haState = this.haButtonStates[String(i)]
-          const condColor = conditionService.resolveColor(btnCfg.ledConditions, haState)
+          const condColor = conditionService.resolveColor(
+            btnCfg.ledConditions,
+            haState,
+            this.haButtonAttributes[String(i)]
+          )
           if (condColor) {
             base[i] = applyBrightness(condColor, this.profile.brightness)
             continue

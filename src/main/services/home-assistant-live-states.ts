@@ -24,7 +24,7 @@ export interface LiveSocket {
 }
 
 export interface HomeAssistantLiveStatesOptions {
-  setButtonState(key: string, state: string): void
+  setButtonState(key: string, state: string, attributes: Record<string, unknown>): void
   /** Called when live updates start (true) or stop (false) being delivered. */
   onLiveChange(live: boolean): void
   log?(level: 'debug' | 'warn' | 'error', message: string): void
@@ -55,6 +55,11 @@ export class HomeAssistantLiveStates {
   private config: LiveConfig | undefined
   private entities = new Map<string, string[]>()
   private subscribedMapping: string | undefined
+  /** Current state and attributes per subscribed entity, rebuilt by each subscription. */
+  private readonly entityStates = new Map<
+    string,
+    { state: string; attributes: Record<string, unknown> }
+  >()
   private socket: LiveSocket | undefined
   private generation = 0
   private nextId = 1
@@ -138,6 +143,7 @@ export class HomeAssistantLiveStates {
     this.authenticated = false
     this.subscriptionId = undefined
     this.subscribedMapping = undefined
+    this.entityStates.clear()
     const socket = this.socket
     this.socket = undefined
     if (socket) {
@@ -303,32 +309,54 @@ export class HomeAssistantLiveStates {
 
   /** Applies a compressed state event: additions (a), changes (c), removals (r). */
   private applyStates(event: Message): void {
-    const updates = new Map<string, string>()
+    type EntityState = { state: string; attributes: Record<string, unknown> }
+    const changed = new Map<string, EntityState>()
+    const store = (entityId: string, entity: EntityState): void => {
+      this.entityStates.set(entityId, entity)
+      changed.set(entityId, entity)
+    }
     if (isRecord(event.a)) {
       for (const [entityId, entity] of Object.entries(event.a)) {
         if (isRecord(entity) && typeof entity.s === 'string') {
-          updates.set(entityId, entity.s)
+          store(entityId, {
+            state: entity.s,
+            attributes: isRecord(entity.a) ? { ...entity.a } : {}
+          })
         }
       }
     }
     if (isRecord(event.c)) {
       for (const [entityId, diff] of Object.entries(event.c)) {
-        const added = isRecord(diff) ? diff['+'] : undefined
-        if (isRecord(added) && typeof added.s === 'string') {
-          updates.set(entityId, added.s)
+        const current = this.entityStates.get(entityId)
+        if (!current || !isRecord(diff)) {
+          continue
         }
+        const added = isRecord(diff['+']) ? diff['+'] : {}
+        const removed = isRecord(diff['-']) ? diff['-'] : {}
+        const attributes = { ...current.attributes, ...(isRecord(added.a) ? added.a : {}) }
+        if (Array.isArray(removed.a)) {
+          for (const name of removed.a) {
+            if (typeof name === 'string') {
+              delete attributes[name]
+            }
+          }
+        }
+        store(entityId, {
+          state: typeof added.s === 'string' ? added.s : current.state,
+          attributes
+        })
       }
     }
     if (Array.isArray(event.r)) {
       for (const entityId of event.r) {
         if (typeof entityId === 'string') {
-          updates.set(entityId, 'unavailable')
+          store(entityId, { state: 'unavailable', attributes: {} })
         }
       }
     }
-    for (const [entityId, state] of updates) {
+    for (const [entityId, entity] of changed) {
       for (const key of this.entities.get(entityId) ?? []) {
-        this.options.setButtonState(key, state)
+        this.options.setButtonState(key, entity.state, entity.attributes)
       }
     }
   }

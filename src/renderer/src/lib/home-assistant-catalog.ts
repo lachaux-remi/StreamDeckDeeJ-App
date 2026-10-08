@@ -1,6 +1,8 @@
 import {
+  isAttributeSuggestions,
   isEntitySuggestions,
   isServiceNames,
+  type HomeAssistantAttributeSuggestion,
   type HomeAssistantEntitySuggestion
 } from '@renderer/types/home-assistant.types'
 
@@ -50,4 +52,17 @@ export const loadHomeAssistantServices = cached<string>(
 export function domainOf(identifier: string | undefined): string | undefined {
   const dot = identifier?.indexOf('.') ?? -1
   return dot > 0 ? identifier?.slice(0, dot) : undefined
+}
+
+/** Attributes of one entity, fetched on demand (values change too often to cache). */
+export function loadHomeAssistantAttributes(
+  entityId: string | undefined
+): Promise<HomeAssistantAttributeSuggestion[]> {
+  if (!entityId) {
+    return Promise.resolve([])
+  }
+  return window.api.homeAssistant
+    .getAttributes(entityId)
+    .then((result) => (isAttributeSuggestions(result) ? result : []))
+    .catch(() => [])
 }

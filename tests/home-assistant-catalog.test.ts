@@ -56,3 +56,40 @@ test('bounds the amount of data sent to the renderer', () => {
   )
   expect(toServiceNames([{ domain: 'script', services }])).toHaveLength(MAX_SERVICE_SUGGESTIONS)
 })
+
+test('lists the attributes of one entity with a short value preview', async () => {
+  const { isHomeAssistantEntityId, toAttributeSuggestions } =
+    await import('@main/services/home-assistant-catalog')
+  expect(
+    toAttributeSuggestions({
+      state: 'on',
+      attributes: {
+        friendly_name: 'Bureau',
+        brightness: 120,
+        supported_color_modes: ['hs', 'color_temp'],
+        effect_list: Array.from({ length: 40 }, (_, i) => `effect_${i}`),
+        hidden: undefined,
+        'bad name': 1
+      }
+    })
+  ).toEqual([
+    { name: 'brightness', preview: '120' },
+    { name: 'effect_list', preview: expect.stringMatching(/^\["effect_0".{40,}…$/) },
+    { name: 'friendly_name', preview: 'Bureau' },
+    { name: 'hidden', preview: '' },
+    { name: 'supported_color_modes', preview: '["hs","color_temp"]' }
+  ])
+  expect(toAttributeSuggestions({ state: 'on' })).toEqual([])
+  expect(toAttributeSuggestions(null)).toEqual([])
+
+  expect(isHomeAssistantEntityId('light.desk')).toBe(true)
+  for (const invalid of [
+    'light',
+    'light.desk/../x',
+    'LIGHT.desk',
+    42,
+    `light.${'a'.repeat(300)}`
+  ]) {
+    expect(isHomeAssistantEntityId(invalid)).toBe(false)
+  }
+})

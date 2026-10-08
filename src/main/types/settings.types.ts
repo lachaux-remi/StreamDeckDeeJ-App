@@ -41,11 +41,17 @@ export interface StreamdeckInputKey {
 }
 
 export type LedConditionType =
-  'mic-mute' | 'discord-mute' | 'discord-deafen' | 'discord-stream' | 'ha-on' | 'ha-off'
+  'mic-mute' | 'discord-mute' | 'discord-deafen' | 'discord-stream' | 'ha-on' | 'ha-off' | 'ha-attr'
+
+export type LedConditionOperator = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains'
 
 export interface LedCondition {
   type: LedConditionType
   color: LedColor
+  /** 'ha-attr' only: attribute of the button's entity, compared with haValue. */
+  haAttribute?: string
+  haOperator?: LedConditionOperator
+  haValue?: string
 }
 
 export interface StreamdeckInputConfig {
@@ -138,8 +144,20 @@ const conditionTypes: LedConditionType[] = [
   'discord-deafen',
   'discord-stream',
   'ha-on',
-  'ha-off'
+  'ha-off',
+  'ha-attr'
 ]
+
+const conditionOperators: LedConditionOperator[] = [
+  'eq',
+  'neq',
+  'gt',
+  'gte',
+  'lt',
+  'lte',
+  'contains'
+]
+const HA_ATTRIBUTE_NAME = /^[A-Za-z0-9_][A-Za-z0-9_.-]*$/
 
 const MAX_SECRET_LENGTH = 16_384
 const APP_SETTINGS_KEYS = [
@@ -230,11 +248,22 @@ function isInputKey(value: unknown): value is StreamdeckInputKey {
 }
 
 function isLedCondition(value: unknown): value is LedCondition {
+  if (
+    !isRecord(value) ||
+    !conditionTypes.includes(value.type as LedConditionType) ||
+    !isLedColor(value.color)
+  ) {
+    return false
+  }
+  if (value.type !== 'ha-attr') {
+    return hasOnlyKeys(value, ['type', 'color'])
+  }
   return (
-    isRecord(value) &&
-    hasOnlyKeys(value, ['type', 'color']) &&
-    conditionTypes.includes(value.type as LedConditionType) &&
-    isLedColor(value.color)
+    hasOnlyKeys(value, ['type', 'color', 'haAttribute', 'haOperator', 'haValue']) &&
+    isStringAtMost(value.haAttribute, MAX_SHORT_STRING_LENGTH) &&
+    HA_ATTRIBUTE_NAME.test(value.haAttribute) &&
+    conditionOperators.includes(value.haOperator as LedConditionOperator) &&
+    isStringAtMost(value.haValue, MAX_SHORT_STRING_LENGTH)
   )
 }
 
