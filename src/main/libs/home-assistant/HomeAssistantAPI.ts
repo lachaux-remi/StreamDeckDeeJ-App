@@ -18,6 +18,27 @@ class HomeAssistantAPI {
     return response.json() as Promise<{ state: string; attributes: Record<string, unknown> }>
   }
 
+  /** All entity states (GET /api/states), as returned by Home Assistant. */
+  public async getStates(signal?: AbortSignal): Promise<unknown> {
+    return this.getJson('/api/states', 'states', signal)
+  }
+
+  /** All services by domain (GET /api/services), as returned by Home Assistant. */
+  public async getServices(signal?: AbortSignal): Promise<unknown> {
+    return this.getJson('/api/services', 'services', signal)
+  }
+
+  private async getJson(path: string, label: string, signal?: AbortSignal): Promise<unknown> {
+    const response = await fetch(`${this.url}${path}`, {
+      headers: { Authorization: `Bearer ${this.token}` },
+      signal
+    })
+    if (!response.ok) {
+      throw new Error(`Home Assistant ${label} error: ${response.status} ${response.statusText}`)
+    }
+    return response.json()
+  }
+
   public async callService(
     service: string,
     entityId: string,
