@@ -50,6 +50,7 @@ export default defineConfig({
         'src/main/services/sessions.service.ts',
         'src/main/services/audio-level.ts',
         'src/main/services/audio-meter.service.ts',
+        'src/main/services/home-assistant-live-states.ts',
         'src/main/services/pipewire-streams.ts',
         'src/main/services/settings-defaults.ts',
         'src/main/services/signed-update.ts',
@@ -137,6 +138,12 @@ export default defineConfig({
           functions: 95.12,
           lines: 91.54,
           statements: 91.3
+        },
+        'src/main/services/home-assistant-live-states.ts': {
+          branches: 83.51,
+          functions: 93.54,
+          lines: 94.7,
+          statements: 94.76
         },
         'src/main/services/audio-meter.service.ts': {
           branches: 83.87,
