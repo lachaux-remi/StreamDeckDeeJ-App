@@ -156,6 +156,28 @@ test('wires serial and deej success, fallback, and asynchronous failure paths', 
   fakes.getSliders.mockReturnValue({ '0': 0.2 })
   expect(invoke('deej:sliders')).toEqual({ '0': 0.2 })
   expect(fakes.getOsVolumes).toHaveBeenCalledOnce()
+  expect(invoke('deej:level-meter-available')).toBe(false)
+})
+
+test('reports the audio level meter only when the platform provides one', async () => {
+  const { registerAllHandlers } = await import('@main/handlers')
+  const platform = (levelMeter?: object): never =>
+    ({
+      audio: {
+        available: true,
+        sessions: { getOsVolumes: fakes.getOsVolumes, getAllSessions: fakes.getAllSessions },
+        microphone: { isMuted: fakes.micMuted },
+        levelMeter
+      },
+      hardwarePermissions: { diagnose: fakes.diagnose, install: fakes.installPermissions },
+      updater: { getState: fakes.getUpdateState }
+    }) as never
+
+  registerAllHandlers(trustedSender as never, platform({ updateConfig: vi.fn() }))
+  expect(invoke('deej:level-meter-available')).toBe(true)
+  fakes.invokes.clear()
+  registerAllHandlers(trustedSender as never, platform())
+  expect(invoke('deej:level-meter-available')).toBe(false)
 })
 
 test('hydrates only the renderer view and rejects malformed secret-bearing settings updates', async () => {
@@ -312,6 +334,7 @@ test('registers the complete main-process handler surface for one trusted render
   expect([...fakes.invokes.keys()].sort()).toEqual(
     [
       'conditions:state',
+      'deej:level-meter-available',
       'deej:sessions',
       'deej:sliders',
       'electron:logs',

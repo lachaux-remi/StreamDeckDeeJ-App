@@ -35,7 +35,8 @@ const api = {
   },
   deej: {
     getSliders: (): Promise<Record<string, number>> => ipcRenderer.invoke('deej:sliders'),
-    getSessions: (): Promise<string[]> => ipcRenderer.invoke('deej:sessions')
+    getSessions: (): Promise<string[]> => ipcRenderer.invoke('deej:sessions'),
+    hasLevelMeter: (): Promise<unknown> => ipcRenderer.invoke('deej:level-meter-available')
   },
   app: {
     getVersions: (): Promise<unknown> => ipcRenderer.invoke('electron:versions'),
@@ -89,6 +90,11 @@ const api = {
       const handler = (_: unknown, sliders: Record<string, number>): void => callback(sliders)
       ipcRenderer.on('deej:sliders', handler)
       return () => ipcRenderer.removeListener('deej:sliders', handler)
+    },
+    levelsUpdate: (callback: (levels: unknown) => void): (() => void) => {
+      const handler = (_: unknown, levels: unknown): void => callback(levels)
+      ipcRenderer.on('deej:levels', handler)
+      return () => ipcRenderer.removeListener('deej:levels', handler)
     },
     streamdeckUpdate: (callback: (key: string, data: unknown) => void): (() => void) => {
       const handler = (_: unknown, key: string, data: unknown): void => callback(key, data)

@@ -3,6 +3,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { HardwareDiagnostic } from '../shared/hardware-diagnostic'
 import type { PlatformRuntime } from './platform-runtime'
+import { audioMeterService } from './services/audio-meter.service'
 import { hardwarePermissionsService } from './services/hardware-permissions.service'
 import { setLinuxAutostart } from './services/linux-autostart'
 import { linuxUpdateService } from './services/linux-update.service'
@@ -36,6 +37,15 @@ export function createLinuxPlatformRuntime(): PlatformRuntime {
           return this
         },
         shutdown: () => micService.shutdown()
+      },
+      levelMeter: {
+        updateConfig: (config) => audioMeterService.updateConfig(config),
+        setActive: (active) => audioMeterService.setActive(active),
+        on(event, listener) {
+          audioMeterService.on(event, listener)
+          return this
+        },
+        shutdown: () => audioMeterService.shutdown()
       }
     },
     hardwarePermissions: {
@@ -63,7 +73,11 @@ export function createLinuxPlatformRuntime(): PlatformRuntime {
       })
     },
     async shutdown() {
-      await Promise.all([sessionsService.shutdown(), micService.shutdown()])
+      await Promise.all([
+        sessionsService.shutdown(),
+        micService.shutdown(),
+        audioMeterService.shutdown()
+      ])
     }
   }
 }
