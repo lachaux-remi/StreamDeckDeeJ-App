@@ -339,6 +339,8 @@ test('registers the complete main-process handler surface for one trusted render
       'deej:sliders',
       'electron:logs',
       'electron:versions',
+      'ha:entities',
+      'ha:services',
       'hardware-permissions:diagnose',
       'hardware-permissions:install',
       'led:setProfile',

@@ -33,6 +33,10 @@ const api = {
     setLedProfile: (profile: unknown): Promise<{ success: boolean }> =>
       ipcRenderer.invoke('led:setProfile', profile)
   },
+  homeAssistant: {
+    getEntities: (): Promise<unknown> => ipcRenderer.invoke('ha:entities'),
+    getServices: (): Promise<unknown> => ipcRenderer.invoke('ha:services')
+  },
   deej: {
     getSliders: (): Promise<Record<string, number>> => ipcRenderer.invoke('deej:sliders'),
     getSessions: (): Promise<string[]> => ipcRenderer.invoke('deej:sessions'),
