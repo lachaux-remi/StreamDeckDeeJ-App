@@ -48,6 +48,9 @@ export default defineConfig({
         'src/main/services/serial-protocol.ts',
         'src/main/services/serial.service.ts',
         'src/main/services/sessions.service.ts',
+        'src/main/services/audio-level.ts',
+        'src/main/services/audio-meter.service.ts',
+        'src/main/services/pipewire-streams.ts',
         'src/main/services/settings-defaults.ts',
         'src/main/services/signed-update.ts',
         'src/main/services/update-command.ts',
@@ -57,11 +60,12 @@ export default defineConfig({
         'src/renderer/src/lib/icon-file.ts',
         'src/preload/index.ts',
         'src/renderer/src/types/settings.types.ts',
+        'src/renderer/src/types/audio-levels.types.ts',
         'src/renderer/src/stores/settings.defaults.ts'
       ],
       reporter: ['text', 'html'],
       thresholds: {
-        '{scripts/linux-permissions.mjs,src/shared/input-limits.ts,src/main/handlers/{hardware-permissions.contract,streamdeck.handlers,trusted-ipc-core}.ts,src/main/services/{app-quit-coordinator,audio-command,audio-subscription,config-transfer,discord-rpc-codec,hardware-permissions-core,home-assistant-state-sync,linux-autostart,renderer-settings,secret-storage,serial-port-discovery,serial-protocol,settings-defaults,update-command,update-controller,update-policy,window-close-handler}.ts,src/main/types/{settings,update}.types.ts,src/renderer/src/lib/icon-file.ts,src/renderer/src/types/settings.types.ts,src/renderer/src/stores/settings.defaults.ts}':
+        '{scripts/linux-permissions.mjs,src/shared/input-limits.ts,src/main/handlers/{hardware-permissions.contract,streamdeck.handlers,trusted-ipc-core}.ts,src/main/services/{app-quit-coordinator,audio-command,audio-level,audio-subscription,config-transfer,discord-rpc-codec,hardware-permissions-core,home-assistant-state-sync,linux-autostart,pipewire-streams,renderer-settings,secret-storage,serial-port-discovery,serial-protocol,settings-defaults,update-command,update-controller,update-policy,window-close-handler}.ts,src/main/types/{settings,update}.types.ts,src/renderer/src/lib/icon-file.ts,src/renderer/src/types/{audio-levels,settings}.types.ts,src/renderer/src/stores/settings.defaults.ts}':
           {
             branches: 86.26,
             functions: 92.85,
@@ -129,10 +133,16 @@ export default defineConfig({
           statements: 79.86
         },
         'src/main/services/sessions.service.ts': {
-          branches: 48.71,
-          functions: 61.53,
-          lines: 70.09,
-          statements: 67.4
+          branches: 70.78,
+          functions: 95.12,
+          lines: 91.54,
+          statements: 91.3
+        },
+        'src/main/services/audio-meter.service.ts': {
+          branches: 83.87,
+          functions: 93.33,
+          lines: 90.47,
+          statements: 90.72
         },
         'src/preload/index.ts': {
           branches: 50,
