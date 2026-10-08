@@ -7,6 +7,32 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 5_000
 
 type SyncConfig = Pick<AppSettings, 'homeAssistant' | 'streamdeck'>
 
+/**
+ * Maps each Home Assistant entity controlled by a Stream Deck button that has
+ * a Home Assistant LED condition to the keys of those buttons.
+ */
+export function homeAssistantButtonEntities(
+  config: Pick<AppSettings, 'streamdeck'>
+): Map<string, string[]> {
+  const entities = new Map<string, string[]>()
+  for (const [key, button] of Object.entries(config.streamdeck ?? {})) {
+    const entityId =
+      button.pressed?.module === ModuleEnum.HomeAssistant
+        ? button.pressed.params[1]
+        : button.hold?.module === ModuleEnum.HomeAssistant
+          ? button.hold.params[1]
+          : undefined
+    const hasHomeAssistantCondition = button.ledConditions?.some(
+      (condition) => condition.type === 'ha-on' || condition.type === 'ha-off'
+    )
+    if (!entityId || !hasHomeAssistantCondition) {
+      continue
+    }
+    entities.set(entityId, [...(entities.get(entityId) ?? []), key])
+  }
+  return entities
+}
+
 interface HomeAssistantStateSyncOptions {
   pollIntervalMs?: number
   requestTimeoutMs?: number
@@ -84,22 +110,7 @@ export class HomeAssistantStateSync {
       return
     }
 
-    const entities = new Map<string, string[]>()
-    for (const [key, button] of Object.entries(config.streamdeck ?? {})) {
-      const entityId =
-        button.pressed?.module === ModuleEnum.HomeAssistant
-          ? button.pressed.params[1]
-          : button.hold?.module === ModuleEnum.HomeAssistant
-            ? button.hold.params[1]
-            : undefined
-      const hasHomeAssistantCondition = button.ledConditions?.some(
-        (condition) => condition.type === 'ha-on' || condition.type === 'ha-off'
-      )
-      if (!entityId || !hasHomeAssistantCondition) {
-        continue
-      }
-      entities.set(entityId, [...(entities.get(entityId) ?? []), key])
-    }
+    const entities = homeAssistantButtonEntities(config)
 
     for (const [entityId, keys] of entities) {
       if (
