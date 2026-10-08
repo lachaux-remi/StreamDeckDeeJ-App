@@ -13,7 +13,8 @@ const fakes = vi.hoisted(() => ({
   fetchSignedUpdateManifest: vi.fn(),
   requireSignedAppImage: vi.fn(),
   verifyDownloadedUpdateArtifact: vi.fn(),
-  installUpdate: vi.fn(async (quit: () => void | Promise<void>) => quit())
+  installUpdate: vi.fn(async (quit: () => void | Promise<void>) => quit()),
+  runCommand: vi.fn()
 }))
 
 vi.mock('electron', () => ({
@@ -30,6 +31,9 @@ vi.mock('electron-updater', () => ({
     quitAndInstall: fakes.quitAndInstall,
     setFeedURL: fakes.setFeedURL
   }
+}))
+vi.mock('@main/services/audio-command', () => ({
+  commandRunner: { run: fakes.runCommand }
 }))
 vi.mock('@main/services/logger.service', () => ({
   loggerService: { info: vi.fn() }
@@ -57,6 +61,7 @@ beforeEach(() => {
     sha512: 'signed-sha512'
   })
   fakes.verifyDownloadedUpdateArtifact.mockResolvedValue(undefined)
+  fakes.runCommand.mockResolvedValue('core\nextra\nstreamdeck-deej\n')
   Object.defineProperty(process, 'resourcesPath', {
     value: '/opt/streamdeck-deej/resources',
     configurable: true
@@ -156,9 +161,11 @@ test('validates official release responses and opens only the fixed release page
       status: 'available',
       version: '4.2.0',
       releaseName: 'Version 4.2.0',
-      releaseNotes: 'Fixes\n• tray: keep icon (#1)'
+      releaseNotes: 'Fixes\n• tray: keep icon (#1)',
+      pacmanRepository: true
     })
   )
+  expect(fakes.runCommand).toHaveBeenCalledWith('pacman-conf', ['--repo-list'], 5_000)
   expect(fakes.fetch).toHaveBeenCalledWith(
     'https://api.github.com/repos/lachaux-remi/StreamDeckDeeJ-App/releases/latest',
     expect.objectContaining({
@@ -189,4 +196,18 @@ test('fails safely before initialization and on malformed release metadata', asy
   expect(linuxUpdateService.getState()).toEqual(
     expect.objectContaining({ mode: 'package-manager', status: 'error' })
   )
+})
+
+test('detects whether the signed pacman repository is configured', async () => {
+  const { isPacmanRepositoryConfigured } = await import('@main/services/linux-update.service')
+  const runner = (output: string | Error): { run: () => Promise<string> } => ({
+    run: () => (output instanceof Error ? Promise.reject(output) : Promise.resolve(output))
+  })
+
+  await expect(isPacmanRepositoryConfigured(runner('core\nstreamdeck-deej\n'))).resolves.toBe(true)
+  await expect(isPacmanRepositoryConfigured(runner('core\nextra\nmultilib\n'))).resolves.toBe(false)
+  await expect(isPacmanRepositoryConfigured(runner('streamdeck-deej-testing\n'))).resolves.toBe(
+    false
+  )
+  await expect(isPacmanRepositoryConfigured(runner(new Error('ENOENT')))).resolves.toBe(false)
 })
