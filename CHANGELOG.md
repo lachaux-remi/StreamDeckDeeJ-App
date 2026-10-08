@@ -1,5 +1,26 @@
 # Changelog
 
+## [4.3.0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.2.0...v4.3.0) (2026-10-08)
+
+
+### Fonctionnalités
+
+* **deej:** show a real-time audio level meter on each slider ([#79](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/79)) ([d908010](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/d908010bbce9157a9ecd05a213e9cb53a9570547))
+* **home-assistant:** add automation buttons and attribute LED conditions ([#82](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/82)) ([7e552d9](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/7e552d97d1e404c7b18b40cfd9508436455dc388))
+* **home-assistant:** autocomplete services and entities in the button dialog ([#81](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/81)) ([1c0f04b](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/1c0f04b4600894d0fe5ea7e759c6a1e680a20fd1))
+* **home-assistant:** update button LEDs live over the WebSocket API ([#80](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/80)) ([39009d2](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/39009d2444f5657dbed576f75022dc375da5ed13))
+* **packaging:** serve releases from a signed pacman repository ([#73](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/73)) ([5ad3229](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/5ad3229bb203c59891175ac023507d0f59824a50))
+* **updater:** tell pacman users how to install the update ([#77](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/77)) ([196997b](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/196997bf92c67d6f5e9ca470a887263cd9c418a8))
+
+
+### Corrections de bugs
+
+* **ci:** package Linux release builds and resume failed releases ([#65](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/65)) ([95cdd91](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/95cdd9159817aa4a5cbd7ec0ac0e3855d45fd48f))
+* **deps:** remove sprintf-js instead of ignoring its advisory ([#74](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/74)) ([65364b0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/65364b07ae8321552eaabd42a5312ef6e2175d80))
+* **packaging:** declare the actual pacman runtime dependencies ([#67](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/67)) ([f41e89b](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/f41e89ba503bf8a67bcb8ac8e7e1420949ebb4a7))
+* **packaging:** rerun the install script on pacman upgrades ([#71](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/71)) ([605012c](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/605012c970ad123fe68d6cf545d2b85708fdb371))
+* **updater:** show release notes as readable text ([#70](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/70)) ([1ed6061](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/1ed60614dd3d38f417a4756d8298f653eea43218))
+
 ## [4.2.0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.1.0...v4.2.0) (2026-10-06)
 
 
