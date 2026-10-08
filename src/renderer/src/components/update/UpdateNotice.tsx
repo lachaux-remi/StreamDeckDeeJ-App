@@ -74,6 +74,14 @@ export default function UpdateNotice(): React.JSX.Element | null {
             <p className="mt-1 max-h-20 overflow-y-auto whitespace-pre-wrap text-xs text-muted-foreground">
               {state.releaseNotes || 'Aucune note de version fournie.'}
             </p>
+            {state.mode === 'package-manager' && (
+              <p className="mt-2 text-xs text-neon-cyan">
+                {state.pacmanRepository
+                  ? 'Installez-la avec '
+                  : 'Ajoutez le dépôt pacman StreamDeck DeeJ (voir la release officielle) pour la recevoir avec '}
+                <code className="rounded bg-black/30 px-1 font-mono">sudo pacman -Syu</code>
+              </p>
+            )}
             {state.status === 'downloading' && (
               <p className="mt-2 text-xs text-neon-cyan">
                 Téléchargement… {Math.round(state.progress ?? 0)} %

@@ -1,6 +1,7 @@
 import { app, net, shell } from 'electron'
 import { readFileSync } from 'fs'
 import { basename, dirname, join } from 'path'
+import { commandRunner, type CommandRunner } from './audio-command'
 import { loggerService } from './logger.service'
 import { createElectronUpdateAdapter, type InstallUpdate } from './electron-update-adapter'
 import { formatReleaseNotes } from './release-notes'
@@ -10,6 +11,7 @@ import { requireSignedAppImage } from './signed-update'
 import type { UpdateReleaseInfo, UpdateState } from '@main/types/update.types'
 
 const MAX_RELEASE_NOTES_LENGTH = 20_000
+const PACMAN_REPOSITORY = 'streamdeck-deej'
 
 function packageType(): string | undefined {
   try {
@@ -35,6 +37,20 @@ function isGitHubRelease(value: unknown): value is {
   )
 }
 
+// `pacman -Syu` only delivers the update once the signed streamdeck-deej
+// repository is configured; a package installed with `pacman -U` is not
+// upgraded by it. pacman-conf resolves Include directives like pacman does.
+export async function isPacmanRepositoryConfigured(
+  runner: CommandRunner = commandRunner
+): Promise<boolean> {
+  try {
+    const repositories = await runner.run('pacman-conf', ['--repo-list'], 5_000)
+    return repositories.split('\n').some((name) => name.trim() === PACMAN_REPOSITORY)
+  } catch {
+    return false
+  }
+}
+
 async function checkOfficialRelease(): Promise<UpdateReleaseInfo> {
   const response = await net.fetch(OFFICIAL_GITHUB_RELEASE_API, {
     headers: {
@@ -54,7 +70,8 @@ async function checkOfficialRelease(): Promise<UpdateReleaseInfo> {
   return {
     version,
     releaseName: value.name || `Version ${version}`,
-    releaseNotes: formatReleaseNotes(value.body || '').slice(0, MAX_RELEASE_NOTES_LENGTH)
+    releaseNotes: formatReleaseNotes(value.body || '').slice(0, MAX_RELEASE_NOTES_LENGTH),
+    pacmanRepository: await isPacmanRepositoryConfigured()
   }
 }
 
