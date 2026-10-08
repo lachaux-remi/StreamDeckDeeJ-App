@@ -14,6 +14,8 @@ export type UpdateState =
       version: string
       releaseName: string
       releaseNotes: string
+      /** Package-manager mode only: whether the signed pacman repository is configured. */
+      pacmanRepository?: boolean
       progress?: number
     }
   | {
@@ -60,6 +62,7 @@ export function isUpdateState(value: unknown): value is UpdateState {
     typeof value.version === 'string' &&
     typeof value.releaseName === 'string' &&
     typeof value.releaseNotes === 'string' &&
+    (value.pacmanRepository === undefined || typeof value.pacmanRepository === 'boolean') &&
     (value.progress === undefined ||
       (typeof value.progress === 'number' && value.progress >= 0 && value.progress <= 100)) &&
     hasOnlyKeys(value, [
@@ -69,6 +72,7 @@ export function isUpdateState(value: unknown): value is UpdateState {
       'version',
       'releaseName',
       'releaseNotes',
+      'pacmanRepository',
       'progress'
     ])
   )

@@ -73,3 +73,26 @@ test('rejects malformed service names, handles empty success bodies, and reports
     'Home Assistant API error: 400 Bad Request'
   )
 })
+
+test('lists states and services with the token only in the authorization header', async () => {
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify([{ entity_id: 'light.desk' }])))
+    .mockResolvedValueOnce(new Response(JSON.stringify([{ domain: 'light', services: {} }])))
+    .mockResolvedValueOnce(new Response('', { status: 401, statusText: 'Unauthorized' }))
+  vi.stubGlobal('fetch', fetch)
+  const api = new HomeAssistantAPI('https://ha.example', 'fixture-secret-token')
+  const signal = new AbortController().signal
+
+  await expect(api.getStates(signal)).resolves.toEqual([{ entity_id: 'light.desk' }])
+  await expect(api.getServices()).resolves.toEqual([{ domain: 'light', services: {} }])
+  const error = await api.getServices().catch((caught: unknown) => caught)
+
+  expect(fetch).toHaveBeenNthCalledWith(1, 'https://ha.example/api/states', {
+    headers: { Authorization: 'Bearer fixture-secret-token' },
+    signal
+  })
+  expect(fetch).toHaveBeenNthCalledWith(2, 'https://ha.example/api/services', expect.anything())
+  expect(String(error)).toContain('Home Assistant services error: 401 Unauthorized')
+  expect(String(error)).not.toContain('fixture-secret-token')
+})

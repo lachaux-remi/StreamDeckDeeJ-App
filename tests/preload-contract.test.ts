@@ -36,6 +36,7 @@ test('exposes request methods on their exact main-process channels', async () =>
     hardwarePermissions: Record<string, (...args: unknown[]) => unknown>
     streamdeck: Record<string, (...args: unknown[]) => unknown>
     deej: Record<string, (...args: unknown[]) => unknown>
+    homeAssistant: Record<string, (...args: unknown[]) => unknown>
     app: Record<string, (...args: unknown[]) => unknown>
     update: Record<string, (...args: unknown[]) => unknown>
     conditions: Record<string, (...args: unknown[]) => unknown>
@@ -64,6 +65,9 @@ test('exposes request methods on their exact main-process channels', async () =>
     ],
     [() => api.deej.getSliders(), 'deej:sliders'],
     [() => api.deej.getSessions(), 'deej:sessions'],
+    [() => api.deej.hasLevelMeter(), 'deej:level-meter-available'],
+    [() => api.homeAssistant.getEntities(), 'ha:entities'],
+    [() => api.homeAssistant.getServices(), 'ha:services'],
     [() => api.app.getVersions(), 'electron:versions'],
     [() => api.app.getLogs(), 'electron:logs'],
     [() => api.update.getState(), 'update:state'],
@@ -90,6 +94,7 @@ test('subscriptions forward payloads and dispose the exact registered listener',
     [() => api.update.onStateChanged(vi.fn()), 'update:state', [{ status: 'checking' }]],
     [() => api.conditions.onChange(vi.fn()), 'conditions:change', [{ micMuted: true }]],
     [() => api.on.slidersUpdate(vi.fn()), 'deej:sliders', [{ '0': 0.5 }]],
+    [() => api.on.levelsUpdate(vi.fn()), 'deej:levels', [{ '0': 0.25 }]],
     [() => api.on.streamdeckUpdate(vi.fn()), 'streamdeck:update', ['3', { pressed: true }]],
     [() => api.on.serialStatus(vi.fn()), 'serial:status', [{ connected: true, port: 'tty0' }]],
     [() => api.on.log(vi.fn()), 'electron:log', [{ level: 'info' }]]

@@ -4,6 +4,7 @@ import { loggerService } from './logger.service'
 import { sliderService } from './slider.service'
 import { commandRunner, LatestValueExecutor, runCommandWithFallback } from './audio-command'
 import { PactlSubscription } from './audio-subscription'
+import { parsePipeWireOutputStreams } from './pipewire-streams'
 
 const SERVICE = 'SessionsService'
 const MIN_REFRESH_TIME = 5 * 1000
@@ -16,20 +17,6 @@ interface AudioSession {
   pwNodeId: number
   name: string
   volume: number
-}
-
-interface PwDumpObject {
-  id: number
-  type: string
-  info?: {
-    props?: Record<string, unknown>
-    params?: {
-      Props?: Array<{
-        channelVolumes?: number[]
-        volume?: number
-      }>
-    }
-  }
 }
 
 class SessionsService extends EventEmitter {
@@ -215,75 +202,13 @@ class SessionsService extends EventEmitter {
 
   /**
    * Uses pw-dump (PipeWire JSON) to discover audio streams.
-   * Resolves application names through the client.id → client object lookup,
-   * which is required for PipeWire-native apps (e.g. Spotify) whose stream
-   * node does NOT carry application.name itself.
    */
   private parsePwDump(raw: string): AudioSession[] {
-    const objects: PwDumpObject[] = JSON.parse(raw)
-
-    const clientMap = new Map<number, Record<string, unknown>>()
-    for (const obj of objects) {
-      if (obj.type === 'PipeWire:Interface:Client' && obj.info?.props) {
-        clientMap.set(obj.id, obj.info.props)
-      }
-    }
-
-    const sessions: AudioSession[] = []
-
-    for (const obj of objects) {
-      const props = obj.info?.props
-      if (!props) {
-        continue
-      }
-      if (obj.type !== 'PipeWire:Interface:Node') {
-        continue
-      }
-      if (props['media.class'] !== 'Stream/Output/Audio') {
-        continue
-      }
-
-      let name = props['application.name'] as string | undefined
-
-      if (!name) {
-        const clientId = props['client.id'] as number | undefined
-        if (clientId !== undefined) {
-          const clientProps = clientMap.get(clientId)
-          if (clientProps) {
-            name =
-              (clientProps['application.name'] as string) ??
-              (clientProps['application.process.binary'] as string)
-          }
-        }
-      }
-
-      if (!name) {
-        name = (props['application.process.binary'] as string) ?? (props['node.name'] as string)
-      }
-
-      if (!name) {
-        continue
-      }
-
-      const paramsProps = obj.info?.params?.Props
-      let volume = 0
-      if (paramsProps && paramsProps.length > 0) {
-        const p = paramsProps[0]
-        if (p.channelVolumes && p.channelVolumes.length > 0) {
-          volume = Math.max(...p.channelVolumes)
-        } else if (p.volume !== undefined) {
-          volume = p.volume
-        }
-      }
-
-      sessions.push({
-        pwNodeId: obj.id,
-        name,
-        volume
-      })
-    }
-
-    return sessions
+    return parsePipeWireOutputStreams(raw).map(({ pwNodeId, name, volume }) => ({
+      pwNodeId,
+      name,
+      volume
+    }))
   }
 
   private runIsStaleTask(): void {

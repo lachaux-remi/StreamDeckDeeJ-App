@@ -14,6 +14,12 @@ import { cn } from '@renderer/lib/utils'
 import { ICON_FILE_ACCEPT, readIconFile } from '@renderer/lib/icon-file'
 import { useSettingsStore } from '@renderer/stores/settings.store'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
+import AutocompleteInput from '@renderer/components/ui/AutocompleteInput'
+import {
+  domainOf,
+  loadHomeAssistantEntities,
+  loadHomeAssistantServices
+} from '@renderer/lib/home-assistant-catalog'
 import ColorPicker from '@renderer/components/ui/ColorPicker'
 import type {
   ConditionsState,
@@ -656,6 +662,42 @@ export default function StreamdeckConfigDialog({
                               )}
                             </button>
                           </div>
+                        ) : currentAction.module === 'home-assistant' && i < 2 ? (
+                          <AutocompleteInput
+                            value={value}
+                            onChange={(next) => {
+                              const params = [...(currentAction.params || [])]
+                              params[i] = next
+                              setCurrentAction((prev) => (prev ? { ...prev, params } : prev))
+                            }}
+                            // Entities of the service's domain come first, and vice versa.
+                            loadSuggestions={() => {
+                              const otherDomain = domainOf(currentAction.params?.[i === 0 ? 1 : 0])
+                              return i === 0
+                                ? loadHomeAssistantServices().then((services) =>
+                                    services.map((service) => ({
+                                      value: service,
+                                      priority: domainOf(service) === otherDomain ? 0 : 1
+                                    }))
+                                  )
+                                : loadHomeAssistantEntities().then((entities) =>
+                                    entities.map((entity) => ({
+                                      value: entity.entityId,
+                                      label: entity.name,
+                                      detail: entity.state,
+                                      priority: domainOf(entity.entityId) === otherDomain ? 0 : 1
+                                    }))
+                                  )
+                            }}
+                            placeholder={paramDef.placeholder}
+                            className={inputClass}
+                            accent={activeTab === 'hold' ? 'blue' : 'purple'}
+                            emptyText={
+                              i === 0
+                                ? 'Aucun service trouvé dans Home Assistant'
+                                : 'Aucune entité trouvée dans Home Assistant'
+                            }
+                          />
                         ) : (
                           <input
                             type="text"
