@@ -108,7 +108,7 @@ app.whenReady().then(async () => {
   platformRuntime = await createPlatformRuntime(process.platform, {
     setLoginItemSettings: (settings) => app.setLoginItemSettings(settings)
   })
-  const { microphone } = platformRuntime.audio
+  const { microphone, levelMeter } = platformRuntime.audio
   await microphone.init()
   await discordService.init()
   conditionService.init(microphone, discordService)
@@ -208,6 +208,19 @@ app.whenReady().then(async () => {
   loggerService.on('log', (log) => webContents.send('electron:log', log))
   platformRuntime.updater.onStateChanged((state) => webContents.send('update:state', state))
 
+  if (levelMeter) {
+    levelMeter.on('levels', (levels) => webContents.send('deej:levels', levels))
+    // Capture processes only run while the meters can be seen.
+    const syncLevelMeterVisibility = (): void =>
+      levelMeter.setActive(window.isVisible() && !window.isMinimized())
+    window.on('show', syncLevelMeterVisibility)
+    window.on('hide', syncLevelMeterVisibility)
+    window.on('minimize', syncLevelMeterVisibility)
+    window.on('restore', syncLevelMeterVisibility)
+    syncLevelMeterVisibility()
+    levelMeter.updateConfig(config.deej)
+  }
+
   microphone.on('change', () =>
     webContents.send('conditions:change', { micMuted: microphone.isMuted() })
   )
@@ -243,6 +256,7 @@ app.whenReady().then(async () => {
   configService.onUpdated((newConfig) => {
     void setAutostart(newConfig.runOnStartup)
     ledService.updateOverrides(newConfig.streamdeck)
+    levelMeter?.updateConfig(newConfig.deej)
 
     if (newConfig.discord?.clientId !== prevDiscordClientId) {
       prevDiscordClientId = newConfig.discord?.clientId

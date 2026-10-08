@@ -5,7 +5,8 @@ import { handleIpc } from './trusted-ipc'
 
 export function registerDeejHandlers(
   trustedSender: WebContents,
-  sessions: AudioSessionsCapability
+  sessions: AudioSessionsCapability,
+  levelMeterAvailable = false
 ): void {
   handleIpc(trustedSender, 'deej:sliders', () => {
     const sliders = sliderService.getSliders()
@@ -16,4 +17,5 @@ export function registerDeejHandlers(
     return sliders
   })
   handleIpc(trustedSender, 'deej:sessions', () => sessions.getAllSessions())
+  handleIpc(trustedSender, 'deej:level-meter-available', () => levelMeterAvailable)
 }

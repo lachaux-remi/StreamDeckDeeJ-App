@@ -50,12 +50,16 @@ class LogBuffer {
 interface SerialStore {
   sessions: string[]
   sliders: Record<string, number>
+  levels: Record<string, number>
+  levelMeterAvailable: boolean
   versions: ApplicationVersions | null
   serialPorts: SerialPortInfo[]
   serialStatus: SerialStatus
   logs: LogEntry[]
   setSessions: (sessions: string[]) => void
   setSliders: (sliders: Record<string, number>) => void
+  setLevels: (levels: Record<string, number>) => void
+  setLevelMeterAvailable: (available: boolean) => void
   setVersions: (versions: ApplicationVersions) => void
   setSerialPorts: (ports: SerialPortInfo[]) => void
   setSerialStatus: (status: SerialStatus) => void
@@ -70,6 +74,8 @@ export const useSerialStore = create<SerialStore>((set) => {
   return {
     sessions: [],
     sliders: {},
+    levels: {},
+    levelMeterAvailable: false,
     versions: null,
     serialPorts: [],
     serialStatus: { connected: false, port: '' },
@@ -77,6 +83,8 @@ export const useSerialStore = create<SerialStore>((set) => {
 
     setSessions: (sessions) => set({ sessions }),
     setSliders: (sliders) => set({ sliders }),
+    setLevels: (levels) => set({ levels }),
+    setLevelMeterAvailable: (levelMeterAvailable) => set({ levelMeterAvailable }),
     setVersions: (versions) => set({ versions }),
     setSerialPorts: (ports) => set({ serialPorts: ports }),
     setSerialStatus: (status) => set({ serialStatus: status }),

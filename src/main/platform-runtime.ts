@@ -1,10 +1,18 @@
 import { EventEmitter } from 'node:events'
 import type { HardwareDiagnostic } from '../shared/hardware-diagnostic'
+import type { DeeJConfig } from './types/settings.types'
 import type { UpdateState } from './types/update.types'
 
 export interface AudioSessionsCapability {
   getAllSessions(): Promise<string[]>
   getOsVolumes(): Promise<Record<string, number>>
+  shutdown(): void | Promise<void>
+}
+
+export interface AudioLevelMeterCapability {
+  updateConfig(config: DeeJConfig): void
+  setActive(active: boolean): void
+  on(event: 'levels', listener: (levels: Record<string, number>) => void): this
   shutdown(): void | Promise<void>
 }
 
@@ -38,6 +46,8 @@ export interface PlatformRuntime {
     available: boolean
     sessions: AudioSessionsCapability
     microphone: MicrophoneCapability
+    /** Per-slider audio level meter, when the platform supports it. */
+    levelMeter?: AudioLevelMeterCapability
   }
   hardwarePermissions: HardwarePermissionsCapability
   updater: UpdateCapability

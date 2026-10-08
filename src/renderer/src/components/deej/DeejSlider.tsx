@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { cn } from '@renderer/lib/utils'
+import DeejLevelMeter from './DeejLevelMeter'
 
 interface DeejSliderProps {
   index: string
@@ -135,27 +136,30 @@ export default function DeejSlider({
           }}
         />
 
-        {/* Segments */}
-        <div className="relative flex h-full flex-col gap-[2px]">
-          {segments.map(({ segIndex, isActive, active, glow }) => (
-            <div
-              key={segIndex}
-              className="flex-1 rounded-sm transition-all duration-75"
-              style={
-                isActive
-                  ? {
-                      backgroundColor: active,
-                      boxShadow: `0 0 6px ${glow}, inset 0 1px 0 rgba(255,255,255,0.15)`,
-                      opacity: 0.9 + (segIndex / SEGMENT_COUNT) * 0.1
-                    }
-                  : {
-                      backgroundColor: 'hsl(230 12% 14%)',
-                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)',
-                      opacity: 0.5
-                    }
-              }
-            />
-          ))}
+        {/* Audio level meter + segments */}
+        <div className="relative flex h-full flex-row gap-[3px]">
+          <DeejLevelMeter index={index} />
+          <div className="flex flex-1 flex-col gap-[2px]">
+            {segments.map(({ segIndex, isActive, active, glow }) => (
+              <div
+                key={segIndex}
+                className="flex-1 rounded-sm transition-all duration-75"
+                style={
+                  isActive
+                    ? {
+                        backgroundColor: active,
+                        boxShadow: `0 0 6px ${glow}, inset 0 1px 0 rgba(255,255,255,0.15)`,
+                        opacity: 0.9 + (segIndex / SEGMENT_COUNT) * 0.1
+                      }
+                    : {
+                        backgroundColor: 'hsl(230 12% 14%)',
+                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)',
+                        opacity: 0.5
+                      }
+                }
+              />
+            ))}
+          </div>
         </div>
 
         {/* Glass reflection */}
