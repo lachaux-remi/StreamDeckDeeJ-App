@@ -3,6 +3,7 @@ import HomeAssistantAPI from '@main/libs/home-assistant/HomeAssistantAPI'
 import { KeyUsageEnum, ModuleEnum } from '@main/types/enums'
 import type { StreamdeckInputConfig, StreamdeckInputKey } from '@main/types/settings.types'
 import { configService } from './config.service'
+import { HomeAssistantLiveStates } from './home-assistant-live-states'
 import { HomeAssistantStateSync } from './home-assistant-state-sync'
 import { ledService } from './led.service'
 import { loggerService } from './logger.service'
@@ -17,16 +18,42 @@ class DeckService extends EventEmitter {
   private readonly homeAssistantStateSync = new HomeAssistantStateSync({
     setButtonState: (key, state) => ledService.setHAButtonState(key, state)
   })
+  // Pushes Home Assistant states as they change; REST polling only runs
+  // while these live updates are unavailable.
+  private readonly homeAssistantLiveStates = new HomeAssistantLiveStates({
+    setButtonState: (key, state) => ledService.setHAButtonState(key, state),
+    onLiveChange: (live) => {
+      loggerService.info(
+        live
+          ? 'Home Assistant live updates active'
+          : 'Home Assistant live updates unavailable, polling',
+        SERVICE
+      )
+      if (live) {
+        this.homeAssistantStateSync.shutdown()
+      } else if (!this.stopped) {
+        this.homeAssistantStateSync.start(configService.getConfig())
+      }
+    },
+    log: (level, message) => loggerService[level](message, SERVICE)
+  })
+  private stopped = false
 
   constructor() {
     super()
     loggerService.debug('INIT', SERVICE)
     serialService.on('serial:deck', (data) => this.deckEventHandler(data))
-    configService.onUpdated((config) => this.homeAssistantStateSync.update(config))
+    configService.onUpdated((config) => {
+      this.homeAssistantStateSync.update(config)
+      this.homeAssistantLiveStates.update(config)
+    })
     this.homeAssistantStateSync.start(configService.getConfig())
+    this.homeAssistantLiveStates.start(configService.getConfig())
   }
 
   public shutdown(): void {
+    this.stopped = true
+    this.homeAssistantLiveStates.shutdown()
     this.homeAssistantStateSync.shutdown()
   }
 
