@@ -140,3 +140,41 @@ test('rejects malformed settings envelopes and integration objects', () => {
   rendererHomeAssistant.homeAssistant = null as never
   expect(isRendererSettings(rendererHomeAssistant)).toBe(false)
 })
+
+test('validates attribute LED conditions and the automation module in both schemas', () => {
+  const color = { r: 0, g: 255, b: 0 }
+  const withButton = (button: unknown): RendererSettingsUpdate => {
+    const update = rendererUpdate()
+    update.settings.streamdeck = { '0': button } as never
+    return update
+  }
+  const valid = {
+    pressed: { module: ModuleEnum.Automation, params: ['automation.good_night'] },
+    ledConditions: [
+      { type: 'ha-attr', color, haAttribute: 'brightness', haOperator: 'gte', haValue: '128' },
+      { type: 'ha-on', color }
+    ]
+  }
+  expect(isRendererSettingsUpdate(withButton(valid))).toBe(true)
+  expect(isRendererSettings(withButton(valid).settings)).toBe(true)
+
+  for (const condition of [
+    { type: 'ha-attr', color, haOperator: 'eq', haValue: '1' },
+    { type: 'ha-attr', color, haAttribute: '', haOperator: 'eq', haValue: '1' },
+    { type: 'ha-attr', color, haAttribute: 'bad name', haOperator: 'eq', haValue: '1' },
+    { type: 'ha-attr', color, haAttribute: 'brightness', haOperator: 'like', haValue: '1' },
+    {
+      type: 'ha-attr',
+      color,
+      haAttribute: 'brightness',
+      haOperator: 'eq',
+      haValue: 'x'.repeat(300)
+    },
+    { type: 'ha-attr', color, haAttribute: 'brightness', haOperator: 'eq', haValue: '1', extra: 1 },
+    { type: 'ha-on', color, haAttribute: 'brightness' }
+  ]) {
+    const button = { ...valid, ledConditions: [condition] }
+    expect(isRendererSettingsUpdate(withButton(button))).toBe(false)
+    expect(isRendererSettings(withButton(button).settings)).toBe(false)
+  }
+})

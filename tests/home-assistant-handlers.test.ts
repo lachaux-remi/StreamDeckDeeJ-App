@@ -5,6 +5,7 @@ const fakes = vi.hoisted(() => ({
   homeAssistant: { url: 'http://ha.local:8123', token: 'secret' },
   getStates: vi.fn(),
   getServices: vi.fn(),
+  getState: vi.fn(),
   warn: vi.fn()
 }))
 
@@ -23,13 +24,14 @@ vi.mock('@main/libs/home-assistant/HomeAssistantAPI', () => ({
   default: class {
     getStates = fakes.getStates
     getServices = fakes.getServices
+    getState = fakes.getState
   }
 }))
 
 const { registerHomeAssistantHandlers } = await import('@main/handlers/home-assistant.handlers')
 
-function invoke(channel: string): unknown {
-  return fakes.handlers.get(channel)?.({})
+function invoke(channel: string, ...args: unknown[]): unknown {
+  return (fakes.handlers.get(channel) as ((...a: unknown[]) => unknown) | undefined)?.({}, ...args)
 }
 
 beforeEach(() => {
@@ -66,4 +68,18 @@ test('logs failures and returns nothing', async () => {
     expect.stringContaining('Cannot list Home Assistant entities'),
     'HomeAssistantHandlers'
   )
+})
+
+test('lists the attributes of one validated entity only', async () => {
+  fakes.getState.mockResolvedValue({ state: 'on', attributes: { brightness: 120 } })
+  await expect(invoke('ha:attributes', 'light.desk')).resolves.toEqual([
+    { name: 'brightness', preview: '120' }
+  ])
+  expect(fakes.getState).toHaveBeenCalledWith('light.desk', expect.any(AbortSignal))
+
+  fakes.getState.mockClear()
+  for (const invalid of ['../api/config', 'light', 42, undefined]) {
+    expect(await invoke('ha:attributes', invalid)).toEqual([])
+  }
+  expect(fakes.getState).not.toHaveBeenCalled()
 })

@@ -35,7 +35,9 @@ const api = {
   },
   homeAssistant: {
     getEntities: (): Promise<unknown> => ipcRenderer.invoke('ha:entities'),
-    getServices: (): Promise<unknown> => ipcRenderer.invoke('ha:services')
+    getServices: (): Promise<unknown> => ipcRenderer.invoke('ha:services'),
+    getAttributes: (entityId: string): Promise<unknown> =>
+      ipcRenderer.invoke('ha:attributes', entityId)
   },
   deej: {
     getSliders: (): Promise<Record<string, number>> => ipcRenderer.invoke('deej:sliders'),

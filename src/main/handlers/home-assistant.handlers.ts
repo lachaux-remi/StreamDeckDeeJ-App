@@ -1,7 +1,12 @@
 import type { WebContents } from 'electron'
 import HomeAssistantAPI from '@main/libs/home-assistant/HomeAssistantAPI'
 import { configService } from '@main/services/config.service'
-import { toEntitySuggestions, toServiceNames } from '@main/services/home-assistant-catalog'
+import {
+  isHomeAssistantEntityId,
+  toAttributeSuggestions,
+  toEntitySuggestions,
+  toServiceNames
+} from '@main/services/home-assistant-catalog'
 import { loggerService } from '@main/services/logger.service'
 import { handleIpc } from './trusted-ipc'
 
@@ -31,6 +36,14 @@ export function registerHomeAssistantHandlers(trustedSender: WebContents): void 
       toEntitySuggestions(await api.getStates(signal))
     )
   )
+  handleIpc(trustedSender, 'ha:attributes', (entityId: unknown) => {
+    if (!isHomeAssistantEntityId(entityId)) {
+      return []
+    }
+    return fromHomeAssistant('attributes', async (api, signal) =>
+      toAttributeSuggestions(await api.getState(entityId, signal))
+    )
+  })
   handleIpc(trustedSender, 'ha:services', () =>
     fromHomeAssistant('services', async (api, signal) =>
       toServiceNames(await api.getServices(signal))

@@ -17,6 +17,7 @@ import CustomSelect from '@renderer/components/ui/CustomSelect'
 import AutocompleteInput from '@renderer/components/ui/AutocompleteInput'
 import {
   domainOf,
+  loadHomeAssistantAttributes,
   loadHomeAssistantEntities,
   loadHomeAssistantServices
 } from '@renderer/lib/home-assistant-catalog'
@@ -25,6 +26,7 @@ import type {
   ConditionsState,
   LedColor,
   LedCondition,
+  LedConditionOperator,
   LedConditionType,
   StreamdeckInputConfig,
   StreamdeckInputKey
@@ -38,7 +40,8 @@ interface StreamdeckConfigDialogProps {
 const MODULES = [
   { value: 'home-assistant', label: 'Home Assistant' },
   { value: 'ir', label: 'Télécommande IR' },
-  { value: 'macro', label: 'Macro' }
+  { value: 'macro', label: 'Macro' },
+  { value: 'automation', label: 'Automatisation HA' }
 ]
 
 const CONDITION_OPTIONS: { value: LedConditionType; label: string; description?: string }[] = [
@@ -47,8 +50,26 @@ const CONDITION_OPTIONS: { value: LedConditionType; label: string; description?:
   { value: 'discord-deafen', label: 'Sourd', description: 'Discord' },
   { value: 'discord-stream', label: 'Stream', description: 'Discord' },
   { value: 'ha-on', label: 'Actif', description: 'Home Assistant' },
-  { value: 'ha-off', label: 'Inactif', description: 'Home Assistant' }
+  { value: 'ha-off', label: 'Inactif', description: 'Home Assistant' },
+  { value: 'ha-attr', label: 'Attribut', description: 'Home Assistant' }
 ]
+
+const OPERATOR_OPTIONS: { value: LedConditionOperator; label: string }[] = [
+  { value: 'eq', label: '=' },
+  { value: 'neq', label: '≠' },
+  { value: 'gt', label: '>' },
+  { value: 'gte', label: '≥' },
+  { value: 'lt', label: '<' },
+  { value: 'lte', label: '≤' },
+  { value: 'contains', label: 'contient' }
+]
+
+const HA_ATTRIBUTE_NAME = /^[A-Za-z0-9_][A-Za-z0-9_.-]*$/
+
+/** An attribute condition needs a valid attribute name before it can be saved. */
+function isConditionComplete(condition: LedCondition): boolean {
+  return condition.type !== 'ha-attr' || HA_ATTRIBUTE_NAME.test(condition.haAttribute ?? '')
+}
 
 const DEFAULT_CONDITIONS_STATE: ConditionsState = {
   micMuted: false,
@@ -71,7 +92,8 @@ const MODULE_PARAMS: Record<string, ModuleParam[]> = {
     { label: 'Pas brightness (%)', placeholder: 'ex : 25  (optionnel)', type: 'text' }
   ],
   ir: [{ label: 'Code infrarouge', placeholder: 'ex : 0xFFA25D', type: 'textarea' }],
-  macro: [{ label: 'Code Arduino', placeholder: 'ex : open_browser', type: 'text' }]
+  macro: [{ label: 'Code Arduino', placeholder: 'ex : open_browser', type: 'text' }],
+  automation: [{ label: 'Automatisation', placeholder: 'ex : automation.bonne_nuit', type: 'text' }]
 }
 
 function IconUpload({
@@ -233,8 +255,23 @@ export default function StreamdeckConfigDialog({
     onClose()
   }, [onClose, buttonIndex, streamdeck, sendLedPreview])
 
+  // Entity whose attributes an attribute condition compares, as the LEDs do.
+  const conditionEntityId = [pressed, hold]
+    .map((action) =>
+      action?.module === 'home-assistant'
+        ? action.params?.[1]
+        : action?.module === 'automation'
+          ? action.params?.[0]
+          : undefined
+    )
+    .find((entityId) => entityId)
+  const conditionsComplete = ledConditions.every(isConditionComplete)
+  const conditionInputClass =
+    // Same box as CustomSelect so the attribute row lines up with the selects.
+    'w-full rounded-lg border border-border/40 bg-surface-2 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 outline-none transition-colors focus:border-neon-pink/50'
+
   const handleSave = useCallback(() => {
-    if (buttonIndex === null) {
+    if (buttonIndex === null || !ledConditions.every(isConditionComplete)) {
       return
     }
     const config: StreamdeckInputConfig = {}
@@ -454,7 +491,7 @@ export default function StreamdeckConfigDialog({
                         setDragOverIndex(null)
                       }}
                       className={cn(
-                        'flex items-center gap-2 rounded-lg border bg-surface-2/50 px-2 py-2 transition-colors',
+                        'space-y-2 rounded-lg border bg-surface-2/50 px-2 py-2 transition-colors',
                         dragOverIndex === idx
                           ? 'border-neon-pink/50 bg-neon-pink/5'
                           : dragIndex === idx
@@ -462,41 +499,123 @@ export default function StreamdeckConfigDialog({
                             : 'border-border/30'
                       )}
                     >
-                      <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/20 active:cursor-grabbing" />
+                      <div className="flex items-center gap-2">
+                        <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/20 active:cursor-grabbing" />
 
-                      <div className="flex-1 min-w-0">
-                        <CustomSelect
-                          value={cond.type}
-                          onChange={(val) => {
-                            setLedConditions((prev) =>
-                              prev.map((c, i) =>
-                                i === idx ? { ...c, type: val as LedConditionType } : c
+                        <div className="flex-1 min-w-0">
+                          <CustomSelect
+                            value={cond.type}
+                            onChange={(val) => {
+                              setLedConditions((prev) =>
+                                prev.map((c, i) =>
+                                  i !== idx
+                                    ? c
+                                    : val === 'ha-attr'
+                                      ? {
+                                          type: 'ha-attr',
+                                          color: c.color,
+                                          haAttribute: c.haAttribute ?? '',
+                                          haOperator: c.haOperator ?? 'eq',
+                                          haValue: c.haValue ?? ''
+                                        }
+                                      : { type: val as LedConditionType, color: c.color }
+                                )
                               )
-                            )
-                          }}
-                          options={CONDITION_OPTIONS}
-                          accent="pink"
-                        />
+                            }}
+                            options={CONDITION_OPTIONS}
+                            accent="pink"
+                          />
+                        </div>
+
+                        <div className="shrink-0 flex items-center">
+                          <ColorPicker
+                            value={cond.color}
+                            onChange={(c) => {
+                              setLedConditions((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, color: c } : item))
+                              )
+                            }}
+                            compact
+                          />
+                        </div>
+
+                        <button
+                          onClick={() =>
+                            setLedConditions((prev) => prev.filter((_, i) => i !== idx))
+                          }
+                          className="shrink-0 rounded p-1 text-muted-foreground/30 hover:text-neon-red transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
                       </div>
 
-                      <div className="shrink-0 flex items-center">
-                        <ColorPicker
-                          value={cond.color}
-                          onChange={(c) => {
-                            setLedConditions((prev) =>
-                              prev.map((item, i) => (i === idx ? { ...item, color: c } : item))
-                            )
-                          }}
-                          compact
-                        />
-                      </div>
-
-                      <button
-                        onClick={() => setLedConditions((prev) => prev.filter((_, i) => i !== idx))}
-                        className="shrink-0 rounded p-1 text-muted-foreground/30 hover:text-neon-red transition-colors"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                      {cond.type === 'ha-attr' && (
+                        <div className="space-y-1.5 pl-5">
+                          <div>
+                            <AutocompleteInput
+                              value={cond.haAttribute ?? ''}
+                              onChange={(next) =>
+                                setLedConditions((prev) =>
+                                  prev.map((item, i) =>
+                                    i === idx ? { ...item, haAttribute: next.trim() } : item
+                                  )
+                                )
+                              }
+                              loadSuggestions={() =>
+                                loadHomeAssistantAttributes(conditionEntityId).then((attributes) =>
+                                  attributes.map((attribute) => ({
+                                    value: attribute.name,
+                                    detail: attribute.preview
+                                  }))
+                                )
+                              }
+                              placeholder="attribut"
+                              className={conditionInputClass}
+                              emptyText={
+                                conditionEntityId
+                                  ? 'Aucun attribut pour cette entité'
+                                  : "Choisissez d'abord une entité Home Assistant"
+                              }
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CustomSelect
+                              value={cond.haOperator ?? 'eq'}
+                              onChange={(val) =>
+                                setLedConditions((prev) =>
+                                  prev.map((item, i) =>
+                                    i === idx
+                                      ? { ...item, haOperator: val as LedConditionOperator }
+                                      : item
+                                  )
+                                )
+                              }
+                              options={OPERATOR_OPTIONS}
+                              accent="pink"
+                              className="w-24 shrink-0"
+                            />
+                            <input
+                              type="text"
+                              value={cond.haValue ?? ''}
+                              onChange={(e) =>
+                                setLedConditions((prev) =>
+                                  prev.map((item, i) =>
+                                    i === idx ? { ...item, haValue: e.target.value } : item
+                                  )
+                                )
+                              }
+                              placeholder="valeur"
+                              maxLength={256}
+                              className={cn(conditionInputClass, 'min-w-0 flex-1')}
+                            />
+                          </div>
+                          {!isConditionComplete(cond) && (
+                            <p className="text-[11px] text-neon-orange/80">
+                              Indiquez l'attribut à comparer (ex : brightness, temperature).
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -585,8 +704,11 @@ export default function StreamdeckConfigDialog({
                       mod
                         ? {
                             module: mod,
+                            // Parameters only make sense for the module they were written for.
                             params: paramDefs
-                              ? paramDefs.map((_, i) => prev?.params?.[i] || '')
+                              ? paramDefs.map((_, i) =>
+                                  prev?.module === mod ? prev.params?.[i] || '' : ''
+                                )
                               : [''],
                             icon: prev?.icon
                           }
@@ -662,6 +784,30 @@ export default function StreamdeckConfigDialog({
                               )}
                             </button>
                           </div>
+                        ) : currentAction.module === 'automation' ? (
+                          <AutocompleteInput
+                            value={value}
+                            onChange={(next) => {
+                              const params = [...(currentAction.params || [])]
+                              params[i] = next
+                              setCurrentAction((prev) => (prev ? { ...prev, params } : prev))
+                            }}
+                            loadSuggestions={() =>
+                              loadHomeAssistantEntities().then((entities) =>
+                                entities
+                                  .filter((entity) => domainOf(entity.entityId) === 'automation')
+                                  .map((entity) => ({
+                                    value: entity.entityId,
+                                    label: entity.name,
+                                    detail: entity.state === 'on' ? 'activée' : 'désactivée'
+                                  }))
+                              )
+                            }
+                            placeholder={paramDef.placeholder}
+                            className={inputClass}
+                            accent={activeTab === 'hold' ? 'blue' : 'purple'}
+                            emptyText="Aucune automatisation trouvée dans Home Assistant"
+                          />
                         ) : currentAction.module === 'home-assistant' && i < 2 ? (
                           <AutocompleteInput
                             value={value}
@@ -760,7 +906,9 @@ export default function StreamdeckConfigDialog({
             </button>
             <button
               onClick={handleSave}
-              className="rounded-lg bg-neon-purple px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-neon-purple/80 hover:glow-purple"
+              disabled={!conditionsComplete}
+              title={conditionsComplete ? undefined : 'Une condition « Attribut » est incomplète'}
+              className="rounded-lg bg-neon-purple px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-neon-purple/80 hover:glow-purple disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-neon-purple disabled:hover:shadow-none"
             >
               Enregistrer
             </button>

@@ -16,14 +16,20 @@ export function homeAssistantButtonEntities(
 ): Map<string, string[]> {
   const entities = new Map<string, string[]>()
   for (const [key, button] of Object.entries(config.streamdeck ?? {})) {
-    const entityId =
-      button.pressed?.module === ModuleEnum.HomeAssistant
-        ? button.pressed.params[1]
-        : button.hold?.module === ModuleEnum.HomeAssistant
-          ? button.hold.params[1]
-          : undefined
+    // A Home Assistant action targets params[1]; an automation is params[0]
+    // (its state tells whether it is enabled).
+    const entityId = [button.pressed, button.hold]
+      .map((action) =>
+        action?.module === ModuleEnum.HomeAssistant
+          ? action.params[1]
+          : action?.module === ModuleEnum.Automation
+            ? action.params[0]
+            : undefined
+      )
+      .find((id) => id)
     const hasHomeAssistantCondition = button.ledConditions?.some(
-      (condition) => condition.type === 'ha-on' || condition.type === 'ha-off'
+      (condition) =>
+        condition.type === 'ha-on' || condition.type === 'ha-off' || condition.type === 'ha-attr'
     )
     if (!entityId || !hasHomeAssistantCondition) {
       continue
@@ -41,8 +47,8 @@ interface HomeAssistantStateSyncOptions {
     token: string,
     entityId: string,
     signal: AbortSignal
-  ): Promise<{ state: string }>
-  setButtonState(key: string, state: string): void
+  ): Promise<{ state: string; attributes?: Record<string, unknown> }>
+  setButtonState(key: string, state: string, attributes?: Record<string, unknown>): void
 }
 
 interface InFlightRequest {
@@ -131,12 +137,12 @@ export class HomeAssistantStateSync {
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(this.requestTimeoutMs)])
     const revision = this.revision
     void this.getState(config.homeAssistant.url, config.homeAssistant.token, entityId, signal)
-      .then(({ state }) => {
+      .then(({ state, attributes }) => {
         if (this.stopped || revision !== this.revision) {
           return
         }
         for (const key of keys) {
-          this.setButtonState(key, state)
+          this.setButtonState(key, state, attributes)
         }
       })
       .catch(() => {})

@@ -16,12 +16,12 @@ class DeckService extends EventEmitter {
   private keyState: Record<string, KeyUsageEnum.Hold | KeyUsageEnum.Pressed> = {}
   private brightnessState: Record<string, number> = {}
   private readonly homeAssistantStateSync = new HomeAssistantStateSync({
-    setButtonState: (key, state) => ledService.setHAButtonState(key, state)
+    setButtonState: (key, state, attributes) => ledService.setHAButtonState(key, state, attributes)
   })
   // Pushes Home Assistant states as they change; REST polling only runs
   // while these live updates are unavailable.
   private readonly homeAssistantLiveStates = new HomeAssistantLiveStates({
-    setButtonState: (key, state) => ledService.setHAButtonState(key, state),
+    setButtonState: (key, state, attributes) => ledService.setHAButtonState(key, state, attributes),
     onLiveChange: (live) => {
       loggerService.info(
         live
@@ -132,11 +132,28 @@ class DeckService extends EventEmitter {
             const result = states[0] ?? {}
             const entityState = result.state as string | undefined
             if (entityState) {
-              ledService.setHAButtonState(deckKey, entityState)
+              const attributes = result.attributes
+              ledService.setHAButtonState(
+                deckKey,
+                entityState,
+                typeof attributes === 'object' && attributes !== null && !Array.isArray(attributes)
+                  ? (attributes as Record<string, unknown>)
+                  : undefined
+              )
             }
             this.emit('deck:updated', deckKey, result)
           })
           .catch((err) => loggerService.error(`Error calling Home Assistant: ${err}`, SERVICE))
+      } else if (stateConfig.module === ModuleEnum.Automation) {
+        const homeAssistant = configService.getConfig().homeAssistant
+        const automation = stateConfig.params[0]
+        if (!homeAssistant?.url || !homeAssistant?.token || !automation) {
+          return
+        }
+        new HomeAssistantAPI(homeAssistant.url, homeAssistant.token)
+          .callService('automation.trigger', automation)
+          .then(() => loggerService.debug(`Automation triggered: ${automation}`, SERVICE))
+          .catch((err) => loggerService.error(`Error triggering automation: ${err}`, SERVICE))
       }
     } else {
       this.keyState[deckKey] = data.state === 'pressed' ? KeyUsageEnum.Pressed : KeyUsageEnum.Hold

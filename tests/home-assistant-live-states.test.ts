@@ -48,6 +48,7 @@ const buttons = { '1': button('light.desk'), '2': button('light.desk'), '3': but
 
 let sockets: FakeSocket[]
 let states: Array<[string, string]>
+let attributes: Array<[string, Record<string, unknown>]>
 let liveChanges: boolean[]
 let client: HomeAssistantLiveStates
 
@@ -72,6 +73,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   sockets = []
   states = []
+  attributes = []
   liveChanges = []
   client = new HomeAssistantLiveStates({
     createSocket: (url) => {
@@ -79,7 +81,10 @@ beforeEach(() => {
       sockets.push(created)
       return created
     },
-    setButtonState: (key, state) => states.push([key, state]),
+    setButtonState: (key, state, attrs) => {
+      states.push([key, state])
+      attributes.push([key, attrs])
+    },
     onLiveChange: (live) => liveChanges.push(live)
   })
 })
@@ -118,27 +123,92 @@ test('applies initial states, changes and removals to every mapped button', asyn
   ws.receive({
     id: 1,
     type: 'event',
-    event: { a: { 'light.desk': { s: 'on', a: {} }, 'switch.fan': { s: 'off', a: {} } } }
+    event: {
+      a: {
+        'light.desk': { s: 'on', a: { brightness: 120, color_mode: 'hs' } },
+        'switch.fan': { s: 'off', a: {} }
+      }
+    }
   })
   expect(states).toEqual([
     ['1', 'on'],
     ['2', 'on'],
     ['3', 'off']
   ])
+  expect(attributes[0]).toEqual(['1', { brightness: 120, color_mode: 'hs' }])
 
   states = []
+  attributes = []
   ws.receive({
     id: 1,
     type: 'event',
-    event: { c: { 'switch.fan': { '+': { s: 'on' } }, 'light.desk': { '+': { a: { b: 1 } } } } }
+    event: {
+      c: {
+        'switch.fan': { '+': { s: 'on' } },
+        'light.desk': { '+': { a: { brightness: 200 } }, '-': { a: ['color_mode'] } },
+        'light.unknown': { '+': { s: 'on' } }
+      }
+    }
   })
+  // An attribute-only change still updates the buttons: attribute conditions depend on it.
+  expect(states).toEqual([
+    ['3', 'on'],
+    ['1', 'on'],
+    ['2', 'on']
+  ])
+  expect(attributes[1]).toEqual(['1', { brightness: 200 }])
+
+  states = []
+  attributes = []
   ws.receive([{ id: 1, type: 'event', event: { r: ['light.desk'] } }])
   ws.receive({ id: 99, type: 'event', event: { a: { 'switch.fan': { s: 'off' } } } })
   expect(states).toEqual([
-    ['3', 'on'],
     ['1', 'unavailable'],
     ['2', 'unavailable']
   ])
+  expect(attributes[0]).toEqual(['1', {}])
+})
+
+test('tolerates partial attribute diffs and entities without buttons', async () => {
+  const ws = await connect()
+  ws.receive({ id: 1, type: 'result', success: true })
+  ws.receive({
+    id: 1,
+    type: 'event',
+    event: { a: { 'switch.fan': { s: 'on' }, 'sensor.unmapped': { s: '21', a: { unit: 'C' } } } }
+  })
+  ws.receive({
+    id: 1,
+    type: 'event',
+    event: {
+      c: {
+        'switch.fan': { '-': { a: ['missing', 42] } },
+        'sensor.unmapped': { '+': { s: '22' } },
+        'light.desk': 'not a diff'
+      }
+    }
+  })
+  expect(states).toEqual([
+    ['3', 'on'],
+    ['3', 'on']
+  ])
+  expect(attributes).toEqual([
+    ['3', {}],
+    ['3', {}]
+  ])
+})
+
+test('forgets cached attributes when the connection is renewed', async () => {
+  const ws = await connect()
+  ws.receive({ id: 1, type: 'result', success: true })
+  ws.receive({ id: 1, type: 'event', event: { a: { 'light.desk': { s: 'on', a: { x: 1 } } } } })
+  ws.onclose?.()
+  await vi.advanceTimersByTimeAsync(1_000)
+  const next = socket()
+  next.receive({ type: 'auth_ok' })
+  states = []
+  next.receive({ id: 1, type: 'event', event: { c: { 'light.desk': { '+': { s: 'off' } } } } })
+  expect(states).toEqual([])
 })
 
 test('ignores malformed, oversized and binary messages', async () => {

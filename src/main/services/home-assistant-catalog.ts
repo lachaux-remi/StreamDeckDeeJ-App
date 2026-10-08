@@ -5,10 +5,23 @@ export interface HomeAssistantEntitySuggestion {
   state: string
 }
 
+/** An attribute of one entity, with a short preview of its current value. */
+export interface HomeAssistantAttributeSuggestion {
+  name: string
+  preview: string
+}
+
 export const MAX_ENTITY_SUGGESTIONS = 5_000
+export const MAX_ATTRIBUTE_SUGGESTIONS = 200
+const MAX_PREVIEW_LENGTH = 60
+const ATTRIBUTE_NAME = /^[A-Za-z0-9_][A-Za-z0-9_.-]*$/
 export const MAX_SERVICE_SUGGESTIONS = 2_000
 const MAX_TEXT_LENGTH = 255
 const IDENTIFIER = /^[a-z0-9_]+\.[a-z0-9_]+$/
+
+export function isHomeAssistantEntityId(value: unknown): value is string {
+  return typeof value === 'string' && value.length <= MAX_TEXT_LENGTH && IDENTIFIER.test(value)
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -66,4 +79,25 @@ export function toServiceNames(domains: unknown): string[] {
     }
   }
   return [...names].sort().slice(0, MAX_SERVICE_SUGGESTIONS)
+}
+
+/** Lists the attribute names of one entity state with a bounded value preview. */
+export function toAttributeSuggestions(state: unknown): HomeAssistantAttributeSuggestion[] {
+  if (!isRecord(state) || !isRecord(state.attributes)) {
+    return []
+  }
+  const suggestions: HomeAssistantAttributeSuggestion[] = []
+  for (const [name, value] of Object.entries(state.attributes)) {
+    if (name.length > MAX_TEXT_LENGTH || !ATTRIBUTE_NAME.test(name)) {
+      continue
+    }
+    const text = typeof value === 'string' ? value : (JSON.stringify(value) ?? '')
+    suggestions.push({
+      name,
+      preview: text.length > MAX_PREVIEW_LENGTH ? `${text.slice(0, MAX_PREVIEW_LENGTH - 1)}…` : text
+    })
+  }
+  return suggestions
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .slice(0, MAX_ATTRIBUTE_SUGGESTIONS)
 }

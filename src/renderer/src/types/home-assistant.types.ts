@@ -33,3 +33,29 @@ export function isEntitySuggestions(value: unknown): value is HomeAssistantEntit
 export function isServiceNames(value: unknown): value is string[] {
   return Array.isArray(value) && value.length <= MAX_SERVICES && value.every(isText)
 }
+
+export interface HomeAssistantAttributeSuggestion {
+  name: string
+  preview: string
+}
+
+const MAX_ATTRIBUTES = 200
+
+/** Validates the attribute suggestions of one entity sent by the main process. */
+export function isAttributeSuggestions(
+  value: unknown
+): value is HomeAssistantAttributeSuggestion[] {
+  return (
+    Array.isArray(value) &&
+    value.length <= MAX_ATTRIBUTES &&
+    value.every(
+      (attribute) =>
+        typeof attribute === 'object' &&
+        attribute !== null &&
+        isText(attribute.name) &&
+        typeof attribute.preview === 'string' &&
+        attribute.preview.length <= MAX_TEXT_LENGTH &&
+        Object.keys(attribute).every((key) => key === 'name' || key === 'preview')
+    )
+  )
+}

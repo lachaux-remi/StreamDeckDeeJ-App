@@ -222,3 +222,43 @@ test('does not poll without complete credentials or a configured LED state targe
   expect(requests).toBe(0)
   synchronizer.shutdown()
 })
+
+test('watches attribute conditions and automation buttons, and forwards attributes', async () => {
+  const { homeAssistantButtonEntities } = await import('@main/services/home-assistant-state-sync')
+  const color = { r: 0, g: 255, b: 0 }
+  expect(
+    homeAssistantButtonEntities({
+      streamdeck: {
+        a: {
+          pressed: { module: ModuleEnum.Ir, params: ['0x1'] },
+          hold: { module: ModuleEnum.HomeAssistant, params: ['light.toggle', 'light.desk'] },
+          ledConditions: [
+            { type: 'ha-attr', color, haAttribute: 'brightness', haOperator: 'gt', haValue: '1' }
+          ]
+        },
+        b: {
+          pressed: { module: ModuleEnum.Automation, params: ['automation.night'] },
+          ledConditions: [{ type: 'ha-on', color }]
+        },
+        c: {
+          pressed: { module: ModuleEnum.Automation, params: ['automation.night'] },
+          ledConditions: [{ type: 'mic-mute', color }]
+        }
+      }
+    })
+  ).toEqual(
+    new Map([
+      ['light.desk', ['a']],
+      ['automation.night', ['b']]
+    ])
+  )
+
+  const forwarded: unknown[] = []
+  const sync = new HomeAssistantStateSync({
+    getState: async () => ({ state: 'on', attributes: { brightness: 42 } }),
+    setButtonState: (key, state, attributes) => forwarded.push([key, state, attributes])
+  })
+  sync.start(config())
+  await vi.waitFor(() => expect(forwarded).toEqual([['a', 'on', { brightness: 42 }]]))
+  sync.shutdown()
+})
