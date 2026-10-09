@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.3.1](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.3.0...v4.3.1) (2026-10-09)
+
+
+### Corrections de bugs
+
+* **ci:** pass the pacman signing secrets to the reusable workflow ([#83](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/83)) ([3b57208](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/3b572088303bb3e5a4f09ed64fb738ee08c0428d))
+
 ## [4.3.0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.2.0...v4.3.0) (2026-10-08)
 
 
