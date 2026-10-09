@@ -397,3 +397,6 @@ jobs:
     uses: ./.github/workflows/pacman-repo.yml
     with:
       tag: ${{ needs.create-release.outputs.tag_name }}
+    secrets:
+      PACMAN_REPO_GPG_PRIVATE_KEY: ${{ secrets.PACMAN_REPO_GPG_PRIVATE_KEY }}
+      PACMAN_REPO_GPG_PASSPHRASE: ${{ secrets.PACMAN_REPO_GPG_PASSPHRASE }}
