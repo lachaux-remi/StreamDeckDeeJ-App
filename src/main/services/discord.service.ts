@@ -10,6 +10,8 @@ const RECONNECT_DELAY = 10_000
 // Discord's internal redirect URI used for the RPC authorization code flow
 const DISCORD_REDIRECT_URI = 'https://discord.com/api/oauth2/authorize'
 
+const VOICE_WRITE_SCOPE = 'rpc.voice.write'
+
 const OP_HANDSHAKE = 0
 const OP_FRAME = 1
 const WINDOWS_DISCORD_PIPE_PREFIX = '\\\\?\\pipe\\discord-ipc-'
@@ -45,6 +47,12 @@ class DiscordService extends EventEmitter {
   private deafened = false
   private streaming = false
   private _connected = false
+  private canWriteVoice = false
+  /** Asked at most once per run, so a refused consent does not prompt again on every reconnect. */
+  private voiceWriteRequested = false
+  private voiceWriteAuthorizing = false
+  /** Discord rejects AUTHORIZE once authenticated, so the upgrade runs on a fresh connection. */
+  private voiceWriteUpgrade = false
   private isShuttingDown = false
   private readonly frameReader = new DiscordRpcFrameReader(() => {
     loggerService.warn('Discord RPC: oversized frame rejected', SERVICE)
@@ -70,6 +78,7 @@ class DiscordService extends EventEmitter {
       this.socket = null
     }
     this._connected = false
+    this.canWriteVoice = false
     void this.connect()
   }
 
@@ -84,6 +93,29 @@ class DiscordService extends EventEmitter {
   }
   isConnected(): boolean {
     return this._connected
+  }
+
+  toggleMute(): void {
+    this.setVoiceSettings({ mute: !this.muted })
+  }
+
+  toggleDeafen(): void {
+    this.setVoiceSettings({ deaf: !this.deafened })
+  }
+
+  private setVoiceSettings(settings: { mute: boolean } | { deaf: boolean }): void {
+    if (!this.canWriteVoice) {
+      loggerService.warn(
+        "Discord RPC: action ignorée, l'autorisation de modifier la voix n'est pas accordée",
+        SERVICE
+      )
+      return
+    }
+    this.writeFrame(OP_FRAME, {
+      cmd: 'SET_VOICE_SETTINGS',
+      args: settings,
+      nonce: `set-voice-${Date.now()}`
+    })
   }
 
   shutdown(): void {
@@ -189,7 +221,31 @@ class DiscordService extends EventEmitter {
       this._connected = true
       this.emit('change')
       void this.onReady()
-    } else if (msg.cmd === 'AUTHORIZE' && msg.evt !== 'ERROR') {
+    } else if (msg.cmd === 'AUTHORIZE' && msg.evt === 'ERROR') {
+      const error = msg.data as { code?: unknown; message?: unknown } | undefined
+      const reason = `${String(error?.code ?? '?')} ${String(error?.message ?? '')}`.trim()
+      const accessToken = configService.getConfig().discord?.accessToken
+      if (this.voiceWriteUpgrade && accessToken) {
+        // Consent refused: keep the current read-only token.
+        this.voiceWriteUpgrade = false
+        loggerService.warn(
+          `Discord RPC: autorisation des boutons refusée (${reason}), lecture seule conservée`,
+          SERVICE
+        )
+        this.authenticate(accessToken)
+      } else if (this.voiceWriteAuthorizing && !accessToken) {
+        // Without a token yet, fall back to read-only access so the LEDs still
+        // work if Discord refuses the write scope for this application.
+        loggerService.warn(
+          `Discord RPC: autorisation complète refusée (${reason}), nouvelle demande en lecture seule`,
+          SERVICE
+        )
+        this.authorize(false)
+      } else {
+        loggerService.warn(`Discord RPC: demande d'autorisation refusée (${reason})`, SERVICE)
+      }
+    } else if (msg.cmd === 'AUTHORIZE') {
+      this.voiceWriteUpgrade = false
       const code = (msg.data as { code?: string } | undefined)?.code
       if (code) {
         void this.handleAuthCode(code)
@@ -210,9 +266,32 @@ class DiscordService extends EventEmitter {
         }
       } else {
         loggerService.info('Discord RPC: authentifié avec succès', SERVICE)
+        const scopes = (msg.data as { scopes?: unknown } | null | undefined)?.scopes
+        this.canWriteVoice = Array.isArray(scopes) && scopes.includes(VOICE_WRITE_SCOPE)
+        if (!this.canWriteVoice && !this.voiceWriteRequested) {
+          // Tokens granted before the voice buttons existed lack the write scope.
+          this.voiceWriteRequested = true
+          this.voiceWriteUpgrade = true
+          loggerService.info(
+            'Discord RPC: nouvelle autorisation demandée pour les boutons muet/sourdine',
+            SERVICE
+          )
+          this.reconnect()
+          return
+        }
         this.subscribeVoiceSettings()
       }
-    } else if (msg.evt === 'VOICE_SETTINGS_UPDATE' || msg.cmd === 'GET_VOICE_SETTINGS') {
+    } else if (msg.cmd === 'SET_VOICE_SETTINGS' && msg.evt === 'ERROR') {
+      const message = (msg.data as { message?: unknown } | undefined)?.message
+      loggerService.warn(
+        `Discord RPC: modification de la voix refusée (${typeof message === 'string' ? message : '?'})`,
+        SERVICE
+      )
+    } else if (
+      msg.evt === 'VOICE_SETTINGS_UPDATE' ||
+      msg.cmd === 'GET_VOICE_SETTINGS' ||
+      msg.cmd === 'SET_VOICE_SETTINGS'
+    ) {
       const d = msg.data as { mute?: boolean; deaf?: boolean } | null | undefined
       if (!d) {
         return
@@ -243,7 +322,7 @@ class DiscordService extends EventEmitter {
       return
     }
 
-    if (discord.accessToken) {
+    if (discord.accessToken && !this.voiceWriteUpgrade) {
       this.authenticate(discord.accessToken)
     } else if (discord.clientSecret) {
       this.authorize()
@@ -252,7 +331,8 @@ class DiscordService extends EventEmitter {
     }
   }
 
-  private authorize(): void {
+  private authorize(voiceWrite = true): void {
+    this.voiceWriteAuthorizing = voiceWrite
     const clientId = configService.getConfig().discord?.clientId
     if (!clientId) {
       return
@@ -268,6 +348,7 @@ class DiscordService extends EventEmitter {
         scopes: [
           'rpc',
           'rpc.voice.read',
+          ...(voiceWrite ? [VOICE_WRITE_SCOPE] : []),
           'rpc.notifications.read',
           'rpc.video.read',
           'rpc.screenshare.read'
@@ -403,6 +484,7 @@ class DiscordService extends EventEmitter {
     this.socket = null
     const hadState = this._connected
     this._connected = false
+    this.canWriteVoice = false
     if (this.muted || this.deafened || this.streaming) {
       this.muted = false
       this.deafened = false

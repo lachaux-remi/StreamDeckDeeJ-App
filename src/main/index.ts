@@ -110,6 +110,7 @@ app.whenReady().then(async () => {
   })
   const { microphone, levelMeter } = platformRuntime.audio
   await microphone.init()
+  deckService.setMicrophone(microphone)
   await discordService.init()
   conditionService.init(microphone, discordService)
   await ledService.init(microphone)

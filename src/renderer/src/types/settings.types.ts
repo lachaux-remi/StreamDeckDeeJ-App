@@ -205,7 +205,9 @@ function isInputKey(value: unknown): value is StreamdeckInputKey {
   return (
     isRecord(value) &&
     hasOnlyKeys(value, ['module', 'params', 'icon']) &&
-    ['', 'home-assistant', 'ir', 'macro', 'automation'].includes(value.module as string) &&
+    ['', 'home-assistant', 'ir', 'macro', 'automation', 'discord', 'microphone'].includes(
+      value.module as string
+    ) &&
     Array.isArray(value.params) &&
     value.params.length <= MAX_ACTION_PARAMS &&
     value.params.every((param) => isStringAtMost(param, MAX_PARAM_LENGTH)) &&

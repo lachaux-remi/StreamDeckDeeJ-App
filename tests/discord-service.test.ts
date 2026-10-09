@@ -150,7 +150,13 @@ test('connects only to a trusted socket, authenticates, subscribes, updates stat
     nonce: 'authenticate'
   })
 
-  socket.emit('data', rpcFrame({ cmd: 'AUTHENTICATE', data: {} }))
+  socket.emit(
+    'data',
+    rpcFrame({
+      cmd: 'AUTHENTICATE',
+      data: { scopes: ['rpc', 'rpc.voice.read', 'rpc.voice.write'] }
+    })
+  )
   expect(socket.write).toHaveBeenCalledTimes(5)
   socket.emit('data', rpcFrame({ evt: 'VOICE_SETTINGS_UPDATE', data: { mute: true, deaf: true } }))
   socket.emit('data', rpcFrame({ evt: 'SCREENSHARE_STATE_UPDATE', data: { active: true } }))
@@ -270,5 +276,131 @@ test('refreshes rejected authentication without exposing stored secrets in failu
   expect(fakes.warn.mock.calls.flat().join(' ')).not.toContain('fixture-client-secret')
   expect(fakes.warn.mock.calls.flat().join(' ')).not.toContain('fixture-refresh-token')
   vi.unstubAllGlobals()
+  vi.clearAllTimers()
+})
+
+async function connectedService(): Promise<{
+  socket: FakeSocket
+  discordService: (typeof import('@main/services/discord.service'))['discordService']
+}> {
+  const socket = fakeSocket()
+  fakes.createConnection.mockReturnValue(socket)
+  const { discordService } = await import('@main/services/discord.service')
+  await discordService.init()
+  await Promise.resolve()
+  socket.emit('connect')
+  socket.emit('data', rpcFrame({ evt: 'READY' }))
+  return { socket, discordService }
+}
+
+function sentCommands(socket: FakeSocket): Record<string, unknown>[] {
+  return socket.write.mock.calls.map((_, index) => writtenPayload(socket, index))
+}
+
+test('toggles Discord mute and deafen once the token carries the voice write scope', async () => {
+  const { socket, discordService } = await connectedService()
+  socket.emit(
+    'data',
+    rpcFrame({
+      cmd: 'AUTHENTICATE',
+      data: { scopes: ['rpc', 'rpc.voice.read', 'rpc.voice.write'] }
+    })
+  )
+  socket.emit('data', rpcFrame({ cmd: 'GET_VOICE_SETTINGS', data: { mute: true, deaf: false } }))
+
+  discordService.toggleMute()
+  discordService.toggleDeafen()
+
+  const commands = sentCommands(socket)
+  expect(commands.some((command) => command.cmd === 'AUTHORIZE')).toBe(false)
+  expect(commands.filter((command) => command.cmd === 'SET_VOICE_SETTINGS')).toEqual([
+    expect.objectContaining({ args: { mute: false } }),
+    expect.objectContaining({ args: { deaf: true } })
+  ])
+
+  socket.emit('data', rpcFrame({ cmd: 'SET_VOICE_SETTINGS', data: { mute: false, deaf: true } }))
+  expect([discordService.isMuted(), discordService.isDeafened()]).toEqual([false, true])
+  socket.emit(
+    'data',
+    rpcFrame({ cmd: 'SET_VOICE_SETTINGS', evt: 'ERROR', data: { message: 'Not authenticated' } })
+  )
+  expect(fakes.warn).toHaveBeenCalledWith(
+    expect.stringContaining('Not authenticated'),
+    'DiscordService'
+  )
+
+  socket.emit('close')
+  discordService.toggleMute()
+  expect(
+    sentCommands(socket).filter((command) => command.cmd === 'SET_VOICE_SETTINGS')
+  ).toHaveLength(2)
+  vi.clearAllTimers()
+})
+
+test('upgrades an old token on a fresh connection and keeps it when consent is refused', async () => {
+  const { socket, discordService } = await connectedService()
+  const upgradeSocket = fakeSocket()
+  fakes.createConnection.mockReturnValue(upgradeSocket)
+
+  socket.emit(
+    'data',
+    rpcFrame({ cmd: 'AUTHENTICATE', data: { scopes: ['rpc', 'rpc.voice.read'] } })
+  )
+  // Discord rejects AUTHORIZE on an authenticated connection, so it reconnects first.
+  expect(socket.destroy).toHaveBeenCalled()
+  expect(sentCommands(socket).some((command) => command.cmd === 'SUBSCRIBE')).toBe(false)
+  await settleUntil(() => fakes.createConnection.mock.calls.length === 2)
+  upgradeSocket.emit('connect')
+  upgradeSocket.emit('data', rpcFrame({ evt: 'READY' }))
+  await Promise.resolve()
+
+  const authorize = sentCommands(upgradeSocket).filter((command) => command.cmd === 'AUTHORIZE')
+  expect(authorize).toHaveLength(1)
+  expect((authorize[0].args as { scopes: string[] }).scopes).toContain('rpc.voice.write')
+  expect(sentCommands(upgradeSocket).some((command) => command.cmd === 'AUTHENTICATE')).toBe(false)
+
+  // A refused consent keeps the current token and is not asked again.
+  upgradeSocket.emit(
+    'data',
+    rpcFrame({ cmd: 'AUTHORIZE', evt: 'ERROR', data: { code: 5000, message: 'User cancelled' } })
+  )
+  expect(sentCommands(upgradeSocket).at(-1)).toEqual({
+    cmd: 'AUTHENTICATE',
+    args: { access_token: 'fixture-access-token' },
+    nonce: 'authenticate'
+  })
+  upgradeSocket.emit('data', rpcFrame({ cmd: 'AUTHENTICATE', data: { scopes: ['rpc'] } }))
+  expect(fakes.createConnection).toHaveBeenCalledTimes(2)
+  expect(sentCommands(upgradeSocket).some((command) => command.cmd === 'SUBSCRIBE')).toBe(true)
+  expect(fakes.setConfig).not.toHaveBeenCalled()
+
+  discordService.toggleMute()
+  expect(sentCommands(upgradeSocket).some((command) => command.cmd === 'SET_VOICE_SETTINGS')).toBe(
+    false
+  )
+  expect(fakes.warn).toHaveBeenCalledWith(
+    expect.stringContaining('User cancelled'),
+    'DiscordService'
+  )
+  vi.clearAllTimers()
+})
+
+test('falls back to read-only access when a first authorization with voice write is refused', async () => {
+  fakes.getConfig.mockReturnValue({
+    discord: { clientId: 'client-id', clientSecret: 'fixture-client-secret' }
+  })
+  const { socket } = await connectedService()
+  await Promise.resolve()
+
+  socket.emit('data', rpcFrame({ cmd: 'AUTHORIZE', evt: 'ERROR', data: { code: 4002 } }))
+  socket.emit('data', rpcFrame({ cmd: 'AUTHORIZE', evt: 'ERROR', data: { code: 4002 } }))
+
+  const scopes = sentCommands(socket)
+    .filter((command) => command.cmd === 'AUTHORIZE')
+    .map((command) => (command.args as { scopes: string[] }).scopes)
+  expect(scopes).toHaveLength(2)
+  expect(scopes[0]).toContain('rpc.voice.write')
+  expect(scopes[1]).not.toContain('rpc.voice.write')
+  expect(scopes[1]).toContain('rpc.voice.read')
   vi.clearAllTimers()
 })

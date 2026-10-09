@@ -32,6 +32,7 @@ export function createLinuxPlatformRuntime(): PlatformRuntime {
       microphone: {
         init: () => micService.init(),
         isMuted: () => micService.isMuted(),
+        toggleMute: () => micService.toggleMute(),
         on(event, listener) {
           micService.on(event, listener)
           return this
