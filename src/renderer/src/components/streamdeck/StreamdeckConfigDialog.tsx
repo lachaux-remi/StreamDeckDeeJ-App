@@ -41,7 +41,9 @@ const MODULES = [
   { value: 'home-assistant', label: 'Home Assistant' },
   { value: 'ir', label: 'Télécommande IR' },
   { value: 'macro', label: 'Macro' },
-  { value: 'automation', label: 'Automatisation HA' }
+  { value: 'automation', label: 'Automatisation HA' },
+  { value: 'discord', label: 'Discord' },
+  { value: 'microphone', label: 'Micro système' }
 ]
 
 const CONDITION_OPTIONS: { value: LedConditionType; label: string; description?: string }[] = [
@@ -82,7 +84,9 @@ const DEFAULT_CONDITIONS_STATE: ConditionsState = {
 interface ModuleParam {
   label: string
   placeholder: string
-  type: 'text' | 'textarea' | 'password'
+  type: 'text' | 'textarea' | 'password' | 'select'
+  /** 'select' only; the first option is the default. */
+  options?: { value: string; label: string }[]
 }
 
 const MODULE_PARAMS: Record<string, ModuleParam[]> = {
@@ -93,7 +97,20 @@ const MODULE_PARAMS: Record<string, ModuleParam[]> = {
   ],
   ir: [{ label: 'Code infrarouge', placeholder: 'ex : 0xFFA25D', type: 'textarea' }],
   macro: [{ label: 'Code Arduino', placeholder: 'ex : open_browser', type: 'text' }],
-  automation: [{ label: 'Automatisation', placeholder: 'ex : automation.bonne_nuit', type: 'text' }]
+  automation: [
+    { label: 'Automatisation', placeholder: 'ex : automation.bonne_nuit', type: 'text' }
+  ],
+  discord: [
+    {
+      label: 'Action',
+      placeholder: 'Choisir une action',
+      type: 'select',
+      options: [
+        { value: 'toggle-mute', label: 'Couper / rétablir le micro' },
+        { value: 'toggle-deafen', label: 'Activer / désactiver la sourdine' }
+      ]
+    }
+  ]
 }
 
 function IconUpload({
@@ -706,8 +723,11 @@ export default function StreamdeckConfigDialog({
                             module: mod,
                             // Parameters only make sense for the module they were written for.
                             params: paramDefs
-                              ? paramDefs.map((_, i) =>
-                                  prev?.module === mod ? prev.params?.[i] || '' : ''
+                              ? paramDefs.map(
+                                  (def, i) =>
+                                    (prev?.module === mod ? prev.params?.[i] : undefined) ||
+                                    def.options?.[0]?.value ||
+                                    ''
                                 )
                               : [''],
                             icon: prev?.icon
@@ -750,7 +770,19 @@ export default function StreamdeckConfigDialog({
                         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
                           {paramDef.label}
                         </label>
-                        {paramDef.type === 'textarea' ? (
+                        {paramDef.type === 'select' ? (
+                          <CustomSelect
+                            value={value}
+                            onChange={(next) => {
+                              const params = [...(currentAction.params || [])]
+                              params[i] = next
+                              setCurrentAction((prev) => (prev ? { ...prev, params } : prev))
+                            }}
+                            options={paramDef.options ?? []}
+                            placeholder={paramDef.placeholder}
+                            accent={activeTab === 'hold' ? 'blue' : 'purple'}
+                          />
+                        ) : paramDef.type === 'textarea' ? (
                           <textarea
                             value={value}
                             onChange={onChange}

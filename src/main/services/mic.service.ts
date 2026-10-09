@@ -27,6 +27,16 @@ class MicService extends EventEmitter {
     return this.muted
   }
 
+  async toggleMute(): Promise<void> {
+    try {
+      await commandRunner.run('pactl', ['set-source-mute', '@DEFAULT_SOURCE@', 'toggle'], 2000)
+    } catch (error) {
+      loggerService.warn(`Unable to toggle the microphone: ${String(error)}`, SERVICE)
+    }
+    // The pactl subscription also reports the change; querying now keeps the LED immediate.
+    this.queryExecutor.submit('default-source', true)
+  }
+
   shutdown(): void {
     this.subscription.stop()
   }

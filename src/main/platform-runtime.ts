@@ -19,6 +19,7 @@ export interface AudioLevelMeterCapability {
 export interface MicrophoneCapability {
   init(): Promise<void>
   isMuted(): boolean
+  toggleMute(): Promise<void>
   on(event: 'change', listener: () => void): this
   shutdown(): void | Promise<void>
 }
@@ -69,6 +70,9 @@ class UnavailableMicrophone extends EventEmitter implements MicrophoneCapability
   }
   isMuted(): boolean {
     return false
+  }
+  toggleMute(): Promise<void> {
+    return Promise.resolve()
   }
   shutdown(): Promise<void> {
     return Promise.resolve()

@@ -1,8 +1,10 @@
 import { EventEmitter } from 'node:events'
 import HomeAssistantAPI from '@main/libs/home-assistant/HomeAssistantAPI'
 import { KeyUsageEnum, ModuleEnum } from '@main/types/enums'
+import type { MicrophoneCapability } from '@main/platform-runtime'
 import type { StreamdeckInputConfig, StreamdeckInputKey } from '@main/types/settings.types'
 import { configService } from './config.service'
+import { discordService } from './discord.service'
 import { HomeAssistantLiveStates } from './home-assistant-live-states'
 import { HomeAssistantStateSync } from './home-assistant-state-sync'
 import { ledService } from './led.service'
@@ -38,6 +40,7 @@ class DeckService extends EventEmitter {
     log: (level, message) => loggerService[level](message, SERVICE)
   })
   private stopped = false
+  private microphone: Pick<MicrophoneCapability, 'toggleMute'> | undefined
 
   constructor() {
     super()
@@ -49,6 +52,10 @@ class DeckService extends EventEmitter {
     })
     this.homeAssistantStateSync.start(configService.getConfig())
     this.homeAssistantLiveStates.start(configService.getConfig())
+  }
+
+  public setMicrophone(microphone: Pick<MicrophoneCapability, 'toggleMute'>): void {
+    this.microphone = microphone
   }
 
   public shutdown(): void {
@@ -154,6 +161,14 @@ class DeckService extends EventEmitter {
           .callService('automation.trigger', automation)
           .then(() => loggerService.debug(`Automation triggered: ${automation}`, SERVICE))
           .catch((err) => loggerService.error(`Error triggering automation: ${err}`, SERVICE))
+      } else if (stateConfig.module === ModuleEnum.Discord) {
+        if (stateConfig.params[0] === 'toggle-mute') {
+          discordService.toggleMute()
+        } else if (stateConfig.params[0] === 'toggle-deafen') {
+          discordService.toggleDeafen()
+        }
+      } else if (stateConfig.module === ModuleEnum.Microphone) {
+        void this.microphone?.toggleMute()
       }
     } else {
       this.keyState[deckKey] = data.state === 'pressed' ? KeyUsageEnum.Pressed : KeyUsageEnum.Hold
