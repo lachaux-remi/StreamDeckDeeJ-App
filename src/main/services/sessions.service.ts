@@ -5,6 +5,7 @@ import { sliderService } from './slider.service'
 import { commandRunner, LatestValueExecutor, runCommandWithFallback } from './audio-command'
 import { PactlSubscription } from './audio-subscription'
 import { parsePipeWireOutputStreams } from './pipewire-streams'
+import { audioSessionTargets } from '../../shared/deej-targets'
 
 const SERVICE = 'SessionsService'
 const MIN_REFRESH_TIME = 5 * 1000
@@ -57,6 +58,11 @@ class SessionsService extends EventEmitter {
         void this.updateSessions(sliderKey, value)
       }
     })
+  }
+
+  /** Slider mapping restricted to audio sessions (Home Assistant entries are handled elsewhere). */
+  private audioTargets(): Record<string, string[]> {
+    return audioSessionTargets(configService.getConfig().deej || {})
   }
 
   public async getAllSessions(): Promise<string[]> {
@@ -121,7 +127,7 @@ class SessionsService extends EventEmitter {
    * Reads master via wpctl, per-app from cached sessions.
    */
   public async getOsVolumes(): Promise<Record<string, number>> {
-    const deejConfig = configService.getConfig().deej || {}
+    const deejConfig = this.audioTargets()
     const volumes: Record<string, number> = {}
 
     await this.refreshSessions()
@@ -263,7 +269,7 @@ class SessionsService extends EventEmitter {
   }
 
   private reapplyVolumes(): Promise<void> {
-    const deejConfig = configService.getConfig().deej || {}
+    const deejConfig = this.audioTargets()
     const sliders = sliderService.getSliders()
 
     for (const [sliderKey, sessionNames] of Object.entries(deejConfig)) {
@@ -433,7 +439,7 @@ class SessionsService extends EventEmitter {
       await this.refreshSessions()
     }
 
-    const targetSessions = configService.getConfig().deej?.[sliderKey] || []
+    const targetSessions = this.audioTargets()[sliderKey] || []
 
     if (
       !targetSessions

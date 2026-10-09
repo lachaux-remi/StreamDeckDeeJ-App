@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { cn } from '@renderer/lib/utils'
 import DeejLevelMeter from './DeejLevelMeter'
+import { deejTargetLabel } from '../../../../shared/deej-targets'
 
 interface DeejSliderProps {
   index: string
@@ -62,7 +63,9 @@ export default function DeejSlider({
   onDragEnd
 }: DeejSliderProps): React.JSX.Element {
   const percent = Math.round(value * 100)
-  const label = name || (sessions.length > 0 ? sessions.join(', ') : `S${parseInt(index) + 1}`)
+  const label =
+    name ||
+    (sessions.length > 0 ? sessions.map(deejTargetLabel).join(', ') : `S${parseInt(index) + 1}`)
   const hasConfig = name || sessions.length > 0
   const activeSegments = Math.round(value * SEGMENT_COUNT)
 
@@ -176,8 +179,8 @@ export default function DeejSlider({
         )}
         title={
           name
-            ? `${name} (${sessions.join(', ') || 'aucune session'})`
-            : sessions.join(', ') || `Slider ${parseInt(index) + 1}`
+            ? `${name} (${sessions.map(deejTargetLabel).join(', ') || 'aucune session'})`
+            : sessions.map(deejTargetLabel).join(', ') || `Slider ${parseInt(index) + 1}`
         }
       >
         {label}

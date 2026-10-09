@@ -2,6 +2,7 @@ import { createRequire } from 'node:module'
 import { configService } from './config.service'
 import { loggerService } from './logger.service'
 import { sliderService } from './slider.service'
+import { audioSessionTargets } from '../../shared/deej-targets'
 
 const require = createRequire(import.meta.url)
 
@@ -194,7 +195,7 @@ export function createWindowsAudioSessions(
   native: WindowsAudioNativeBinding = loadNativeBinding()
 ): WindowsAudioSessions {
   const sessions = new WindowsAudioSessions(native, {
-    getAssignments: () => configService.getConfig().deej ?? {},
+    getAssignments: () => audioSessionTargets(configService.getConfig().deej ?? {}),
     getSliders: () => sliderService.getSliders(),
     onSlidersUpdated: (listener) => sliderService.onUpdated(listener),
     onError: (error) =>
