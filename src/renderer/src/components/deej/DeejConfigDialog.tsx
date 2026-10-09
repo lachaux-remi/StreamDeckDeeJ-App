@@ -1,8 +1,31 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, ChevronLeft, ChevronRight, RefreshCw, X } from 'lucide-react'
+import AutocompleteInput from '@renderer/components/ui/AutocompleteInput'
+import CustomSelect from '@renderer/components/ui/CustomSelect'
+import { domainOf, loadHomeAssistantEntities } from '@renderer/lib/home-assistant-catalog'
 import { cn } from '@renderer/lib/utils'
 import { useSettingsStore } from '@renderer/stores/settings.store'
 import { useSerialStore } from '@renderer/stores/serial.store'
+import {
+  HOME_ASSISTANT_SLIDER_DOMAINS,
+  HOME_ASSISTANT_TARGET_PREFIX,
+  homeAssistantSliderEntity,
+  homeAssistantTarget,
+  isHomeAssistantTarget
+} from '../../../../shared/deej-targets'
+
+type SliderMode = 'audio' | 'home-assistant'
+
+const MODES = [
+  { value: 'audio', label: 'Sources audio' },
+  {
+    value: 'home-assistant',
+    label: 'Home Assistant',
+    description: 'Lumière, son, ventilateur, volet'
+  }
+]
+
+const SLIDER_DOMAINS: readonly string[] = HOME_ASSISTANT_SLIDER_DOMAINS
 
 interface DeejConfigDialogProps {
   sliderIndex: string | null
@@ -22,29 +45,44 @@ export default function DeejConfigDialog({
 
   const [name, setName] = useState('')
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [mode, setMode] = useState<SliderMode>('audio')
   const [assigned, setAssigned] = useState<string[]>([])
+  const [entity, setEntity] = useState('')
   const [selectedAvailable, setSelectedAvailable] = useState<string | null>(null)
   const [selectedAssigned, setSelectedAssigned] = useState<string | null>(null)
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false)
 
   useEffect(() => {
     if (sliderIndex !== null) {
+      const targets = deej[sliderIndex] || []
+      const entityTarget = targets.find(isHomeAssistantTarget)
       setName(deejNames[sliderIndex] || '')
-      setAssigned([...(deej[sliderIndex] || [])])
+      setMode(entityTarget ? 'home-assistant' : 'audio')
+      setAssigned(targets.filter((target) => !isHomeAssistantTarget(target)))
+      setEntity(entityTarget ? entityTarget.slice(HOME_ASSISTANT_TARGET_PREFIX.length) : '')
       setSelectedAvailable(null)
       setSelectedAssigned(null)
       setShowDiscardPrompt(false)
     }
   }, [sliderIndex, deej, deejNames])
 
+  // A slider drives either audio sessions or one Home Assistant entity.
+  const entityTarget = homeAssistantTarget(entity.trim())
+  const entityValid = homeAssistantSliderEntity(entityTarget) !== undefined
+  const canSave = mode === 'audio' || entity.trim() === '' || entityValid
+  const targets = useMemo(
+    () => (mode === 'audio' ? assigned : entityValid ? [entityTarget] : []),
+    [mode, assigned, entityValid, entityTarget]
+  )
+
   const hasChanges = useMemo(() => {
     if (sliderIndex === null) {
       return false
     }
     const originalName = deejNames[sliderIndex] || ''
-    const originalAssigned = deej[sliderIndex] || []
-    return name !== originalName || JSON.stringify(assigned) !== JSON.stringify(originalAssigned)
-  }, [sliderIndex, deej, deejNames, name, assigned])
+    const originalTargets = deej[sliderIndex] || []
+    return name !== originalName || JSON.stringify(targets) !== JSON.stringify(originalTargets)
+  }, [sliderIndex, deej, deejNames, name, targets])
 
   const handleClose = useCallback(() => {
     if (hasChanges) {
@@ -67,7 +105,10 @@ export default function DeejConfigDialog({
   }, [setSessions])
 
   const originalAssigned = useMemo(
-    () => (sliderIndex !== null ? deej[sliderIndex] || [] : []),
+    () =>
+      sliderIndex !== null
+        ? (deej[sliderIndex] || []).filter((target) => !isHomeAssistantTarget(target))
+        : [],
     [sliderIndex, deej]
   )
 
@@ -105,12 +146,12 @@ export default function DeejConfigDialog({
   }, [selectedAssigned])
 
   const handleSave = useCallback(() => {
-    if (sliderIndex === null) {
+    if (sliderIndex === null || !canSave) {
       return
     }
-    updateSlider(sliderIndex, assigned, name.trim() || undefined)
+    updateSlider(sliderIndex, targets, name.trim() || undefined)
     onClose()
-  }, [sliderIndex, assigned, name, updateSlider, onClose])
+  }, [sliderIndex, canSave, targets, name, updateSlider, onClose])
 
   if (sliderIndex === null) {
     return null
@@ -147,99 +188,147 @@ export default function DeejConfigDialog({
           />
         </div>
 
-        {/* Transfer lists */}
-        <div className="flex gap-3">
-          {/* Available */}
-          <div className="flex-1">
-            <div className="mb-1.5 flex items-center justify-between">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-                Disponibles
-              </label>
+        {/* Target type */}
+        <div className="mb-4">
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+            Type
+          </label>
+          <CustomSelect
+            value={mode}
+            onChange={(value) => setMode(value as SliderMode)}
+            options={MODES}
+            accent="blue"
+          />
+        </div>
+
+        {mode === 'audio' ? (
+          /* Transfer lists */
+          <div className="flex gap-3">
+            {/* Available */}
+            <div className="flex-1">
+              <div className="mb-1.5 flex items-center justify-between">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                  Disponibles
+                </label>
+                <button
+                  onClick={refreshSessions}
+                  className="rounded p-1 text-muted-foreground/40 hover:text-neon-blue transition-colors"
+                  title="Rafraîchir les sessions"
+                >
+                  <RefreshCw className={cn('h-3 w-3', isRefreshing && 'animate-spin')} />
+                </button>
+              </div>
+              <div className="h-48 overflow-y-auto rounded-xl border border-border/30 bg-surface-2 p-1.5">
+                {available.length === 0 ? (
+                  <p className="p-3 text-center text-xs text-muted-foreground/40">Aucune session</p>
+                ) : (
+                  available.map((session) => (
+                    <button
+                      key={session}
+                      onClick={() => setSelectedAvailable(session)}
+                      onDoubleClick={() => {
+                        setAssigned((prev) => [...prev, session])
+                        setSelectedAvailable(null)
+                      }}
+                      className={cn(
+                        'w-full rounded-lg px-2.5 py-1.5 text-left text-sm transition-all',
+                        selectedAvailable === session
+                          ? 'bg-neon-purple/15 text-foreground border border-neon-purple/20'
+                          : 'text-muted-foreground border border-transparent hover:bg-surface-3'
+                      )}
+                    >
+                      {session}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Transfer buttons */}
+            <div className="flex flex-col items-center justify-center gap-2">
               <button
-                onClick={refreshSessions}
-                className="rounded p-1 text-muted-foreground/40 hover:text-neon-blue transition-colors"
-                title="Rafraîchir les sessions"
+                onClick={handleAssign}
+                disabled={!selectedAvailable}
+                className="rounded-lg border border-border/40 bg-surface-2 p-2 text-muted-foreground transition-all hover:text-neon-blue hover:border-neon-blue/30 disabled:opacity-20 disabled:cursor-not-allowed"
               >
-                <RefreshCw className={cn('h-3 w-3', isRefreshing && 'animate-spin')} />
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={handleUnassign}
+                disabled={!selectedAssigned}
+                className="rounded-lg border border-border/40 bg-surface-2 p-2 text-muted-foreground transition-all hover:text-neon-purple hover:border-neon-purple/30 disabled:opacity-20 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="h-4 w-4" />
               </button>
             </div>
-            <div className="h-48 overflow-y-auto rounded-xl border border-border/30 bg-surface-2 p-1.5">
-              {available.length === 0 ? (
-                <p className="p-3 text-center text-xs text-muted-foreground/40">Aucune session</p>
-              ) : (
-                available.map((session) => (
-                  <button
-                    key={session}
-                    onClick={() => setSelectedAvailable(session)}
-                    onDoubleClick={() => {
-                      setAssigned((prev) => [...prev, session])
-                      setSelectedAvailable(null)
-                    }}
-                    className={cn(
-                      'w-full rounded-lg px-2.5 py-1.5 text-left text-sm transition-all',
-                      selectedAvailable === session
-                        ? 'bg-neon-purple/15 text-foreground border border-neon-purple/20'
-                        : 'text-muted-foreground border border-transparent hover:bg-surface-3'
-                    )}
-                  >
-                    {session}
-                  </button>
-                ))
-              )}
+
+            {/* Assigned */}
+            <div className="flex-1">
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                Assignées
+              </label>
+              <div className="h-48 overflow-y-auto rounded-xl border border-border/30 bg-surface-2 p-1.5">
+                {assigned.length === 0 ? (
+                  <p className="p-3 text-center text-xs text-muted-foreground/40">
+                    Aucune session assignée
+                  </p>
+                ) : (
+                  assigned.map((session) => (
+                    <button
+                      key={session}
+                      onClick={() => setSelectedAssigned(session)}
+                      onDoubleClick={() => {
+                        setAssigned((prev) => prev.filter((s) => s !== session))
+                        setSelectedAssigned(null)
+                      }}
+                      className={cn(
+                        'w-full rounded-lg px-2.5 py-1.5 text-left text-sm transition-all',
+                        selectedAssigned === session
+                          ? 'bg-neon-blue/15 text-foreground border border-neon-blue/20'
+                          : 'text-muted-foreground border border-transparent hover:bg-surface-3'
+                      )}
+                    >
+                      {session}
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
           </div>
-
-          {/* Transfer buttons */}
-          <div className="flex flex-col items-center justify-center gap-2">
-            <button
-              onClick={handleAssign}
-              disabled={!selectedAvailable}
-              className="rounded-lg border border-border/40 bg-surface-2 p-2 text-muted-foreground transition-all hover:text-neon-blue hover:border-neon-blue/30 disabled:opacity-20 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-            <button
-              onClick={handleUnassign}
-              disabled={!selectedAssigned}
-              className="rounded-lg border border-border/40 bg-surface-2 p-2 text-muted-foreground transition-all hover:text-neon-purple hover:border-neon-purple/30 disabled:opacity-20 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Assigned */}
-          <div className="flex-1">
+        ) : (
+          <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-              Assignées
+              Entité
             </label>
-            <div className="h-48 overflow-y-auto rounded-xl border border-border/30 bg-surface-2 p-1.5">
-              {assigned.length === 0 ? (
-                <p className="p-3 text-center text-xs text-muted-foreground/40">
-                  Aucune session assignée
-                </p>
-              ) : (
-                assigned.map((session) => (
-                  <button
-                    key={session}
-                    onClick={() => setSelectedAssigned(session)}
-                    onDoubleClick={() => {
-                      setAssigned((prev) => prev.filter((s) => s !== session))
-                      setSelectedAssigned(null)
-                    }}
-                    className={cn(
-                      'w-full rounded-lg px-2.5 py-1.5 text-left text-sm transition-all',
-                      selectedAssigned === session
-                        ? 'bg-neon-blue/15 text-foreground border border-neon-blue/20'
-                        : 'text-muted-foreground border border-transparent hover:bg-surface-3'
-                    )}
-                  >
-                    {session}
-                  </button>
-                ))
+            <AutocompleteInput
+              value={entity}
+              onChange={setEntity}
+              loadSuggestions={() =>
+                loadHomeAssistantEntities().then((entities) =>
+                  entities
+                    .filter((item) => SLIDER_DOMAINS.includes(domainOf(item.entityId) ?? ''))
+                    .map((item) => ({
+                      value: item.entityId,
+                      label: item.name,
+                      detail: item.state
+                    }))
+                )
+              }
+              placeholder="ex : light.salon"
+              className={cn(
+                'w-full rounded-lg border bg-surface-2 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/30 outline-none transition-colors',
+                canSave ? 'border-border focus:border-neon-blue/50' : 'border-neon-red/50'
               )}
-            </div>
+              accent="blue"
+              emptyText="Aucune lumière, enceinte, ventilateur ou volet trouvé"
+            />
+            <p className="mt-1.5 text-[11px] text-muted-foreground/50">
+              {canSave
+                ? 'La luminosité, le volume, la vitesse ou la position suivent le slider quand il bouge.'
+                : 'Choisis une lumière, un media_player, un ventilateur ou un volet.'}
+            </p>
           </div>
-        </div>
+        )}
 
         {/* Discard confirmation */}
         {showDiscardPrompt && (
@@ -277,7 +366,8 @@ export default function DeejConfigDialog({
           </button>
           <button
             onClick={handleSave}
-            className="rounded-lg bg-neon-blue px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-neon-blue/80 hover:glow-blue"
+            disabled={!canSave}
+            className="rounded-lg bg-neon-blue disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-neon-blue/80 hover:glow-blue"
           >
             Enregistrer
           </button>
