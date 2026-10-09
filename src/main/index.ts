@@ -18,9 +18,20 @@ import { serialService } from '@main/services/serial.service'
 import { sliderService } from '@main/services/slider.service'
 import { createWindowCloseHandler } from '@main/services/window-close-handler'
 import { restoreAndFocusWindow } from '@main/services/window-lifecycle'
+import { linuxXWaylandRelaunchArgs, XWAYLAND_SWITCH } from '@main/linux-display'
 import { audioSessionTargets } from '../shared/deej-targets'
 
 const APP_ID = 'fr.remi-lachaux.streamdeck-deej'
+
+// Before anything else: restart through XWayland on NVIDIA Wayland sessions.
+const xwaylandArgs = linuxXWaylandRelaunchArgs()
+if (xwaylandArgs) {
+  // The new process starts once this one has exited and released the
+  // single-instance lock. An AppImage's extracted binary disappears on exit,
+  // so relaunch the image itself.
+  app.relaunch({ execPath: process.env['APPIMAGE'] || process.execPath, args: xwaylandArgs })
+  app.exit(0)
+}
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -112,6 +123,9 @@ app.whenReady().then(async () => {
   }
 
   configService.init()
+  if (process.argv.includes(XWAYLAND_SWITCH)) {
+    loggerService.info('Rendering through XWayland', 'Main')
+  }
   platformRuntime = await createPlatformRuntime(process.platform, {
     setLoginItemSettings: (settings) => app.setLoginItemSettings(settings)
   })

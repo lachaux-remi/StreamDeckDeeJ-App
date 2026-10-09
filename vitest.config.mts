@@ -56,6 +56,7 @@ export default defineConfig({
         'src/main/services/home-assistant-live-states.ts',
         'src/main/services/home-assistant-sliders.ts',
         'src/shared/deej-targets.ts',
+        'src/main/linux-display.ts',
         'src/main/services/pipewire-streams.ts',
         'src/main/services/settings-defaults.ts',
         'src/main/services/signed-update.ts',
@@ -162,6 +163,12 @@ export default defineConfig({
         },
         'src/main/services/home-assistant-sliders.ts': {
           branches: 97.22,
+          functions: 100,
+          lines: 100,
+          statements: 100
+        },
+        'src/main/linux-display.ts': {
+          branches: 100,
           functions: 100,
           lines: 100,
           statements: 100
