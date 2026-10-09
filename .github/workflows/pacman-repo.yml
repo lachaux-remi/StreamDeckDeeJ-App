@@ -13,6 +13,14 @@ on:
         description: Latest published release tag to serve from the pacman repository
         required: true
         type: string
+    # A reusable workflow only receives environment secrets the caller passes;
+    # otherwise they silently resolve to empty strings. The values still come
+    # from the pacman-repo environment, which takes precedence.
+    secrets:
+      PACMAN_REPO_GPG_PRIVATE_KEY:
+        required: true
+      PACMAN_REPO_GPG_PASSPHRASE:
+        required: true
 
 permissions:
   contents: read

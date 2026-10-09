@@ -162,4 +162,11 @@ test('the release workflow refreshes the pacman repository after publishing', ()
   expect(job).toContain('uses: ./.github/workflows/pacman-repo.yml')
   expect(job).toContain('contents: write')
   expect(job).toContain('tag: ${{ needs.create-release.outputs.tag_name }}')
+  // Without these, the environment secrets silently resolve to empty strings.
+  for (const secret of ['PACMAN_REPO_GPG_PRIVATE_KEY', 'PACMAN_REPO_GPG_PASSPHRASE']) {
+    expect(job).toContain(`${secret}: \${{ secrets.${secret} }}`)
+    expect(workflow).toMatch(
+      new RegExp(`workflow_call:[\\s\\S]*secrets:[\\s\\S]*${secret}:\\s+required: true`)
+    )
+  }
 })
