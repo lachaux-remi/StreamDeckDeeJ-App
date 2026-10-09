@@ -1,8 +1,9 @@
 import { app, safeStorage } from 'electron'
-import { existsSync, mkdirSync } from 'node:fs'
+import { chmodSync, copyFileSync, existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { EventEmitter } from 'node:events'
 import {
+  dropUnsupportedEntries,
   isAppSettings,
   type AppSettings,
   type RendererSettings,
@@ -56,10 +57,7 @@ export class ConfigService extends EventEmitter {
       if (existsSync(this.configPath)) {
         const parsed = this.persistence?.load() as Partial<AppSettings>
         const candidate = applySettingsDefaults(parsed)
-        if (!isAppSettings(candidate)) {
-          throw new Error('Invalid config')
-        }
-        this.data = candidate
+        this.data = isAppSettings(candidate) ? candidate : this.withoutUnsupportedEntries(candidate)
       } else {
         this.data = { ...defaultSettings }
         this.save()
@@ -77,6 +75,28 @@ export class ConfigService extends EventEmitter {
         loggerService.error('Failed to enforce config file permissions', SERVICE)
       }
     }
+  }
+
+  /**
+   * Accepts a config written by a newer version once the values this version
+   * does not know are dropped. The file is untouched until the next save, and
+   * a copy is kept so the newer version's settings can be restored.
+   */
+  private withoutUnsupportedEntries(candidate: AppSettings): AppSettings {
+    const { settings, dropped } = dropUnsupportedEntries(
+      candidate as unknown as Record<string, unknown>
+    )
+    if (dropped.length === 0 || !isAppSettings(settings)) {
+      throw new Error('Invalid config')
+    }
+    const backupPath = `${this.configPath}.bak`
+    copyFileSync(this.configPath, backupPath)
+    chmodSync(backupPath, 0o600)
+    loggerService.warn(
+      `Config from a newer version: ignoring ${dropped.join(', ')}; original kept in ${backupPath}`,
+      SERVICE
+    )
+    return settings
   }
 
   private save(data: AppSettings = this.data): void {
