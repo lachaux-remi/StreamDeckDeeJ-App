@@ -8,12 +8,17 @@ import { AppQuitCoordinator } from '@main/services/app-quit-coordinator'
 import { configService } from '@main/services/config.service'
 import { deckService } from '@main/services/deck.service'
 import { discordService } from '@main/services/discord.service'
+import {
+  startHomeAssistantSliders,
+  type HomeAssistantSliders
+} from '@main/services/home-assistant-sliders'
 import { ledService } from '@main/services/led.service'
 import { loggerService } from '@main/services/logger.service'
 import { serialService } from '@main/services/serial.service'
 import { sliderService } from '@main/services/slider.service'
 import { createWindowCloseHandler } from '@main/services/window-close-handler'
 import { restoreAndFocusWindow } from '@main/services/window-lifecycle'
+import { audioSessionTargets } from '../shared/deej-targets'
 
 const APP_ID = 'fr.remi-lachaux.streamdeck-deej'
 
@@ -43,10 +48,12 @@ const APP_ICON = isDev
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let platformRuntime: PlatformRuntime | null = null
+let homeAssistantSliders: HomeAssistantSliders | null = null
 let isQuitting = false
 const appQuitCoordinator = new AppQuitCoordinator({
   shutdown: async () => {
     deckService.shutdown()
+    homeAssistantSliders?.shutdown()
     tray?.destroy()
     tray = null
     await Promise.all([
@@ -111,6 +118,7 @@ app.whenReady().then(async () => {
   const { microphone, levelMeter } = platformRuntime.audio
   await microphone.init()
   deckService.setMicrophone(microphone)
+  homeAssistantSliders = startHomeAssistantSliders()
   await discordService.init()
   conditionService.init(microphone, discordService)
   await ledService.init(microphone)
@@ -219,7 +227,7 @@ app.whenReady().then(async () => {
     window.on('minimize', syncLevelMeterVisibility)
     window.on('restore', syncLevelMeterVisibility)
     syncLevelMeterVisibility()
-    levelMeter.updateConfig(config.deej)
+    levelMeter.updateConfig(audioSessionTargets(config.deej))
   }
 
   microphone.on('change', () =>
@@ -257,7 +265,7 @@ app.whenReady().then(async () => {
   configService.onUpdated((newConfig) => {
     void setAutostart(newConfig.runOnStartup)
     ledService.updateOverrides(newConfig.streamdeck)
-    levelMeter?.updateConfig(newConfig.deej)
+    levelMeter?.updateConfig(audioSessionTargets(newConfig.deej))
 
     if (newConfig.discord?.clientId !== prevDiscordClientId) {
       prevDiscordClientId = newConfig.discord?.clientId
