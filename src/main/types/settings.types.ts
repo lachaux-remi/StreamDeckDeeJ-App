@@ -347,6 +347,58 @@ function hasValidSharedSettings(value: Record<string, unknown>): boolean {
   )
 }
 
+/**
+ * Removes the values a newer version may have written and this one does not
+ * know (button modules, LED condition types, LED modes), so going back to an
+ * older version keeps the rest of the configuration. Returns a copy and a
+ * description of what was dropped; anything else stays for isAppSettings.
+ */
+export function dropUnsupportedEntries(value: Record<string, unknown>): {
+  settings: Record<string, unknown>
+  dropped: string[]
+} {
+  const settings = structuredClone(value)
+  const dropped: string[] = []
+  const modules: string[] = ['', ...Object.values(ModuleEnum)]
+  if (isRecord(settings.streamdeck)) {
+    for (const [key, input] of Object.entries(settings.streamdeck)) {
+      if (!isRecord(input)) {
+        continue
+      }
+      for (const slot of ['pressed', 'hold']) {
+        const action = input[slot]
+        if (
+          isRecord(action) &&
+          typeof action.module === 'string' &&
+          !modules.includes(action.module)
+        ) {
+          delete input[slot]
+          dropped.push(`key ${key} ${slot} action (module "${action.module}")`)
+        }
+      }
+      if (Array.isArray(input.ledConditions)) {
+        input.ledConditions = input.ledConditions.filter((condition: unknown) => {
+          const type = isRecord(condition) ? condition.type : undefined
+          if (typeof type === 'string' && !conditionTypes.includes(type as LedConditionType)) {
+            dropped.push(`key ${key} LED condition "${type}"`)
+            return false
+          }
+          return true
+        })
+      }
+    }
+  }
+  if (
+    isRecord(settings.ledProfile) &&
+    typeof settings.ledProfile.mode === 'string' &&
+    !ledModes.includes(settings.ledProfile.mode as LedMode)
+  ) {
+    dropped.push(`LED mode "${settings.ledProfile.mode}"`)
+    settings.ledProfile.mode = 'static'
+  }
+  return { settings, dropped }
+}
+
 export function isAppSettings(value: unknown): value is AppSettings {
   if (
     !isRecord(value) ||

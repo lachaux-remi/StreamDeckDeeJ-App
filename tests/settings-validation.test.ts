@@ -178,3 +178,32 @@ test('validates attribute LED conditions and the automation module in both schem
     expect(isRendererSettings(withButton(button).settings)).toBe(false)
   }
 })
+
+test('drops only the values a newer version added and reports them', async () => {
+  const { dropUnsupportedEntries } = await import('@main/types/settings.types')
+  const original = {
+    ledProfile: { mode: 'rainbow' },
+    streamdeck: {
+      '1': {
+        pressed: { module: '', params: [''] },
+        hold: { module: 'home-assistant', params: [] },
+        ledConditions: [{ type: 'ha-on' }, 'not-a-condition']
+      },
+      '2': 'not-a-button',
+      '3': { pressed: { module: 'teleport', params: [] }, ledConditions: [{ type: 'eclipse' }] }
+    }
+  }
+
+  const { settings, dropped } = dropUnsupportedEntries(original)
+
+  expect(dropped).toEqual([
+    'key 3 pressed action (module "teleport")',
+    'key 3 LED condition "eclipse"'
+  ])
+  expect(settings.streamdeck).toEqual({
+    ...original.streamdeck,
+    '3': { ledConditions: [] }
+  })
+  expect(original.streamdeck['3'].pressed).toBeDefined()
+  expect(dropUnsupportedEntries({ streamdeck: [] }).dropped).toEqual([])
+})

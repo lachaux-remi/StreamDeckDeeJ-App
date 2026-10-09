@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, expect, test, vi } from 'vitest'
@@ -21,6 +21,7 @@ vi.mock('electron', () => ({
 
 beforeEach(() => {
   rmSync(configPath, { force: true })
+  rmSync(`${configPath}.bak`, { force: true })
 })
 
 test('loads a legacy brightness state without exposing secrets and removes it on the next save', () => {
@@ -126,4 +127,64 @@ test('restores the persisted Home Assistant token when an update listener reject
     url: 'https://old.example',
     token: 'stored-token'
   })
+})
+
+test('keeps a config written by a newer version once its unknown values are dropped', () => {
+  const settings = {
+    ...structuredClone(defaultSettings),
+    homeAssistant: { url: 'https://ha.example', token: fixtureSecret },
+    ledProfile: { ...defaultSettings.ledProfile, mode: 'aurora' },
+    streamdeck: {
+      '0': {
+        pressed: { module: 'macro', params: ['open_browser'] },
+        hold: { module: 'future-module', params: ['x'] },
+        ledConditions: [
+          { type: 'mic-mute', color: { r: 255, g: 0, b: 0 } },
+          { type: 'future-condition', color: { r: 0, g: 255, b: 0 } }
+        ]
+      }
+    }
+  }
+  const originalFile = JSON.stringify(settings, null, 2)
+  writeFileSync(configPath, originalFile, { mode: 0o600 })
+
+  const service = new ConfigService()
+  service.init()
+
+  expect(service.getConfig().homeAssistant).toEqual({
+    url: 'https://ha.example',
+    token: fixtureSecret
+  })
+  expect(service.getConfig().ledProfile.mode).toBe('static')
+  expect(service.getConfig().streamdeck['0']).toEqual({
+    pressed: { module: 'macro', params: ['open_browser'] },
+    ledConditions: [{ type: 'mic-mute', color: { r: 255, g: 0, b: 0 } }]
+  })
+  // The file stays as written until the next save, and a copy is kept.
+  expect(readFileSync(configPath, 'utf8')).toBe(originalFile)
+  expect(readFileSync(`${configPath}.bak`, 'utf8')).toBe(originalFile)
+  if (process.platform !== 'win32') {
+    expect(statSync(`${configPath}.bak`).mode & 0o777).toBe(0o600)
+  }
+
+  service.setConfig({ closeToTray: false })
+  expect(readFileSync(configPath, 'utf8')).not.toContain('future-module')
+  expect(readFileSync(`${configPath}.bak`, 'utf8')).toBe(originalFile)
+})
+
+test('still falls back to defaults when dropping unknown values is not enough', () => {
+  const settings = {
+    ...structuredClone(defaultSettings),
+    gridCols: 0,
+    streamdeck: { '0': { pressed: { module: 'future-module', params: [] } } }
+  }
+  const originalFile = JSON.stringify(settings, null, 2)
+  writeFileSync(configPath, originalFile, { mode: 0o600 })
+
+  const service = new ConfigService()
+  service.init()
+
+  expect(service.getConfig()).toEqual(defaultSettings)
+  expect(readFileSync(configPath, 'utf8')).toBe(originalFile)
+  expect(existsSync(`${configPath}.bak`)).toBe(false)
 })
