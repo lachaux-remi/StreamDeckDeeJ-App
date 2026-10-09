@@ -1,5 +1,19 @@
 # Changelog
 
+## [4.4.0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.3.1...v4.4.0) (2026-10-09)
+
+
+### Fonctionnalités
+
+* **deej:** drive Home Assistant entities with sliders ([#87](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/87)) ([feeec87](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/feeec871ef37edf9f910fc13b375093a3c61e342))
+* **streamdeck:** add Discord voice and system microphone buttons ([#85](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/85)) ([e607a74](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/e607a74bc5ecd0bc905dc93e6c59cc9796dcd0ec))
+
+
+### Corrections de bugs
+
+* **config:** keep settings written by a newer version ([#88](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/88)) ([937dd80](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/937dd80ffcaa574fa2b18e54759d71c3a9be3b9a))
+* **linux:** render through XWayland with NVIDIA on Wayland ([#89](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/89)) ([cb6cebe](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/cb6cebecf06d1219eea73089e64d63f5a4cdb5ab))
+
 ## [4.3.1](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.3.0...v4.3.1) (2026-10-09)
 
 
