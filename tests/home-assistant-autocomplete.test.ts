@@ -46,6 +46,12 @@ test('ranks suggestions by priority, prefix match and name, and limits results',
   ])
   expect(filterSuggestions(suggestions, 'bureau', 10).map((s) => s.value)).toEqual(['light.desk'])
   expect(filterSuggestions(suggestions, '', 2)).toHaveLength(2)
+  // A suggestion without priority listed first is compared on both sides of the sort.
+  expect(
+    filterSuggestions([{ value: 'sensor.temp' }, { value: 'light.bed', priority: 0 }], '', 10).map(
+      (s) => s.value
+    )
+  ).toEqual(['light.bed', 'sensor.temp'])
 })
 
 test('caches loaded catalogs for a minute and retries after an empty answer', async () => {
