@@ -14,6 +14,13 @@
 - `settings:hydrate` returns `RendererSettings`, never stored tokens or client secrets. It exposes only configuration-state booleans for secrets. `settings:update` sends the full renderer settings plus explicit `unchanged`, `set`, or `clear` secret operations and is validated again in the main process.
 - Configuration is stored in Electron's user-data `config.json` with mode `0600`. Secrets are encrypted with Electron `safeStorage` when a secure keyring backend is available and fall back to plain values in that file otherwise. Preserve that permission, the keyring encryption, and the rule that secrets remain in the main process when changing settings, IPC, or persistence.
 - Use `src/preload/index.ts` and `src/main/handlers/` as the source of truth for IPC channels and directions; keep transport changes aligned on both sides.
+- Keep settings readable by older releases. When a config fails validation, `dropUnsupportedEntries` drops only unknown button modules, LED condition types, and LED modes, keeps the rest, and copies the original to `config.json.bak` (mode `0600`) before the next save. Any other invalid content, including an unknown top-level key, still falls back to defaults without touching the file, so extend existing structures with new enum values rather than adding top-level keys.
+- A DeeJ slider maps to audio session names or to one `ha:<entity_id>` Home Assistant target (`src/shared/deej-targets.ts`). Audio code must read slider mappings through `audioSessionTargets` so it never treats those entries as sessions.
+
+## Integrations
+
+- Home Assistant calls stay in the main process: state comes from the WebSocket `subscribe_entities` stream with REST polling as fallback, and slider-driven calls are rate limited per entity and never sent for the position read at startup.
+- Discord uses the local RPC socket with OAuth scopes requested in `discordService.authorize`. Discord rejects `AUTHORIZE` on an authenticated connection, so a token missing a newly required scope is upgraded once per run on a fresh connection, keeping the current token if consent is refused. Adding a scope therefore prompts every existing user once in Discord; say so in the pull request.
 
 ## Validation
 
