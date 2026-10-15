@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.5.0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.4.0...v4.5.0) (2026-10-15)
+
+
+### Fonctionnalités
+
+* **settings:** test Home Assistant and connect Discord from the settings ([#97](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/97)) ([98a464b](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/98a464bb663d364fc11dfb0dc70b3e8327158a73))
+
+
+### Corrections de bugs
+
+* **settings:** clarify secret fields and report discard and save failures ([#95](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/95)) ([79d7eeb](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/79d7eeb5a860d5a3a69a57818639b3799f917fcd))
+
 ## [4.4.0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.3.1...v4.4.0) (2026-10-09)
 
 
