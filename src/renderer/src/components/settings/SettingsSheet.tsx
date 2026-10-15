@@ -100,6 +100,8 @@ export default function SettingsSheet({
     action: 'unchanged'
   })
   const [clearDiscordTokens, setClearDiscordTokens] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [hardwarePermissions, setHardwarePermissions] =
     useState<HardwarePermissionsDiagnostic | null>(null)
   const [isInstallingPermissions, setIsInstallingPermissions] = useState(false)
@@ -127,6 +129,7 @@ export default function SettingsSheet({
       setDiscordSecretChange({ action: 'unchanged' })
       setClearDiscordTokens(false)
       setTransferMessage(null)
+      setSaveError(null)
     }
   }, [isOpen, settings])
 
@@ -154,12 +157,16 @@ export default function SettingsSheet({
 
   const handleDiscard = useCallback(() => {
     setShowDiscardPrompt(false)
+    if (JSON.stringify(localSettings.ledProfile) !== JSON.stringify(settings.ledProfile)) {
+      // The open sheet previews ledProfile on the device; put the saved profile back.
+      void window.api.streamdeck.setLedProfile(settings.ledProfile)
+    }
     setLocalSettings(settings)
     setHATokenChange({ action: 'unchanged' })
     setDiscordSecretChange({ action: 'unchanged' })
     setClearDiscordTokens(false)
     onClose()
-  }, [settings, onClose])
+  }, [localSettings.ledProfile, settings, onClose])
 
   const refreshPorts = useCallback(async () => {
     setIsRefreshing(true)
@@ -223,13 +230,21 @@ export default function SettingsSheet({
           discordSecretChange.action === 'unchanged'
       }
     }
-    await updateConfig(settingsToSave, {
-      homeAssistantToken: haTokenChange,
-      discordClientSecret: discordSecretChange,
-      discordTokens:
-        clearDiscordTokens || discordSecretChange.action !== 'unchanged' ? 'clear' : 'unchanged'
-    })
-    onClose()
+    setIsSaving(true)
+    setSaveError(null)
+    try {
+      await updateConfig(settingsToSave, {
+        homeAssistantToken: haTokenChange,
+        discordClientSecret: discordSecretChange,
+        discordTokens:
+          clearDiscordTokens || discordSecretChange.action !== 'unchanged' ? 'clear' : 'unchanged'
+      })
+      onClose()
+    } catch {
+      setSaveError("L'enregistrement a échoué : les paramètres n'ont pas été modifiés.")
+    } finally {
+      setIsSaving(false)
+    }
   }, [localSettings, haTokenChange, discordSecretChange, clearDiscordTokens, updateConfig, onClose])
 
   const handleExport = useCallback(async () => {
@@ -710,6 +725,10 @@ export default function SettingsSheet({
                           }
                           show={showHAToken}
                           onToggle={() => setShowHAToken((s) => !s)}
+                          configured={secretConfigured(
+                            localSettings.homeAssistant.tokenConfigured,
+                            haTokenChange
+                          )}
                           className={`${inputGreen} pr-9`}
                         />
                         {(localSettings.homeAssistant.tokenConfigured ||
@@ -793,6 +812,10 @@ export default function SettingsSheet({
                           }
                           show={showDiscordSecret}
                           onToggle={() => setShowDiscordSecret((s) => !s)}
+                          configured={secretConfigured(
+                            localSettings.discord.clientSecretConfigured,
+                            discordSecretChange
+                          )}
                           className={`${inputDiscord} pr-9`}
                         />
                         {(localSettings.discord.clientSecretConfigured ||
@@ -814,19 +837,38 @@ export default function SettingsSheet({
                           </button>
                         )}
                       </div>
-                      <div className="flex items-center justify-between">
-                        <ConfiguredState
-                          configured={localSettings.discord.authenticated && !clearDiscordTokens}
-                        />
-                        {localSettings.discord.authenticated && (
-                          <button
-                            type="button"
-                            onClick={() => setClearDiscordTokens((clear) => !clear)}
-                            className="text-[11px] text-neon-red/50 hover:text-neon-red transition-colors"
-                          >
-                            {clearDiscordTokens ? 'Annuler la réinitialisation' : 'Réinitialiser'}
-                          </button>
-                        )}
+                      <div>
+                        <div className="mb-1.5 flex items-center justify-between">
+                          <label className="text-xs font-medium text-muted-foreground/70">
+                            Autorisation Discord
+                          </label>
+                          <ConfiguredState
+                            configured={
+                              localSettings.discord.authenticated &&
+                              !clearDiscordTokens &&
+                              discordSecretChange.action === 'unchanged'
+                            }
+                          />
+                        </div>
+                        <p className="text-[11px] leading-relaxed text-muted-foreground/40">
+                          {!localSettings.discord.authenticated
+                            ? 'Discord te demandera ton accord à la prochaine connexion.'
+                            : clearDiscordTokens || discordSecretChange.action !== 'unchanged'
+                              ? "Sera révoquée à l'enregistrement : Discord te redemandera ton accord."
+                              : 'Accès accordé pour lire les états Muet, Sourd et Stream.'}
+                        </p>
+                        {localSettings.discord.authenticated &&
+                          discordSecretChange.action === 'unchanged' && (
+                            <button
+                              type="button"
+                              onClick={() => setClearDiscordTokens((clear) => !clear)}
+                              className="mt-1.5 text-[11px] text-neon-red/60 transition-colors hover:text-neon-red"
+                            >
+                              {clearDiscordTokens
+                                ? 'Annuler la révocation'
+                                : "Révoquer l'autorisation"}
+                            </button>
+                          )}
                       </div>
                     </div>
                   </section>
@@ -1030,6 +1072,12 @@ export default function SettingsSheet({
                 </div>
               </div>
             )}
+            {saveError && (
+              <p className="mb-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-neon-red">
+                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                {saveError}
+              </p>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={handleClose}
@@ -1039,9 +1087,10 @@ export default function SettingsSheet({
               </button>
               <button
                 onClick={handleSave}
-                className="flex-1 rounded-lg bg-neon-purple py-2.5 text-xs font-semibold text-white transition-all hover:bg-neon-purple/80 hover:glow-purple"
+                disabled={isSaving}
+                className="flex-1 rounded-lg bg-neon-purple py-2.5 text-xs font-semibold text-white transition-all hover:bg-neon-purple/80 hover:glow-purple disabled:pointer-events-none disabled:opacity-60"
               >
-                Enregistrer
+                {isSaving ? 'Enregistrement…' : 'Enregistrer'}
               </button>
             </div>
           </div>
@@ -1232,27 +1281,38 @@ function PasswordInput({
   onChange,
   show,
   onToggle,
+  configured,
   className
 }: {
   value: string
   onChange: (v: string) => void
   show: boolean
   onToggle: () => void
+  configured: boolean
   className?: string
 }): React.JSX.Element {
+  // Stored secrets never reach the renderer: the field only holds what the user types.
   return (
     <div className="relative">
       <input
         type={show ? 'text' : 'password'}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="••••••••••••••••••••••••••••••••"
+        placeholder={configured ? 'Enregistré — saisir pour remplacer' : 'Coller la valeur ici'}
         className={className}
       />
       <button
         type="button"
         onClick={onToggle}
-        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+        disabled={!value}
+        title={
+          value
+            ? show
+              ? 'Masquer'
+              : 'Afficher'
+            : 'La valeur enregistrée ne peut pas être affichée'
+        }
+        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors disabled:pointer-events-none disabled:opacity-40"
       >
         {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
       </button>
