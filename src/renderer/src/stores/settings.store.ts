@@ -47,10 +47,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       }
     }),
 
-  updateConfig: (partial, secrets) => {
+  updateConfig: async (partial, secrets) => {
     const newSettings = { ...get().settings, ...partial }
+    // Only show the new settings once the main process has validated and saved them.
+    await persistSettings(newSettings, secrets)
     set({ settings: newSettings })
-    return persistSettings(newSettings, secrets)
   },
 
   updateStreamdeckButton: (index, config) => {
