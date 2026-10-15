@@ -37,7 +37,14 @@ const api = {
     getEntities: (): Promise<unknown> => ipcRenderer.invoke('ha:entities'),
     getServices: (): Promise<unknown> => ipcRenderer.invoke('ha:services'),
     getAttributes: (entityId: string): Promise<unknown> =>
-      ipcRenderer.invoke('ha:attributes', entityId)
+      ipcRenderer.invoke('ha:attributes', entityId),
+    test: (request: {
+      url: string
+      token: { action: 'unchanged' | 'clear' } | { action: 'set'; value: string }
+    }): Promise<unknown> => ipcRenderer.invoke('ha:test', request)
+  },
+  discord: {
+    authorize: (): Promise<unknown> => ipcRenderer.invoke('discord:authorize')
   },
   deej: {
     getSliders: (): Promise<Record<string, number>> => ipcRenderer.invoke('deej:sliders'),

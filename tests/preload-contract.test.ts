@@ -37,6 +37,7 @@ test('exposes request methods on their exact main-process channels', async () =>
     streamdeck: Record<string, (...args: unknown[]) => unknown>
     deej: Record<string, (...args: unknown[]) => unknown>
     homeAssistant: Record<string, (...args: unknown[]) => unknown>
+    discord: Record<string, (...args: unknown[]) => unknown>
     app: Record<string, (...args: unknown[]) => unknown>
     update: Record<string, (...args: unknown[]) => unknown>
     conditions: Record<string, (...args: unknown[]) => unknown>
@@ -69,6 +70,12 @@ test('exposes request methods on their exact main-process channels', async () =>
     [() => api.homeAssistant.getEntities(), 'ha:entities'],
     [() => api.homeAssistant.getServices(), 'ha:services'],
     [() => api.homeAssistant.getAttributes('light.desk'), 'ha:attributes', 'light.desk'],
+    [
+      () => api.homeAssistant.test({ url: 'http://ha.local', token: { action: 'unchanged' } }),
+      'ha:test',
+      { url: 'http://ha.local', token: { action: 'unchanged' } }
+    ],
+    [() => api.discord.authorize(), 'discord:authorize'],
     [() => api.app.getVersions(), 'electron:versions'],
     [() => api.app.getLogs(), 'electron:logs'],
     [() => api.update.getState(), 'update:state'],

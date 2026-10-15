@@ -18,6 +18,7 @@ export default defineConfig({
         'src/main/handlers/app.handlers.ts',
         'src/main/handlers/conditions.handlers.ts',
         'src/main/handlers/deej.handlers.ts',
+        'src/main/handlers/discord.handlers.ts',
         'src/main/handlers/hardware-permissions.handlers.ts',
         'src/main/handlers/hardware-permissions.contract.ts',
         'src/main/handlers/index.ts',
@@ -88,7 +89,7 @@ export default defineConfig({
           lines: 100,
           statements: 100
         },
-        'src/main/handlers/{app,conditions,deej,hardware-permissions,serial}.handlers.ts': {
+        'src/main/handlers/{app,conditions,deej,discord,hardware-permissions,serial}.handlers.ts': {
           branches: 100,
           functions: 100,
           lines: 100,

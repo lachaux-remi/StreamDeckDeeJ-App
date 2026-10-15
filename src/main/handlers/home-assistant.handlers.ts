@@ -8,6 +8,7 @@ import {
   toServiceNames
 } from '@main/services/home-assistant-catalog'
 import { loggerService } from '@main/services/logger.service'
+import { isHomeAssistantTestRequest } from '@main/types/settings.types'
 import { handleIpc } from './trusted-ipc'
 
 const SERVICE = 'HomeAssistantHandlers'
@@ -29,6 +30,38 @@ async function fromHomeAssistant<T>(
   }
 }
 
+export type HomeAssistantTestResult =
+  'ok' | 'unauthorized' | 'unreachable' | 'missing-url' | 'missing-token' | 'error'
+
+/** Checks the URL and token being edited, falling back to the stored token when unchanged. */
+async function testConnection(request: unknown): Promise<HomeAssistantTestResult> {
+  if (!isHomeAssistantTestRequest(request)) {
+    throw new TypeError('Invalid Home Assistant test request')
+  }
+  const { url, token } = request
+  const value =
+    token.action === 'set'
+      ? token.value
+      : token.action === 'unchanged'
+        ? configService.getConfig().homeAssistant.token
+        : ''
+  if (!url) {
+    return 'missing-url'
+  }
+  if (!value) {
+    return 'missing-token'
+  }
+  try {
+    const status = await new HomeAssistantAPI(url, value).checkApi(
+      AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+    )
+    return status === 200 ? 'ok' : status === 401 || status === 403 ? 'unauthorized' : 'error'
+  } catch (error) {
+    loggerService.warn(`Home Assistant connection test failed: ${String(error)}`, SERVICE)
+    return 'unreachable'
+  }
+}
+
 /** Autocompletion data for the button dialog; the token stays in the main process. */
 export function registerHomeAssistantHandlers(trustedSender: WebContents): void {
   handleIpc(trustedSender, 'ha:entities', () =>
@@ -44,6 +77,7 @@ export function registerHomeAssistantHandlers(trustedSender: WebContents): void 
       toAttributeSuggestions(await api.getState(entityId, signal))
     )
   })
+  handleIpc(trustedSender, 'ha:test', testConnection)
   handleIpc(trustedSender, 'ha:services', () =>
     fromHomeAssistant('services', async (api, signal) =>
       toServiceNames(await api.getServices(signal))

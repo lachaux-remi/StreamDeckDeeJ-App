@@ -6,6 +6,8 @@ const fakes = vi.hoisted(() => ({
   getStates: vi.fn(),
   getServices: vi.fn(),
   getState: vi.fn(),
+  checkApi: vi.fn(),
+  urls: [] as Array<{ url: string; token: string }>,
   warn: vi.fn()
 }))
 
@@ -22,6 +24,10 @@ vi.mock('@main/services/config.service', () => ({
 vi.mock('@main/services/logger.service', () => ({ loggerService: { warn: fakes.warn } }))
 vi.mock('@main/libs/home-assistant/HomeAssistantAPI', () => ({
   default: class {
+    constructor(url: string, token: string) {
+      fakes.urls.push({ url, token })
+    }
+    checkApi = fakes.checkApi
     getStates = fakes.getStates
     getServices = fakes.getServices
     getState = fakes.getState
@@ -36,6 +42,7 @@ function invoke(channel: string, ...args: unknown[]): unknown {
 
 beforeEach(() => {
   fakes.handlers.clear()
+  fakes.urls = []
   vi.clearAllMocks()
   fakes.homeAssistant = { url: 'http://ha.local:8123', token: 'secret' }
   registerHomeAssistantHandlers({} as never)
@@ -82,4 +89,50 @@ test('lists the attributes of one validated entity only', async () => {
     expect(await invoke('ha:attributes', invalid)).toEqual([])
   }
   expect(fakes.getState).not.toHaveBeenCalled()
+})
+
+test('tests the edited URL with a typed token or the stored one', async () => {
+  fakes.checkApi.mockResolvedValue(200)
+  const url = 'https://ha.example:8123'
+
+  await expect(invoke('ha:test', { url, token: { action: 'unchanged' } })).resolves.toBe('ok')
+  await expect(
+    invoke('ha:test', { url, token: { action: 'set', value: 'typed-token' } })
+  ).resolves.toBe('ok')
+
+  expect(fakes.urls).toEqual([
+    { url, token: 'secret' },
+    { url, token: 'typed-token' }
+  ])
+  expect(fakes.checkApi.mock.calls[0][0]).toBeInstanceOf(AbortSignal)
+})
+
+test('maps connection test outcomes', async () => {
+  const request = { url: 'http://ha.local:8123', token: { action: 'unchanged' } }
+
+  fakes.checkApi.mockResolvedValueOnce(401)
+  await expect(invoke('ha:test', request)).resolves.toBe('unauthorized')
+  fakes.checkApi.mockResolvedValueOnce(404)
+  await expect(invoke('ha:test', request)).resolves.toBe('error')
+  fakes.checkApi.mockRejectedValueOnce(new TypeError('fetch failed'))
+  await expect(invoke('ha:test', request)).resolves.toBe('unreachable')
+
+  await expect(invoke('ha:test', { url: '', token: { action: 'unchanged' } })).resolves.toBe(
+    'missing-url'
+  )
+  await expect(invoke('ha:test', { ...request, token: { action: 'clear' } })).resolves.toBe(
+    'missing-token'
+  )
+})
+
+test('rejects malformed connection test requests', async () => {
+  for (const invalid of [
+    undefined,
+    { url: 'file:///etc/passwd', token: { action: 'unchanged' } },
+    { url: 'http://ha.local', token: { action: 'set', value: '' } },
+    { url: 'http://ha.local', token: { action: 'unchanged' }, extra: true }
+  ]) {
+    await expect(invoke('ha:test', invalid)).rejects.toThrow(TypeError)
+  }
+  expect(fakes.checkApi).not.toHaveBeenCalled()
 })

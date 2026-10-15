@@ -23,6 +23,13 @@ interface RpcMessage {
   data?: unknown
 }
 
+/** Outcome of an authorization started from the settings sheet. */
+export type DiscordAuthorizationResult =
+  'authenticated' | 'refused' | 'failed' | 'unavailable' | 'not-configured' | 'timeout'
+
+// Long enough for the user to notice and accept the consent prompt in Discord.
+const AUTHORIZATION_TIMEOUT = 120_000
+
 export function discordSocketPaths(
   platform: NodeJS.Platform,
   index: number,
@@ -59,6 +66,20 @@ class DiscordService extends EventEmitter {
     this.socket?.destroy()
   })
   private reconnectTimer: NodeJS.Timeout | null = null
+
+  /** Reconnects and resolves once Discord grants or refuses access, or cannot be reached. */
+  authorizeNow(timeoutMs = AUTHORIZATION_TIMEOUT): Promise<DiscordAuthorizationResult> {
+    return new Promise((resolve) => {
+      const finish = (result: DiscordAuthorizationResult): void => {
+        clearTimeout(timer)
+        this.off('authorization', finish)
+        resolve(result)
+      }
+      const timer = setTimeout(() => finish('timeout'), timeoutMs)
+      this.on('authorization', finish)
+      this.reconnect()
+    })
+  }
 
   async init(): Promise<void> {
     void this.connect()
@@ -154,6 +175,7 @@ class DiscordService extends EventEmitter {
     const clientId = configService.getConfig().discord?.clientId
     if (!clientId) {
       loggerService.debug('Discord RPC: client_id non configuré — ignoré', SERVICE)
+      this.emit('authorization', 'not-configured')
       return
     }
 
@@ -172,6 +194,7 @@ class DiscordService extends EventEmitter {
       }
     }
     loggerService.debug('Discord: aucun socket IPC trouvé, réessai dans 10s', SERVICE)
+    this.emit('authorization', 'unavailable')
     this.scheduleReconnect()
   }
 
@@ -243,6 +266,7 @@ class DiscordService extends EventEmitter {
         this.authorize(false)
       } else {
         loggerService.warn(`Discord RPC: demande d'autorisation refusée (${reason})`, SERVICE)
+        this.emit('authorization', 'refused')
       }
     } else if (msg.cmd === 'AUTHORIZE') {
       this.voiceWriteUpgrade = false
@@ -279,6 +303,7 @@ class DiscordService extends EventEmitter {
           this.reconnect()
           return
         }
+        this.emit('authorization', 'authenticated')
         this.subscribeVoiceSettings()
       }
     } else if (msg.cmd === 'SET_VOICE_SETTINGS' && msg.evt === 'ERROR') {
@@ -319,6 +344,7 @@ class DiscordService extends EventEmitter {
   private async onReady(): Promise<void> {
     const discord = configService.getConfig().discord
     if (!discord) {
+      this.emit('authorization', 'not-configured')
       return
     }
 
@@ -328,6 +354,7 @@ class DiscordService extends EventEmitter {
       this.authorize()
     } else {
       loggerService.warn('Discord RPC: client_secret manquant dans les paramètres', SERVICE)
+      this.emit('authorization', 'not-configured')
     }
   }
 
@@ -395,9 +422,11 @@ class DiscordService extends EventEmitter {
           `Discord RPC: échange de token échoué (${data.error ?? 'unknown'}) — vérifiez client_secret`,
           SERVICE
         )
+        this.emit('authorization', 'failed')
       }
     } catch (err) {
       loggerService.warn(`Discord RPC: erreur réseau lors de l'échange: ${err}`, SERVICE)
+      this.emit('authorization', 'failed')
     }
   }
 

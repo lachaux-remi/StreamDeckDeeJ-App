@@ -17,6 +17,7 @@ const fakes = vi.hoisted(() => ({
   discordDeafened: vi.fn(),
   discordStreaming: vi.fn(),
   discordConnected: vi.fn(),
+  discordAuthorizeNow: vi.fn(),
   diagnose: vi.fn(),
   installPermissions: vi.fn(),
   getUpdateState: vi.fn(),
@@ -94,7 +95,8 @@ vi.mock('@main/services/discord.service', () => ({
     isMuted: fakes.discordMuted,
     isDeafened: fakes.discordDeafened,
     isStreaming: fakes.discordStreaming,
-    isConnected: fakes.discordConnected
+    isConnected: fakes.discordConnected,
+    authorizeNow: fakes.discordAuthorizeNow
   }
 }))
 vi.mock('@main/services/hardware-permissions.service', () => ({
@@ -241,6 +243,10 @@ test('reports app and condition state and ignores untrusted devtools events', as
     discordStreaming: false,
     discordConnected: true
   })
+  fakes.discordAuthorizeNow.mockResolvedValue('authenticated')
+  const { registerDiscordHandlers } = await import('@main/handlers/discord.handlers')
+  registerDiscordHandlers(trustedSender as never)
+  await expect(invoke('discord:authorize')).resolves.toBe('authenticated')
   const toggle = fakes.events.get('app:toggle-devtools')
   toggle?.({ sender: {}, senderFrame: trustedSender.mainFrame })
   expect(fakes.toggleDevTools).not.toHaveBeenCalled()
@@ -337,11 +343,13 @@ test('registers the complete main-process handler surface for one trusted render
       'deej:level-meter-available',
       'deej:sessions',
       'deej:sliders',
+      'discord:authorize',
       'electron:logs',
       'electron:versions',
       'ha:attributes',
       'ha:entities',
       'ha:services',
+      'ha:test',
       'hardware-permissions:diagnose',
       'hardware-permissions:install',
       'led:setProfile',

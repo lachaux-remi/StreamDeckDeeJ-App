@@ -404,3 +404,76 @@ test('falls back to read-only access when a first authorization with voice write
   expect(scopes[1]).toContain('rpc.voice.read')
   vi.clearAllTimers()
 })
+
+test('authorizeNow reports success once Discord authenticates with the voice scopes', async () => {
+  const socket = fakeSocket()
+  fakes.createConnection.mockReturnValue(socket)
+  const { discordService } = await import('@main/services/discord.service')
+
+  const result = discordService.authorizeNow()
+  await settleUntil(() => fakes.createConnection.mock.calls.length === 1)
+  socket.emit('connect')
+  socket.emit('data', rpcFrame({ evt: 'READY' }))
+  await Promise.resolve()
+  socket.emit(
+    'data',
+    rpcFrame({
+      cmd: 'AUTHENTICATE',
+      data: { scopes: ['rpc', 'rpc.voice.read', 'rpc.voice.write'] }
+    })
+  )
+
+  await expect(result).resolves.toBe('authenticated')
+  expect(discordService.listenerCount('authorization')).toBe(0)
+  vi.clearAllTimers()
+})
+
+test('authorizeNow reports a refused consent prompt', async () => {
+  fakes.getConfig.mockReturnValue({
+    discord: { clientId: 'client-id', clientSecret: 'fixture-client-secret' }
+  })
+  const socket = fakeSocket()
+  fakes.createConnection.mockReturnValue(socket)
+  const { discordService } = await import('@main/services/discord.service')
+
+  const result = discordService.authorizeNow()
+  await settleUntil(() => fakes.createConnection.mock.calls.length === 1)
+  socket.emit('connect')
+  socket.emit('data', rpcFrame({ evt: 'READY' }))
+  await Promise.resolve()
+  // The full request is refused first, then the read-only fallback.
+  socket.emit('data', rpcFrame({ cmd: 'AUTHORIZE', evt: 'ERROR', data: { code: 5000 } }))
+  socket.emit('data', rpcFrame({ cmd: 'AUTHORIZE', evt: 'ERROR', data: { code: 5000 } }))
+
+  await expect(result).resolves.toBe('refused')
+  vi.clearAllTimers()
+})
+
+test('authorizeNow reports a missing client id or an unreachable Discord', async () => {
+  fakes.getConfig.mockReturnValue({ discord: { clientId: '' } })
+  const { discordService } = await import('@main/services/discord.service')
+  await expect(discordService.authorizeNow()).resolves.toBe('not-configured')
+
+  fakes.getConfig.mockReturnValue({ discord: { clientId: 'client-id' } })
+  fakes.lstat.mockResolvedValue({ isSocket: () => false, uid: 1000, mode: 0o600 })
+  if (process.platform === 'win32') {
+    return
+  }
+  await expect(discordService.authorizeNow()).resolves.toBe('unavailable')
+  vi.clearAllTimers()
+})
+
+test('authorizeNow gives up after the timeout', async () => {
+  const socket = fakeSocket()
+  fakes.createConnection.mockReturnValue(socket)
+  const { discordService } = await import('@main/services/discord.service')
+
+  const result = discordService.authorizeNow(1_000)
+  await settleUntil(() => fakes.createConnection.mock.calls.length === 1)
+  socket.emit('connect')
+  vi.advanceTimersByTime(1_000)
+
+  await expect(result).resolves.toBe('timeout')
+  expect(discordService.listenerCount('authorization')).toBe(0)
+  vi.clearAllTimers()
+})

@@ -96,3 +96,16 @@ test('lists states and services with the token only in the authorization header'
   expect(String(error)).toContain('Home Assistant services error: 401 Unauthorized')
   expect(String(error)).not.toContain('fixture-secret-token')
 })
+
+test('checkApi returns the API root status with the bearer token', async () => {
+  const fetch = vi.fn().mockResolvedValue(new Response('', { status: 401 }))
+  vi.stubGlobal('fetch', fetch)
+
+  await expect(
+    new HomeAssistantAPI('https://ha.example', 'fixture-token').checkApi()
+  ).resolves.toBe(401)
+  expect(fetch).toHaveBeenCalledWith(
+    'https://ha.example/api/',
+    expect.objectContaining({ headers: { Authorization: 'Bearer fixture-token' } })
+  )
+})

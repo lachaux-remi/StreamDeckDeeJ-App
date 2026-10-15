@@ -1,6 +1,7 @@
 import { registerAppHandlers } from './app.handlers'
 import { registerConditionsHandlers } from './conditions.handlers'
 import { registerDeejHandlers } from './deej.handlers'
+import { registerDiscordHandlers } from './discord.handlers'
 import { registerHardwarePermissionsHandlers } from './hardware-permissions.handlers'
 import { registerHomeAssistantHandlers } from './home-assistant.handlers'
 import { registerSerialHandlers } from './serial.handlers'
@@ -23,5 +24,6 @@ export function registerAllHandlers(trustedSender: WebContents, platform: Platfo
   registerAppHandlers(trustedSender)
   registerHomeAssistantHandlers(trustedSender)
   registerConditionsHandlers(trustedSender, platform.audio.microphone)
+  registerDiscordHandlers(trustedSender)
   registerUpdateHandlers(trustedSender, platform.updater)
 }
