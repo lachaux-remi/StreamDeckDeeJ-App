@@ -434,7 +434,7 @@ export function isAppSettings(value: unknown): value is AppSettings {
   )
 }
 
-function isSecretChange(value: unknown): value is SecretChange {
+export function isSecretChange(value: unknown): value is SecretChange {
   if (!isRecord(value) || typeof value.action !== 'string') {
     return false
   }
@@ -504,5 +504,21 @@ export function isRendererSettingsUpdate(value: unknown): value is RendererSetti
     isSecretChange(secrets.homeAssistantToken) &&
     isSecretChange(secrets.discordClientSecret) &&
     (secrets.discordTokens === 'unchanged' || secrets.discordTokens === 'clear')
+  )
+}
+
+/** Connection test from the settings sheet: the URL being edited and its pending token change. */
+export interface HomeAssistantTestRequest {
+  url: string
+  token: SecretChange
+}
+
+export function isHomeAssistantTestRequest(value: unknown): value is HomeAssistantTestRequest {
+  return (
+    isRecord(value) &&
+    hasOnlyKeys(value, ['url', 'token']) &&
+    isStringAtMost(value.url, MAX_URL_LENGTH) &&
+    isHomeAssistantUrl(value.url) &&
+    isSecretChange(value.token)
   )
 }

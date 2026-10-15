@@ -18,6 +18,15 @@ class HomeAssistantAPI {
     return response.json() as Promise<{ state: string; attributes: Record<string, unknown> }>
   }
 
+  /** HTTP status of the API root (GET /api/): 200 when the URL and token are accepted. */
+  public async checkApi(signal?: AbortSignal): Promise<number> {
+    const response = await fetch(`${this.url}/api/`, {
+      headers: { Authorization: `Bearer ${this.token}` },
+      signal
+    })
+    return response.status
+  }
+
   /** All entity states (GET /api/states), as returned by Home Assistant. */
   public async getStates(signal?: AbortSignal): Promise<unknown> {
     return this.getJson('/api/states', 'states', signal)

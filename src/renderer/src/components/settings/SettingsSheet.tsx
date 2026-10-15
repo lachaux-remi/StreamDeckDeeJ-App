@@ -101,6 +101,9 @@ export default function SettingsSheet({
   })
   const [clearDiscordTokens, setClearDiscordTokens] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [haTest, setHATest] = useState<HomeAssistantTestState>('idle')
+  const [discordAuthorization, setDiscordAuthorization] =
+    useState<DiscordAuthorizationState>('idle')
   const [saveError, setSaveError] = useState<string | null>(null)
   const [hardwarePermissions, setHardwarePermissions] =
     useState<HardwarePermissionsDiagnostic | null>(null)
@@ -130,6 +133,8 @@ export default function SettingsSheet({
       setClearDiscordTokens(false)
       setTransferMessage(null)
       setSaveError(null)
+      setHATest('idle')
+      setDiscordAuthorization('idle')
     }
   }, [isOpen, settings])
 
@@ -146,6 +151,11 @@ export default function SettingsSheet({
     }
     void window.api.hardwarePermissions.diagnose().then(setHardwarePermissions)
   }, [isOpen])
+
+  useEffect(() => {
+    // A result only describes the URL and token it was obtained with.
+    setHATest('idle')
+  }, [localSettings.homeAssistant.url, haTokenChange])
 
   const handleClose = useCallback(() => {
     if (hasChanges) {
@@ -246,6 +256,36 @@ export default function SettingsSheet({
       setIsSaving(false)
     }
   }, [localSettings, haTokenChange, discordSecretChange, clearDiscordTokens, updateConfig, onClose])
+
+  const testHomeAssistant = useCallback(async () => {
+    setHATest('testing')
+    try {
+      const result = await window.api.homeAssistant.test({
+        url: localSettings.homeAssistant.url.trim(),
+        token: haTokenChange
+      })
+      setHATest(isHomeAssistantTestResult(result) ? result : 'error')
+    } catch {
+      setHATest('error')
+    }
+  }, [localSettings.homeAssistant.url, haTokenChange])
+
+  const authorizeDiscord = useCallback(async () => {
+    setDiscordAuthorization('waiting')
+    try {
+      const result = await window.api.discord.authorize()
+      const outcome = isDiscordAuthorizationResult(result) ? result : 'failed'
+      if (outcome === 'authenticated') {
+        const refreshed = await window.api.settings.hydrate()
+        if (isRendererSettings(refreshed)) {
+          hydrate(refreshed)
+        }
+      }
+      setDiscordAuthorization(outcome)
+    } catch {
+      setDiscordAuthorization('failed')
+    }
+  }, [hydrate])
 
   const handleExport = useCallback(async () => {
     setIsTransferring(true)
@@ -750,6 +790,26 @@ export default function SettingsSheet({
                           </button>
                         )}
                       </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                        <button
+                          type="button"
+                          onClick={() => void testHomeAssistant()}
+                          disabled={haTest === 'testing'}
+                          className="rounded-lg border border-neon-green/30 bg-neon-green/10 px-3 py-1.5 text-[11px] font-semibold text-neon-green transition-all hover:bg-neon-green/20 disabled:pointer-events-none disabled:opacity-60"
+                        >
+                          {haTest === 'testing' ? 'Test en cours…' : 'Tester la connexion'}
+                        </button>
+                        {haTest !== 'idle' && haTest !== 'testing' && (
+                          <span
+                            className={cn(
+                              'text-[11px]',
+                              haTest === 'ok' ? 'text-neon-green' : 'text-neon-red'
+                            )}
+                          >
+                            {HOME_ASSISTANT_TEST_MESSAGES[haTest]}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </section>
 
@@ -868,6 +928,51 @@ export default function SettingsSheet({
                                 ? 'Annuler la révocation'
                                 : "Révoquer l'autorisation"}
                             </button>
+                          )}
+                        {!localSettings.discord.authenticated && (
+                          <div className="mt-2 space-y-1.5">
+                            <button
+                              type="button"
+                              onClick={() => void authorizeDiscord()}
+                              disabled={
+                                hasChanges ||
+                                discordAuthorization === 'waiting' ||
+                                !localSettings.discord.clientId ||
+                                !localSettings.discord.clientSecretConfigured
+                              }
+                              className="rounded-lg border border-[#5865F2]/40 bg-[#5865F2]/10 px-3 py-1.5 text-[11px] font-semibold text-[#5865F2] transition-all hover:bg-[#5865F2]/20 disabled:pointer-events-none disabled:opacity-50"
+                            >
+                              {discordAuthorization === 'waiting'
+                                ? 'En attente de Discord…'
+                                : 'Connecter à Discord'}
+                            </button>
+                            <p
+                              className={cn(
+                                'text-[11px] leading-relaxed',
+                                discordAuthorization === 'idle' ||
+                                  discordAuthorization === 'waiting'
+                                  ? 'text-muted-foreground/40'
+                                  : discordAuthorization === 'authenticated'
+                                    ? 'text-neon-green'
+                                    : 'text-neon-red'
+                              )}
+                            >
+                              {discordAuthorization !== 'idle'
+                                ? DISCORD_AUTHORIZATION_MESSAGES[discordAuthorization]
+                                : !localSettings.discord.clientId ||
+                                    !localSettings.discord.clientSecretConfigured
+                                  ? 'Renseigne et enregistre le Client ID et le Client Secret.'
+                                  : hasChanges
+                                    ? "Enregistre d'abord tes modifications."
+                                    : 'Discord doit être ouvert sur ce PC.'}
+                            </p>
+                          </div>
+                        )}
+                        {localSettings.discord.authenticated &&
+                          discordAuthorization === 'authenticated' && (
+                            <p className="mt-1.5 text-[11px] text-neon-green">
+                              {DISCORD_AUTHORIZATION_MESSAGES.authenticated}
+                            </p>
                           )}
                       </div>
                     </div>
@@ -1098,6 +1203,41 @@ export default function SettingsSheet({
       </div>
     </>
   )
+}
+
+type HomeAssistantTestResult =
+  'ok' | 'unauthorized' | 'unreachable' | 'missing-url' | 'missing-token' | 'error'
+type HomeAssistantTestState = 'idle' | 'testing' | HomeAssistantTestResult
+
+const HOME_ASSISTANT_TEST_MESSAGES: Record<HomeAssistantTestResult, string> = {
+  ok: 'Connexion réussie.',
+  unauthorized: 'Token refusé par Home Assistant.',
+  unreachable: 'Home Assistant ne répond pas à cette URL.',
+  'missing-url': "Renseigne l'URL de Home Assistant.",
+  'missing-token': 'Renseigne un token.',
+  error: 'Réponse inattendue : vérifie l’URL.'
+}
+
+function isHomeAssistantTestResult(value: unknown): value is HomeAssistantTestResult {
+  return typeof value === 'string' && value in HOME_ASSISTANT_TEST_MESSAGES
+}
+
+type DiscordAuthorizationResult =
+  'authenticated' | 'refused' | 'failed' | 'unavailable' | 'not-configured' | 'timeout'
+type DiscordAuthorizationState = 'idle' | 'waiting' | DiscordAuthorizationResult
+
+const DISCORD_AUTHORIZATION_MESSAGES: Record<Exclude<DiscordAuthorizationState, 'idle'>, string> = {
+  waiting: 'Accepte la demande d’autorisation dans Discord.',
+  authenticated: 'Discord est connecté.',
+  refused: 'Autorisation refusée dans Discord.',
+  failed: 'Échec de l’autorisation : vérifie le Client Secret.',
+  unavailable: 'Discord est introuvable : ouvre l’application sur ce PC.',
+  'not-configured': 'Renseigne et enregistre le Client ID et le Client Secret.',
+  timeout: 'Pas de réponse de Discord à temps.'
+}
+
+function isDiscordAuthorizationResult(value: unknown): value is DiscordAuthorizationResult {
+  return typeof value === 'string' && value !== 'waiting' && value in DISCORD_AUTHORIZATION_MESSAGES
 }
 
 function secretInputValue(change: SecretChange): string {
