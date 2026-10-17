@@ -150,12 +150,18 @@ export function applyPressEffect(
 }
 
 /** Weight 0-1 of an active condition color over the key's normal color at time t. */
-export function conditionIntensity(effect: LedConditionEffect | undefined, t: number): number {
+export function conditionIntensity(
+  effect: LedConditionEffect | undefined,
+  t: number,
+  speed = 50
+): number {
+  // speed 50 keeps the base periods; every 25 points halves or doubles them.
+  const scale = Math.pow(2, (50 - Math.max(1, Math.min(100, speed))) / 25)
   if (effect === 'blink') {
-    return Math.floor(t / BLINK_MS) % 2 === 0 ? 1 : 0
+    return Math.floor(t / (BLINK_MS * scale)) % 2 === 0 ? 1 : 0
   }
   if (effect === 'pulse') {
-    return (Math.cos((2 * Math.PI * t) / CONDITION_PULSE_MS) + 1) / 2
+    return (Math.cos((2 * Math.PI * t) / (CONDITION_PULSE_MS * scale)) + 1) / 2
   }
   return 1
 }

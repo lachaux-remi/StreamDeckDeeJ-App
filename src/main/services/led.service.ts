@@ -202,7 +202,7 @@ class LedService {
           base[i] = interpolateColor(
             base[i],
             applyBrightness(condition.color, this.profile.brightness),
-            conditionIntensity(condition.effect, t)
+            conditionIntensity(condition.effect, t, this.profile.conditionSpeed)
           )
         }
       }

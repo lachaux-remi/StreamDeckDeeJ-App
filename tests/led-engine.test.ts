@@ -149,6 +149,11 @@ test('blinks or pulses an active condition color over the normal color', () => {
   expect(conditionIntensity('pulse', 0)).toBeCloseTo(1)
   expect(conditionIntensity('pulse', 750)).toBeCloseTo(0)
   expect(conditionIntensity('pulse', 375)).toBeCloseTo(0.5)
+  // Faster conditions shorten both periods; 75 halves them, 25 doubles them.
+  expect(conditionIntensity('blink', 250, 75)).toBe(0)
+  expect(conditionIntensity('blink', 750, 25)).toBe(1)
+  expect(conditionIntensity('pulse', 375, 75)).toBeCloseTo(0)
+  expect(conditionIntensity('blink', 10_000, 0)).toBe(conditionIntensity('blink', 10_000, 1))
   const normal = { r: 0, g: 100, b: 200 }
   const condition = { r: 200, g: 0, b: 0 }
   expect(interpolateColor(normal, condition, 1)).toEqual(condition)
