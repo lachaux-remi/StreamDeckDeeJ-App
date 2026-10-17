@@ -288,15 +288,31 @@ export default function StreamdeckConfigDialog({
     ledConditions
   ])
 
+  // Shows the key's unsaved color and conditions on the device; saving or
+  // discarding sends the stored configuration back.
   const sendLedPreview = useCallback(
-    (enabled: boolean, color: LedColor) => {
+    (color: LedColor | null, conditions: LedCondition[]) => {
       if (buttonIndex === null) {
         return
       }
-      void window.api.streamdeck.setLedOverride(streamdeck, buttonIndex, enabled ? color : null)
+      const complete = conditions.filter(isConditionComplete)
+      const preview = {
+        ...streamdeck,
+        [buttonIndex]: {
+          ...streamdeck[buttonIndex],
+          ledConditions: complete.length > 0 ? complete : undefined
+        }
+      }
+      void window.api.streamdeck.setLedOverride(preview, buttonIndex, color)
     },
     [buttonIndex, streamdeck]
   )
+
+  const updateLedConditions = (update: (prev: LedCondition[]) => LedCondition[]): void => {
+    const next = update(ledConditions)
+    setLedConditions(next)
+    sendLedPreview(ledOverrideEnabled ? ledColor : null, next)
+  }
 
   const handleClose = useCallback(() => {
     if (hasChanges) {
@@ -310,7 +326,7 @@ export default function StreamdeckConfigDialog({
     setShowDiscardPrompt(false)
     if (buttonIndex !== null) {
       const original = streamdeck[buttonIndex]
-      sendLedPreview(!!original?.color, original?.color ?? { r: 255, g: 0, b: 255 })
+      sendLedPreview(original?.color ?? null, original?.ledConditions ?? [])
     }
     onClose()
   }, [onClose, buttonIndex, streamdeck, sendLedPreview])
@@ -463,7 +479,7 @@ export default function StreamdeckConfigDialog({
                     onChange={(e) => {
                       const enabled = e.target.checked
                       setLedOverrideEnabled(enabled)
-                      sendLedPreview(enabled, ledColor)
+                      sendLedPreview(enabled ? ledColor : null, ledConditions)
                     }}
                     className="peer sr-only"
                   />
@@ -478,7 +494,7 @@ export default function StreamdeckConfigDialog({
                     value={ledColor}
                     onChange={(c) => {
                       setLedColor(c)
-                      sendLedPreview(true, c)
+                      sendLedPreview(c, ledConditions)
                     }}
                   />
                 </div>
@@ -493,7 +509,7 @@ export default function StreamdeckConfigDialog({
                 </span>
                 <button
                   onClick={() =>
-                    setLedConditions((prev) => [
+                    updateLedConditions((prev) => [
                       ...prev,
                       { type: 'mic-mute', color: { r: 255, g: 0, b: 0 } }
                     ])
@@ -536,7 +552,7 @@ export default function StreamdeckConfigDialog({
                       onDrop={(e) => {
                         e.preventDefault()
                         if (dragIndex !== null && dragIndex !== idx) {
-                          setLedConditions((prev) => {
+                          updateLedConditions((prev) => {
                             const next = [...prev]
                             const [item] = next.splice(dragIndex, 1)
                             next.splice(idx, 0, item)
@@ -566,7 +582,7 @@ export default function StreamdeckConfigDialog({
                           <CustomSelect
                             value={cond.type}
                             onChange={(val) => {
-                              setLedConditions((prev) =>
+                              updateLedConditions((prev) =>
                                 prev.map((c, i) =>
                                   i !== idx
                                     ? c
@@ -596,7 +612,7 @@ export default function StreamdeckConfigDialog({
                           <CustomSelect
                             value={cond.effect ?? 'solid'}
                             onChange={(val) => {
-                              setLedConditions((prev) =>
+                              updateLedConditions((prev) =>
                                 prev.map((item, i) => {
                                   if (i !== idx) {
                                     return item
@@ -621,7 +637,7 @@ export default function StreamdeckConfigDialog({
                           <ColorPicker
                             value={cond.color}
                             onChange={(c) => {
-                              setLedConditions((prev) =>
+                              updateLedConditions((prev) =>
                                 prev.map((item, i) => (i === idx ? { ...item, color: c } : item))
                               )
                             }}
@@ -653,7 +669,7 @@ export default function StreamdeckConfigDialog({
 
                         <button
                           onClick={() =>
-                            setLedConditions((prev) => prev.filter((_, i) => i !== idx))
+                            updateLedConditions((prev) => prev.filter((_, i) => i !== idx))
                           }
                           className="shrink-0 rounded p-1 text-muted-foreground/30 hover:text-neon-red transition-colors"
                         >
@@ -667,7 +683,7 @@ export default function StreamdeckConfigDialog({
                             <AutocompleteInput
                               value={cond.haAttribute ?? ''}
                               onChange={(next) =>
-                                setLedConditions((prev) =>
+                                updateLedConditions((prev) =>
                                   prev.map((item, i) =>
                                     i === idx ? { ...item, haAttribute: next.trim() } : item
                                   )
@@ -694,7 +710,7 @@ export default function StreamdeckConfigDialog({
                             <CustomSelect
                               value={cond.haOperator ?? 'eq'}
                               onChange={(val) =>
-                                setLedConditions((prev) =>
+                                updateLedConditions((prev) =>
                                   prev.map((item, i) =>
                                     i === idx
                                       ? { ...item, haOperator: val as LedConditionOperator }
@@ -710,7 +726,7 @@ export default function StreamdeckConfigDialog({
                               type="text"
                               value={cond.haValue ?? ''}
                               onChange={(e) =>
-                                setLedConditions((prev) =>
+                                updateLedConditions((prev) =>
                                   prev.map((item, i) =>
                                     i === idx ? { ...item, haValue: e.target.value } : item
                                   )
