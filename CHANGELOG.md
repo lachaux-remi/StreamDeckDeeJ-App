@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.5.2](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.5.1...v4.5.2) (2026-10-17)
+
+
+### Corrections de bugs
+
+* **update:** relaunch after pacman upgrades the running app ([#103](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/103)) ([59017e8](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/59017e8e3d5f21715606b41dd3d6e85f13df822f))
+
 ## [4.5.1](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.5.0...v4.5.1) (2026-10-17)
 
 
