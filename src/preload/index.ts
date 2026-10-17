@@ -109,6 +109,11 @@ const api = {
       ipcRenderer.on('deej:levels', handler)
       return () => ipcRenderer.removeListener('deej:levels', handler)
     },
+    ledFrame: (callback: (colors: unknown) => void): (() => void) => {
+      const handler = (_: unknown, colors: unknown): void => callback(colors)
+      ipcRenderer.on('led:frame', handler)
+      return () => ipcRenderer.removeListener('led:frame', handler)
+    },
     streamdeckUpdate: (callback: (key: string, data: unknown) => void): (() => void) => {
       const handler = (_: unknown, key: string, data: unknown): void => callback(key, data)
       ipcRenderer.on('streamdeck:update', handler)

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, ChevronDown } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
@@ -7,6 +7,14 @@ export interface SelectOption {
   value: string
   label: string
   description?: string
+}
+
+interface DropdownPosition {
+  top?: number
+  bottom?: number
+  left: number
+  width: number
+  maxHeight: number
 }
 
 interface CustomSelectProps {
@@ -27,11 +35,36 @@ export default function CustomSelect({
   accent = 'purple'
 }: CustomSelectProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 })
+  const [dropdownPos, setDropdownPos] = useState<DropdownPosition>({
+    left: 0,
+    width: 0,
+    maxHeight: 0
+  })
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
   const selected = options.find((o) => o.value === value)
+
+  // The panel is fixed in a portal, so it follows the trigger whenever the
+  // window is resized or a container scrolls.
+  const updatePosition = useCallback((): void => {
+    if (!triggerRef.current) {
+      return
+    }
+    const rect = triggerRef.current.getBoundingClientRect()
+    const estimatedH = options.length * 48
+    const spaceBelow = window.innerHeight - rect.bottom - 12
+    const spaceAbove = rect.top - 12
+    // Open upward only when the list does not fit below and there is more room above;
+    // past the available room the panel scrolls.
+    const openAbove = spaceBelow < estimatedH && spaceAbove > spaceBelow
+    setDropdownPos({
+      ...(openAbove ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }),
+      left: rect.left,
+      width: rect.width,
+      maxHeight: Math.max(0, openAbove ? spaceAbove : spaceBelow)
+    })
+  }, [options.length])
 
   useEffect(() => {
     if (!isOpen) {
@@ -53,24 +86,29 @@ export default function CustomSelect({
       }
     }
 
+    panelRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' })
+
+    const handleScroll = (e: Event): void => {
+      if (!panelRef.current?.contains(e.target as Node)) {
+        updatePosition()
+      }
+    }
+
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('keydown', handleEscape)
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', handleScroll, true)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', handleScroll, true)
     }
-  }, [isOpen])
+  }, [isOpen, updatePosition])
 
   const handleToggle = (): void => {
-    if (!isOpen && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect()
-      const estimatedH = options.length * 48
-      const spaceBelow = window.innerHeight - rect.bottom
-      const top =
-        spaceBelow < estimatedH + 8 && rect.top > estimatedH
-          ? rect.top - estimatedH - 4
-          : rect.bottom + 4
-      setDropdownPos({ top, left: rect.left, width: rect.width })
+    if (!isOpen) {
+      updatePosition()
     }
     setIsOpen((v) => !v)
   }
@@ -107,8 +145,8 @@ export default function CustomSelect({
         createPortal(
           <div
             ref={panelRef}
-            className="fixed z-[300] overflow-hidden rounded-lg border border-border/50 bg-surface-2 py-1 shadow-xl animate-fade-in"
-            style={{ top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
+            className="fixed z-[300] overflow-y-auto overscroll-contain rounded-lg border border-border/50 bg-surface-2 py-1 shadow-xl animate-fade-in"
+            style={dropdownPos}
           >
             {options.map((option) => {
               const isActive = option.value === value
@@ -116,6 +154,7 @@ export default function CustomSelect({
                 <button
                   key={option.value}
                   type="button"
+                  aria-selected={isActive}
                   onClick={() => {
                     onChange(option.value)
                     setIsOpen(false)

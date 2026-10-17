@@ -23,7 +23,26 @@ export interface LedColor {
 }
 
 export type LedMode =
-  'static' | 'rainbow' | 'wave' | 'pulse' | 'colorshift' | 'visor' | 'sequential' | 'spinner'
+  | 'static'
+  | 'rainbow'
+  | 'wave'
+  | 'pulse'
+  | 'colorshift'
+  | 'visor'
+  | 'sequential'
+  | 'spinner'
+  | 'twinkle'
+  | 'fire'
+  | 'gradient'
+  | 'rainbow-wave'
+
+export type LedPressEffectType = 'flash' | 'ripple'
+
+/** Feedback drawn over the LEDs when a key is pressed; absent means none. */
+export interface LedPressEffect {
+  type: LedPressEffectType
+  color: LedColor
+}
 
 export interface LedProfile {
   mode: LedMode
@@ -32,6 +51,7 @@ export interface LedProfile {
   startColor: LedColor
   endColor: LedColor
   direction: 'horizontal' | 'vertical' | 'diagonal'
+  pressEffect?: LedPressEffect
 }
 
 export interface StreamdeckInputKey {
@@ -45,9 +65,13 @@ export type LedConditionType =
 
 export type LedConditionOperator = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains'
 
+/** How an active condition shows its color; absent means a solid color. */
+export type LedConditionEffect = 'blink' | 'pulse'
+
 export interface LedCondition {
   type: LedConditionType
   color: LedColor
+  effect?: LedConditionEffect
   /** 'ha-attr' only: attribute of the button's entity, compared with haValue. */
   haAttribute?: string
   haOperator?: LedConditionOperator
@@ -135,8 +159,16 @@ const ledModes: LedMode[] = [
   'colorshift',
   'visor',
   'sequential',
-  'spinner'
+  'spinner',
+  'twinkle',
+  'fire',
+  'gradient',
+  'rainbow-wave'
 ]
+
+const pressEffectTypes: LedPressEffectType[] = ['flash', 'ripple']
+
+const conditionEffects: LedConditionEffect[] = ['blink', 'pulse']
 
 const conditionTypes: LedConditionType[] = [
   'mic-mute',
@@ -251,15 +283,16 @@ function isLedCondition(value: unknown): value is LedCondition {
   if (
     !isRecord(value) ||
     !conditionTypes.includes(value.type as LedConditionType) ||
-    !isLedColor(value.color)
+    !isLedColor(value.color) ||
+    (value.effect !== undefined && !conditionEffects.includes(value.effect as LedConditionEffect))
   ) {
     return false
   }
   if (value.type !== 'ha-attr') {
-    return hasOnlyKeys(value, ['type', 'color'])
+    return hasOnlyKeys(value, ['type', 'color', 'effect'])
   }
   return (
-    hasOnlyKeys(value, ['type', 'color', 'haAttribute', 'haOperator', 'haValue']) &&
+    hasOnlyKeys(value, ['type', 'color', 'effect', 'haAttribute', 'haOperator', 'haValue']) &&
     isStringAtMost(value.haAttribute, MAX_SHORT_STRING_LENGTH) &&
     HA_ATTRIBUTE_NAME.test(value.haAttribute) &&
     conditionOperators.includes(value.haOperator as LedConditionOperator) &&
@@ -318,13 +351,31 @@ export function isStreamdeckConfig(value: unknown): value is StreamdeckConfig {
 export function isLedProfile(value: unknown): value is LedProfile {
   return (
     isRecord(value) &&
-    hasOnlyKeys(value, ['mode', 'speed', 'brightness', 'startColor', 'endColor', 'direction']) &&
+    hasOnlyKeys(value, [
+      'mode',
+      'speed',
+      'brightness',
+      'startColor',
+      'endColor',
+      'direction',
+      'pressEffect'
+    ]) &&
     ledModes.includes(value.mode as LedMode) &&
     isIntegerBetween(value.speed, 0, 100) &&
     isIntegerBetween(value.brightness, 0, 100) &&
     isLedColor(value.startColor) &&
     isLedColor(value.endColor) &&
-    ['horizontal', 'vertical', 'diagonal'].includes(value.direction as string)
+    ['horizontal', 'vertical', 'diagonal'].includes(value.direction as string) &&
+    (value.pressEffect === undefined || isLedPressEffect(value.pressEffect))
+  )
+}
+
+function isLedPressEffect(value: unknown): value is LedPressEffect {
+  return (
+    isRecord(value) &&
+    hasOnlyKeys(value, ['type', 'color']) &&
+    pressEffectTypes.includes(value.type as LedPressEffectType) &&
+    isLedColor(value.color)
   )
 }
 
@@ -349,8 +400,9 @@ function hasValidSharedSettings(value: Record<string, unknown>): boolean {
 
 /**
  * Removes the values a newer version may have written and this one does not
- * know (button modules, LED condition types, LED modes), so going back to an
- * older version keeps the rest of the configuration. Returns a copy and a
+ * know (button modules, LED condition types and effects, LED modes and press
+ * effects), so going back to an older version keeps the rest of the
+ * configuration. Returns a copy and a
  * description of what was dropped; anything else stays for isAppSettings.
  */
 export function dropUnsupportedEntries(value: Record<string, unknown>): {
@@ -377,7 +429,7 @@ export function dropUnsupportedEntries(value: Record<string, unknown>): {
         }
       }
       if (Array.isArray(input.ledConditions)) {
-        input.ledConditions = input.ledConditions.filter((condition: unknown) => {
+        const conditions = input.ledConditions.filter((condition: unknown) => {
           const type = isRecord(condition) ? condition.type : undefined
           if (typeof type === 'string' && !conditionTypes.includes(type as LedConditionType)) {
             dropped.push(`key ${key} LED condition "${type}"`)
@@ -385,6 +437,17 @@ export function dropUnsupportedEntries(value: Record<string, unknown>): {
           }
           return true
         })
+        input.ledConditions = conditions
+        for (const condition of conditions) {
+          if (
+            isRecord(condition) &&
+            typeof condition.effect === 'string' &&
+            !conditionEffects.includes(condition.effect as LedConditionEffect)
+          ) {
+            dropped.push(`key ${key} LED condition effect "${condition.effect}"`)
+            delete condition.effect
+          }
+        }
       }
     }
   }
@@ -395,6 +458,15 @@ export function dropUnsupportedEntries(value: Record<string, unknown>): {
   ) {
     dropped.push(`LED mode "${settings.ledProfile.mode}"`)
     settings.ledProfile.mode = 'static'
+  }
+  if (
+    isRecord(settings.ledProfile) &&
+    isRecord(settings.ledProfile.pressEffect) &&
+    typeof settings.ledProfile.pressEffect.type === 'string' &&
+    !pressEffectTypes.includes(settings.ledProfile.pressEffect.type as LedPressEffectType)
+  ) {
+    dropped.push(`LED press effect "${settings.ledProfile.pressEffect.type}"`)
+    delete settings.ledProfile.pressEffect
   }
   return { settings, dropped }
 }

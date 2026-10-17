@@ -88,6 +88,10 @@ class DeckService extends EventEmitter {
   private deckEventHandler(data: Omit<DeckSerialMessage, 'type'>): void {
     const deckKey = data.value.toString().toLowerCase()
 
+    if (data.state === KeyUsageEnum.Pressed) {
+      ledService.notifyPress(data.value)
+    }
+
     if (data.state === KeyUsageEnum.Released) {
       const deckConfig: StreamdeckInputConfig | undefined =
         configService.getConfig().streamdeck?.[deckKey]

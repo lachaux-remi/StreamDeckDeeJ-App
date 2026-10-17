@@ -8,7 +8,7 @@ import {
   type RendererSettingsUpdate
 } from '@main/types/settings.types'
 import { ModuleEnum } from '@main/types/enums'
-import { isRendererSettings } from '@renderer/types/settings.types'
+import { isLedFrame, isRendererSettings } from '@renderer/types/settings.types'
 
 function rendererUpdate(): RendererSettingsUpdate {
   return {
@@ -152,7 +152,8 @@ test('validates attribute LED conditions and the automation module in both schem
     pressed: { module: ModuleEnum.Automation, params: ['automation.good_night'] },
     ledConditions: [
       { type: 'ha-attr', color, haAttribute: 'brightness', haOperator: 'gte', haValue: '128' },
-      { type: 'ha-on', color }
+      { type: 'ha-on', color, effect: 'blink' },
+      { type: 'mic-mute', color, effect: 'pulse' }
     ]
   }
   expect(isRendererSettingsUpdate(withButton(valid))).toBe(true)
@@ -171,12 +172,72 @@ test('validates attribute LED conditions and the automation module in both schem
       haValue: 'x'.repeat(300)
     },
     { type: 'ha-attr', color, haAttribute: 'brightness', haOperator: 'eq', haValue: '1', extra: 1 },
-    { type: 'ha-on', color, haAttribute: 'brightness' }
+    { type: 'ha-on', color, haAttribute: 'brightness' },
+    { type: 'ha-on', color, effect: 'strobe' }
   ]) {
     const button = { ...valid, ledConditions: [condition] }
     expect(isRendererSettingsUpdate(withButton(button))).toBe(false)
     expect(isRendererSettings(withButton(button).settings)).toBe(false)
   }
+})
+
+test('validates the new LED modes and press effects in both schemas', () => {
+  for (const mode of ['twinkle', 'fire', 'gradient', 'rainbow-wave']) {
+    const update = rendererUpdate()
+    update.settings.ledProfile = { ...update.settings.ledProfile, mode: mode as never }
+    expect(isRendererSettingsUpdate(update)).toBe(true)
+  }
+  const color = { r: 255, g: 255, b: 255 }
+  for (const [pressEffect, valid] of [
+    [{ type: 'flash', color }, true],
+    [{ type: 'ripple', color }, true],
+    [{ type: 'explode', color }, false],
+    [{ type: 'flash' }, false],
+    [{ type: 'flash', color, extra: 1 }, false]
+  ] as const) {
+    const update = rendererUpdate()
+    update.settings.ledProfile = {
+      ...update.settings.ledProfile,
+      pressEffect: pressEffect as never
+    }
+    expect(isRendererSettingsUpdate(update)).toBe(valid)
+    expect(isRendererSettings(update.settings)).toBe(valid)
+  }
+})
+
+test('drops unknown LED condition and press effects from a newer version', async () => {
+  const { dropUnsupportedEntries } = await import('@main/types/settings.types')
+  const color = { r: 1, g: 2, b: 3 }
+  const { settings, dropped } = dropUnsupportedEntries({
+    ledProfile: { mode: 'fire', pressEffect: { type: 'explode', color } },
+    streamdeck: {
+      '0': {
+        ledConditions: [
+          { type: 'mic-mute', color, effect: 'strobe' },
+          { type: 'ha-on', color, effect: 'blink' },
+          'not-a-condition'
+        ]
+      }
+    }
+  })
+
+  expect(dropped).toEqual(['key 0 LED condition effect "strobe"', 'LED press effect "explode"'])
+  expect(settings).toEqual({
+    ledProfile: { mode: 'fire' },
+    streamdeck: {
+      '0': {
+        ledConditions: [
+          { type: 'mic-mute', color },
+          { type: 'ha-on', color, effect: 'blink' },
+          'not-a-condition'
+        ]
+      }
+    }
+  })
+  expect(
+    dropUnsupportedEntries({ ledProfile: { mode: 'static', pressEffect: { type: 'ripple' } } })
+      .dropped
+  ).toEqual([])
 })
 
 test('drops only the values a newer version added and reports them', async () => {
@@ -206,4 +267,12 @@ test('drops only the values a newer version added and reports them', async () =>
   })
   expect(original.streamdeck['3'].pressed).toBeDefined()
   expect(dropUnsupportedEntries({ streamdeck: [] }).dropped).toEqual([])
+})
+
+test('accepts only valid LED preview frames', () => {
+  expect(isLedFrame([{ r: 0, g: 128, b: 255 }])).toBe(true)
+  expect(isLedFrame([])).toBe(true)
+  expect(isLedFrame({ r: 0, g: 0, b: 0 })).toBe(false)
+  expect(isLedFrame([{ r: 256, g: 0, b: 0 }])).toBe(false)
+  expect(isLedFrame(Array.from({ length: 65 }, () => ({ r: 0, g: 0, b: 0 })))).toBe(false)
 })

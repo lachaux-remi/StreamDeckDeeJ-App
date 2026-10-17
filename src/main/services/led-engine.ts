@@ -1,4 +1,9 @@
-import type { LedColor, LedProfile } from '@main/types/settings.types'
+import type {
+  LedColor,
+  LedConditionEffect,
+  LedPressEffect,
+  LedProfile
+} from '@main/types/settings.types'
 
 // OpenLinkHub-style 5-segment piecewise rainbow (Red→Yellow→Green→Cyan→Blue→Red)
 function rainbowColor(position: number): LedColor {
@@ -55,6 +60,110 @@ function speedToMs(speed: number): number {
 }
 
 const BLACK: LedColor = { r: 0, g: 0, b: 0 }
+
+// Deterministic 0-1 pseudo-random value per (a, b, c), so random-looking
+// effects need no state and give the same frame for the same time.
+function hash(a: number, b: number, c = 0): number {
+  let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(c | 0, 2147483647)
+  h = Math.imul(h ^ (h >>> 13), 1274126177)
+  h ^= h >>> 16
+  return (h >>> 0) / 4294967296
+}
+
+// Smoothly interpolated noise along time for one LED.
+function valueNoise(seed: number, x: number): number {
+  const i = Math.floor(x)
+  const f = x - i
+  const smooth = f * f * (3 - 2 * f)
+  return lerp(hash(seed, i, 7), hash(seed, i + 1, 7), smooth)
+}
+
+// Black → startColor → endColor as heat rises from 0 to 1.
+function heatColor(heat: number, cool: LedColor, hot: LedColor): LedColor {
+  return heat < 0.5
+    ? interpolateColor(BLACK, cool, heat * 2)
+    : interpolateColor(cool, hot, (heat - 0.5) * 2)
+}
+
+const FLASH_MS = 400
+const RIPPLE_MS_PER_KEY = 90
+const RIPPLE_WIDTH = 0.9
+const BLINK_MS = 500
+const CONDITION_PULSE_MS = 1500
+
+/** Key presses still drawing feedback, by LED index and press time. */
+export interface LedPress {
+  index: number
+  at: number
+}
+
+/** How long a press effect lasts on a grid, so finished presses can be dropped. */
+export function pressEffectDuration(
+  effect: LedPressEffect,
+  ledCount: number,
+  gridCols: number
+): number {
+  if (effect.type === 'flash') {
+    return FLASH_MS
+  }
+  const gridRows = Math.ceil(ledCount / gridCols)
+  return (Math.hypot(gridCols, gridRows) + RIPPLE_WIDTH) * RIPPLE_MS_PER_KEY
+}
+
+/**
+ * Draws press feedback over the frame: a flash fades out on the pressed key,
+ * a ripple is a ring growing from it across the grid.
+ */
+export function applyPressEffect(
+  colors: LedColor[],
+  effect: LedPressEffect,
+  presses: LedPress[],
+  gridCols: number,
+  brightness: number,
+  t: number
+): LedColor[] {
+  const color = applyBrightness(effect.color, brightness)
+  return colors.map((base, i) => {
+    let amount = 0
+    for (const press of presses) {
+      const age = t - press.at
+      if (age < 0) {
+        continue
+      }
+      if (effect.type === 'flash') {
+        if (press.index === i) {
+          amount = Math.max(amount, 1 - age / FLASH_MS)
+        }
+        continue
+      }
+      const distance = Math.hypot(
+        (i % gridCols) - (press.index % gridCols),
+        Math.floor(i / gridCols) - Math.floor(press.index / gridCols)
+      )
+      const radius = age / RIPPLE_MS_PER_KEY
+      const ring = 1 - Math.abs(distance - radius) / RIPPLE_WIDTH
+      const fade = 1 - radius / (Math.hypot(gridCols, Math.ceil(colors.length / gridCols)) + 1)
+      amount = Math.max(amount, ring * fade)
+    }
+    return amount > 0 ? interpolateColor(base, color, amount) : base
+  })
+}
+
+/** Intensity 0-1 of an active condition color at time t. */
+export function conditionIntensity(effect: LedConditionEffect | undefined, t: number): number {
+  if (effect === 'blink') {
+    return Math.floor(t / BLINK_MS) % 2 === 0 ? 1 : 0
+  }
+  if (effect === 'pulse') {
+    // Never fully dark, so the key stays readable between beats.
+    return 0.15 + 0.85 * ((Math.cos((2 * Math.PI * t) / CONDITION_PULSE_MS) + 1) / 2)
+  }
+  return 1
+}
+
+export function scaleColor(c: LedColor, intensity: number): LedColor {
+  return interpolateColor(BLACK, c, intensity)
+}
 
 export class LedEngine {
   compute(profile: LedProfile, ledCount: number, gridCols: number, t: number): LedColor[] {
@@ -173,6 +282,47 @@ export class LedEngine {
           const wrappedDist = Math.min(dist, ledCount - dist)
           const intensity = Math.exp(-0.5 * Math.pow(wrappedDist / 1.2, 2))
           return applyBrightness(interpolateColor(BLACK, startColor, intensity), brightness)
+        })
+      }
+
+      case 'twinkle': {
+        // Each LED gets its own phase; in every cycle a third of them light up
+        // with a random mix of the two colors and fade in and out.
+        return Array.from({ length: ledCount }, (_, i) => {
+          const local = elapsedMs / cycleMs + hash(i, 0, 1)
+          const cycle = Math.floor(local)
+          if (hash(i, cycle, 2) > 0.35) {
+            return { ...BLACK }
+          }
+          const intensity = Math.sin(Math.PI * (local - cycle))
+          const color = interpolateColor(startColor, endColor, hash(i, cycle, 3))
+          return applyBrightness(scaleColor(color, intensity), brightness)
+        })
+      }
+
+      case 'fire': {
+        // Bottom row is hottest; each LED flickers with its own noise.
+        return Array.from({ length: ledCount }, (_, i) => {
+          const row = Math.floor(i / gridCols)
+          const height = gridRows > 1 ? (gridRows - 1 - row) / (gridRows - 1) : 0
+          const flicker = valueNoise(i, (elapsedMs / cycleMs) * 4)
+          const heat = Math.max(0, Math.min(1, 0.9 - height * 0.6 + (flicker - 0.5) * 0.6))
+          return applyBrightness(heatColor(heat, startColor, endColor), brightness)
+        })
+      }
+
+      case 'gradient':
+        return Array.from({ length: ledCount }, (_, i) => {
+          const fraction = getSpatialIndex(i) / Math.max(1, spatialCount - 1)
+          return applyBrightness(interpolateColor(startColor, endColor, fraction), brightness)
+        })
+
+      case 'rainbow-wave': {
+        // The whole spectrum spans the grid along the direction and scrolls.
+        const timePos = elapsedSeconds / cycleSeconds
+        return Array.from({ length: ledCount }, (_, i) => {
+          const position = getSpatialIndex(i) / spatialCount - timePos
+          return applyBrightness(rainbowColor(position), brightness)
         })
       }
 

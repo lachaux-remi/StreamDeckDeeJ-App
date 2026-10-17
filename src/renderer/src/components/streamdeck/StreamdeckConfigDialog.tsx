@@ -26,6 +26,7 @@ import type {
   ConditionsState,
   LedColor,
   LedCondition,
+  LedConditionEffect,
   LedConditionOperator,
   LedConditionType,
   StreamdeckInputConfig,
@@ -54,6 +55,12 @@ const CONDITION_OPTIONS: { value: LedConditionType; label: string; description?:
   { value: 'ha-on', label: 'Actif', description: 'Home Assistant' },
   { value: 'ha-off', label: 'Inactif', description: 'Home Assistant' },
   { value: 'ha-attr', label: 'Attribut', description: 'Home Assistant' }
+]
+
+const EFFECT_OPTIONS: { value: LedConditionEffect | 'solid'; label: string }[] = [
+  { value: 'solid', label: 'Fixe' },
+  { value: 'blink', label: 'Clignote' },
+  { value: 'pulse', label: 'Pulse' }
 ]
 
 const OPERATOR_OPTIONS: { value: LedConditionOperator; label: string }[] = [
@@ -531,15 +538,45 @@ export default function StreamdeckConfigDialog({
                                       ? {
                                           type: 'ha-attr',
                                           color: c.color,
+                                          ...(c.effect && { effect: c.effect }),
                                           haAttribute: c.haAttribute ?? '',
                                           haOperator: c.haOperator ?? 'eq',
                                           haValue: c.haValue ?? ''
                                         }
-                                      : { type: val as LedConditionType, color: c.color }
+                                      : {
+                                          type: val as LedConditionType,
+                                          color: c.color,
+                                          ...(c.effect && { effect: c.effect })
+                                        }
                                 )
                               )
                             }}
                             options={CONDITION_OPTIONS}
+                            accent="pink"
+                          />
+                        </div>
+
+                        <div className="w-24 shrink-0">
+                          <CustomSelect
+                            value={cond.effect ?? 'solid'}
+                            onChange={(val) => {
+                              setLedConditions((prev) =>
+                                prev.map((item, i) => {
+                                  if (i !== idx) {
+                                    return item
+                                  }
+                                  const next: LedCondition = {
+                                    ...item,
+                                    effect: val as LedConditionEffect
+                                  }
+                                  if (val === 'solid') {
+                                    delete next.effect
+                                  }
+                                  return next
+                                })
+                              )
+                            }}
+                            options={EFFECT_OPTIONS}
                             accent="pink"
                           />
                         </div>
