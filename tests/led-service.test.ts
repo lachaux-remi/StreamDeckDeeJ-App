@@ -216,6 +216,7 @@ test('keeps the preview running when the device write fails', async () => {
   ledService.setPreviewActive(true)
   fakes.device.write.mockRejectedValueOnce(new Error('device removed'))
 
+  ledService.updateOverrides({})
   await ledService.flush()
   // Animation plus the reconnect timer.
   expect(vi.getTimerCount()).toBe(2)
@@ -271,6 +272,134 @@ test('forces a tested condition over real conditions until it expires or is clea
   fakes.device.write.mockClear()
   ledService.clearConditionTest()
   expect(fakes.device.write).not.toHaveBeenCalled()
+  await ledService.shutdown()
+  vi.restoreAllMocks()
+})
+
+test('skips unchanged packets but resends them every second and after updates', async () => {
+  let now = 1_000
+  vi.spyOn(performance, 'now').mockImplementation(() => now)
+  const { ledService } = await import('@main/services/led.service')
+  await ledService.init(fakes.mic as never)
+  expect(fakes.device.write).toHaveBeenCalledTimes(1)
+
+  await vi.advanceTimersByTimeAsync(500)
+  now += 999
+  await ledService.flush()
+  expect(fakes.device.write).toHaveBeenCalledTimes(1)
+
+  now += 1
+  await ledService.flush()
+  expect(fakes.device.write).toHaveBeenCalledTimes(2)
+  await ledService.flush()
+  expect(fakes.device.write).toHaveBeenCalledTimes(2)
+
+  ledService.updateProfile({
+    mode: 'static',
+    speed: 50,
+    brightness: 50,
+    startColor: { r: 2, g: 4, b: 6 },
+    endColor: { r: 0, g: 0, b: 0 },
+    direction: 'horizontal'
+  })
+  await ledService.flush()
+  expect(fakes.device.write).toHaveBeenCalledTimes(3)
+
+  ledService.updateOverrides({ '0': { color: { r: 20, g: 40, b: 60 } } })
+  await ledService.flush()
+  expect(fakes.device.write).toHaveBeenCalledTimes(4)
+
+  await ledService.shutdown()
+  expect(fakes.device.write).toHaveBeenCalledTimes(5)
+  expect(fakes.device.write.mock.calls.at(-1)?.[0]).toEqual([0x02, 0xaa, ...new Array(62).fill(0)])
+  vi.restoreAllMocks()
+})
+
+test('writes the unchanged frame again after reconnecting', async () => {
+  vi.spyOn(performance, 'now').mockReturnValue(1_000)
+  const { ledService } = await import('@main/services/led.service')
+  await ledService.init(fakes.mic as never)
+  const packet = fakes.device.write.mock.calls.at(-1)?.[0]
+  fakes.device.write.mockClear()
+  fakes.device.write.mockRejectedValueOnce(new Error('device removed'))
+
+  ledService.updateOverrides({ '0': { color: { r: 20, g: 40, b: 60 } } })
+  await ledService.flush()
+  expect(fakes.device.write).toHaveBeenCalledTimes(1)
+
+  await vi.advanceTimersByTimeAsync(5_000)
+  expect(fakes.open).toHaveBeenCalledTimes(2)
+  expect(fakes.device.write).toHaveBeenCalledTimes(2)
+  expect(fakes.device.write.mock.calls.at(-1)?.[0]).toEqual(packet)
+
+  await vi.advanceTimersByTimeAsync(100)
+  expect(fakes.device.write).toHaveBeenCalledTimes(2)
+  await ledService.shutdown()
+  vi.restoreAllMocks()
+})
+
+test('emits preview frames only when the colors change', async () => {
+  vi.spyOn(performance, 'now').mockReturnValue(1_000)
+  fakes.devices.mockReturnValue([])
+  const { ledService } = await import('@main/services/led.service')
+  const frames = vi.fn()
+  ledService.onFrame(frames)
+  await ledService.init(fakes.mic as never)
+
+  ledService.setPreviewActive(true)
+  await vi.advanceTimersByTimeAsync(200)
+  expect(frames).toHaveBeenCalledTimes(1)
+
+  // A reopened preview needs the current frame.
+  ledService.setPreviewActive(false)
+  ledService.setPreviewActive(true)
+  await vi.advanceTimersByTimeAsync(100)
+  expect(frames).toHaveBeenCalledTimes(2)
+
+  ledService.updateOverrides({ '3': { color: { r: 8, g: 8, b: 8 } } })
+  await vi.advanceTimersByTimeAsync(100)
+  expect(frames).toHaveBeenCalledTimes(3)
+  expect(frames.mock.calls.at(-1)?.[0][3]).toEqual({ r: 4, g: 4, b: 4 })
+  await ledService.shutdown()
+  vi.restoreAllMocks()
+})
+
+test('writes the first frame of a condition test and the frame that ends it at once', async () => {
+  vi.spyOn(performance, 'now').mockReturnValue(1_000)
+  const { ledService } = await import('@main/services/led.service')
+  const frames = vi.fn()
+  ledService.onFrame(frames)
+  await ledService.init(fakes.mic as never)
+  ledService.setPreviewActive(true)
+  await ledService.flush()
+  fakes.device.write.mockClear()
+  frames.mockClear()
+  const keyColor = (index: number): number[] => {
+    const packet = fakes.device.write.mock.calls.at(-1)?.[0] as number[]
+    return packet.slice(2 + index * 3, 5 + index * 3)
+  }
+
+  // The unchanged frame is skipped before and while the test runs.
+  await ledService.flush()
+  expect(fakes.device.write).not.toHaveBeenCalled()
+  expect(frames).not.toHaveBeenCalled()
+
+  ledService.testCondition(0, { r: 0, g: 250, b: 0 })
+  await Promise.resolve()
+  expect(fakes.device.write).toHaveBeenCalledTimes(1)
+  expect(keyColor(0)).toEqual([0, 125, 0])
+  expect(frames).toHaveBeenCalledTimes(1)
+  expect(frames.mock.calls.at(-1)?.[0][0]).toEqual({ r: 0, g: 125, b: 0 })
+  await ledService.flush()
+  expect(fakes.device.write).toHaveBeenCalledTimes(1)
+  expect(frames).toHaveBeenCalledTimes(1)
+
+  ledService.clearConditionTest()
+  await Promise.resolve()
+  expect(fakes.device.write).toHaveBeenCalledTimes(2)
+  expect(keyColor(0)).toEqual([10, 20, 30])
+  expect(frames).toHaveBeenCalledTimes(2)
+  expect(frames.mock.calls.at(-1)?.[0][0]).toEqual({ r: 10, g: 20, b: 30 })
   await ledService.shutdown()
   vi.restoreAllMocks()
 })
