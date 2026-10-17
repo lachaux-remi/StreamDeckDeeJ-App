@@ -38,6 +38,7 @@ export default defineConfig({
         'src/main/services/hardware-permissions-core.ts',
         'src/main/services/home-assistant-state-sync.ts',
         'src/main/services/keyring-unlock.ts',
+        'src/main/services/package-upgrade.ts',
         'src/main/services/linux-autostart.ts',
         'src/main/services/update-controller.ts',
         'src/main/services/update-policy.ts',
@@ -277,6 +278,12 @@ export default defineConfig({
           functions: 100,
           lines: 100,
           statements: 100
+        },
+        'src/main/services/package-upgrade.ts': {
+          branches: 93.33,
+          functions: 100,
+          lines: 95.31,
+          statements: 95.71
         },
         'src/main/services/renderer-settings.ts': {
           branches: 50,

@@ -17,6 +17,7 @@ import { loggerService } from '@main/services/logger.service'
 import { serialService } from '@main/services/serial.service'
 import { sliderService } from '@main/services/slider.service'
 import { startKeyringRecovery } from '@main/services/keyring-unlock'
+import { relaunchWhenIdle, upgradeRelaunchArgs } from '@main/services/package-upgrade'
 import { createWindowCloseHandler } from '@main/services/window-close-handler'
 import { restoreAndFocusWindow } from '@main/services/window-lifecycle'
 import { linuxXWaylandRelaunchArgs, XWAYLAND_SWITCH } from '@main/linux-display'
@@ -61,10 +62,13 @@ let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let platformRuntime: PlatformRuntime | null = null
 let homeAssistantSliders: HomeAssistantSliders | null = null
+let stopPackageUpgradeWatch: (() => void) | undefined
+let lastHardwareActivityAt = 0
 let isQuitting = false
 const appQuitCoordinator = new AppQuitCoordinator({
   shutdown: async () => {
     deckService.shutdown()
+    stopPackageUpgradeWatch?.()
     homeAssistantSliders?.shutdown()
     tray?.destroy()
     tray = null
@@ -94,6 +98,13 @@ function isSafeExternalUrl(url: string): boolean {
   } catch {
     return false
   }
+}
+
+// Quits through the shutdown coordinator; Electron starts the new process once
+// this one has exited and released the single-instance lock.
+function relaunch(args: string[]): void {
+  app.relaunch({ execPath: process.env['APPIMAGE'] || process.execPath, args })
+  app.quit()
 }
 
 async function setAutostart(enabled: boolean): Promise<void> {
@@ -228,6 +239,8 @@ app.whenReady().then(async () => {
     }
   })
 
+  sliderService.onUpdated(() => (lastHardwareActivityAt = Date.now()))
+  serialService.on('serial:deck', () => (lastHardwareActivityAt = Date.now()))
   serialService.on('status', (status) => webContents.send('serial:status', status))
   loggerService.on('log', (log) => webContents.send('electron:log', log))
   platformRuntime.updater.onStateChanged((state) => webContents.send('update:state', state))
@@ -314,16 +327,29 @@ app.whenReady().then(async () => {
       backend: configService.getSecretStorageBackend(),
       needsRecovery: () => configService.hasUnavailableSecrets(),
       watch: (backend, onUnlocked) => keyring.watchUnlock(backend, onUnlocked),
-      relaunch: (args) => {
-        app.relaunch({ execPath: process.env['APPIMAGE'] || process.execPath, args })
-        app.quit()
-      },
+      relaunch,
       log: {
         info: (message) => loggerService.info(message, 'Main'),
         warn: (message) => loggerService.warn(message, 'Main')
       }
     })
   }
+  // Files replaced by the package manager break the running version: run the new one.
+  void platformRuntime.packageUpgrade
+    ?.watch((version) => {
+      loggerService.info(`Version ${version} installed; relaunching once the deck is idle`, 'Main')
+      relaunchWhenIdle({
+        lastActivityAt: () => lastHardwareActivityAt,
+        relaunch: () => {
+          if (isQuitting) {
+            return
+          }
+          loggerService.info(`Relaunching to run version ${version}`, 'Main')
+          relaunch(upgradeRelaunchArgs(process.argv))
+        }
+      })
+    })
+    .then((stop) => (stopPackageUpgradeWatch = stop))
   void platformRuntime.updater.check()
 })
 
