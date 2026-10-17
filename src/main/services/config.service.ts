@@ -58,6 +58,12 @@ export class ConfigService extends EventEmitter {
         const parsed = this.persistence?.load() as Partial<AppSettings>
         const candidate = applySettingsDefaults(parsed)
         this.data = isAppSettings(candidate) ? candidate : this.withoutUnsupportedEntries(candidate)
+        if (this.persistence?.hasUnavailableSecrets()) {
+          loggerService.warn(
+            'Keyring is locked or unavailable; Home Assistant and Discord secrets are kept and load after a restart',
+            SERVICE
+          )
+        }
       } else {
         this.data = { ...defaultSettings }
         this.save()
