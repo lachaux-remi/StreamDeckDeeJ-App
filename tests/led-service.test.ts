@@ -481,3 +481,42 @@ test('evaluates the conditions previewed from the key dialog before they are sav
   expect(fakes.resolve).toHaveBeenCalledWith(previewed, undefined, undefined)
   await ledService.shutdown()
 })
+
+test('computes one LED per key of the grid and sends the first ones to the device', async () => {
+  vi.spyOn(performance, 'now').mockReturnValue(1_000)
+  const { ledService } = await import('@main/services/led.service')
+  const frames = vi.fn()
+  ledService.onFrame(frames)
+  await ledService.init(fakes.mic as never)
+  const white = { r: 255, g: 255, b: 255 }
+  fakes.configListener?.({
+    gridCols: 5,
+    gridRows: 5,
+    streamdeck: { '24': { color: white }, '19': { color: white } },
+    ledProfile: {
+      mode: 'static',
+      speed: 50,
+      brightness: 100,
+      startColor: { r: 0, g: 0, b: 0 },
+      endColor: { r: 0, g: 0, b: 0 },
+      direction: 'horizontal'
+    }
+  })
+  fakes.resolve.mockReturnValue(undefined)
+  ledService.setPreviewActive(true)
+  await ledService.flush()
+
+  const frame = frames.mock.calls.at(-1)?.[0] as Array<{ r: number }>
+  expect(frame).toHaveLength(25)
+  expect(frame[24]).toEqual(white)
+  const packet = fakes.device.write.mock.calls.at(-1)?.[0] as number[]
+  expect(packet).toHaveLength(64)
+  // 20 LEDs fit in a packet: key 19 is the last one sent.
+  expect(packet.slice(2 + 19 * 3, 2 + 20 * 3)).toEqual([255, 255, 255])
+  expect(packet.slice(2 + 20 * 3)).toEqual([0, 0])
+
+  ledService.notifyPress(24)
+  ledService.testCondition(25, white)
+  await ledService.shutdown()
+  vi.restoreAllMocks()
+})
