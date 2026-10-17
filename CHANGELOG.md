@@ -1,5 +1,24 @@
 # Changelog
 
+## [4.7.0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.6.0...v4.7.0) (2026-10-17)
+
+
+### Fonctionnalités
+
+* **led:** add a speed setting for blinking and pulsing conditions ([#113](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/113)) ([2e13741](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/2e13741dad49fb6c05c3d02ba7c2af60c7cb0174))
+* **led:** test LED conditions from the key dialog ([#108](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/108)) ([442c396](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/442c39694b7c611f8d4bbfd47803b1814049751e))
+
+
+### Corrections de bugs
+
+* **led:** follow the configured grid size instead of 16 LEDs ([#112](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/112)) ([dbf123e](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/dbf123e7a0b3fce2c9264bf4070c989b21b913e8))
+* **led:** preview unsaved LED conditions live from the key dialog ([#111](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/111)) ([019fd32](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/019fd32a3c3706047c367fc3cd03c78e63e22519))
+
+
+### Améliorations des performances
+
+* **led:** skip unchanged frames ([#107](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/107)) ([279b86d](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/279b86d60a4812a644ad064c74c25e9dea3888ae))
+
 ## [4.6.0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.5.2...v4.6.0) (2026-10-17)
 
 
