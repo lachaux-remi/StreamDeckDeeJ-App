@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.5.1](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.5.0...v4.5.1) (2026-10-17)
+
+
+### Corrections de bugs
+
+* **settings:** keep the config when the keyring cannot decrypt secrets ([#100](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/100)) ([b910da8](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/b910da8b59d6a639af97876a39bcc55ad79b5068))
+* **settings:** relaunch once the keyring unlocks to load secrets ([#102](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/102)) ([ba590b8](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/ba590b86f2833afbcb665b9b03fbd8b0e7e44520))
+
 ## [4.5.0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.4.0...v4.5.0) (2026-10-15)
 
 
