@@ -16,6 +16,7 @@ import { ledService } from '@main/services/led.service'
 import { loggerService } from '@main/services/logger.service'
 import { serialService } from '@main/services/serial.service'
 import { sliderService } from '@main/services/slider.service'
+import { startKeyringRecovery } from '@main/services/keyring-unlock'
 import { createWindowCloseHandler } from '@main/services/window-close-handler'
 import { restoreAndFocusWindow } from '@main/services/window-lifecycle'
 import { linuxXWaylandRelaunchArgs, XWAYLAND_SWITCH } from '@main/linux-display'
@@ -304,6 +305,25 @@ app.whenReady().then(async () => {
   }
 
   loggerService.info('Application started', 'Main')
+  // Secrets the locked keyring could not decrypt load after a relaunch once it is unlocked.
+  const { keyring } = platformRuntime
+  if (keyring && configService.hasUnavailableSecrets()) {
+    startKeyringRecovery({
+      argv: process.argv,
+      env: process.env,
+      backend: configService.getSecretStorageBackend(),
+      needsRecovery: () => configService.hasUnavailableSecrets(),
+      watch: (backend, onUnlocked) => keyring.watchUnlock(backend, onUnlocked),
+      relaunch: (args) => {
+        app.relaunch({ execPath: process.env['APPIMAGE'] || process.execPath, args })
+        app.quit()
+      },
+      log: {
+        info: (message) => loggerService.info(message, 'Main'),
+        warn: (message) => loggerService.warn(message, 'Main')
+      }
+    })
+  }
   void platformRuntime.updater.check()
 })
 

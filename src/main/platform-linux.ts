@@ -3,8 +3,10 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { HardwareDiagnostic } from '../shared/hardware-diagnostic'
 import type { PlatformRuntime } from './platform-runtime'
+import { commandRunner } from './services/audio-command'
 import { audioMeterService } from './services/audio-meter.service'
 import { hardwarePermissionsService } from './services/hardware-permissions.service'
+import { watchKeyringUnlock } from './services/keyring-unlock'
 import { setLinuxAutostart } from './services/linux-autostart'
 import { linuxUpdateService } from './services/linux-update.service'
 import { micService } from './services/mic.service'
@@ -60,6 +62,10 @@ export function createLinuxPlatformRuntime(): PlatformRuntime {
           diagnostic: withLinuxPlatform(result.diagnostic) as HardwareDiagnostic
         }
       }
+    },
+    keyring: {
+      watchUnlock: (backend, onUnlocked) =>
+        watchKeyringUnlock({ backend, runner: commandRunner, onUnlocked })
     },
     updater: linuxUpdateService,
     async setAutostart(enabled) {

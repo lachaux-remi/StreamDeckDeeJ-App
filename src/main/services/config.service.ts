@@ -22,6 +22,7 @@ export class ConfigService extends EventEmitter {
   private configPath: string = ''
   private persistence: SettingsPersistence | undefined
   private persistenceEnabled = true
+  private secretStorageBackend = 'unknown'
 
   constructor() {
     super()
@@ -45,6 +46,7 @@ export class ConfigService extends EventEmitter {
         SERVICE
       )
     }
+    this.secretStorageBackend = secretCodec.storageBackend()
     this.persistence = new SettingsPersistence(this.configPath, secretCodec)
     this.load()
     loggerService.debug('INIT', SERVICE)
@@ -60,7 +62,7 @@ export class ConfigService extends EventEmitter {
         this.data = isAppSettings(candidate) ? candidate : this.withoutUnsupportedEntries(candidate)
         if (this.persistence?.hasUnavailableSecrets()) {
           loggerService.warn(
-            'Keyring is locked or unavailable; Home Assistant and Discord secrets are kept and load after a restart',
+            'Keyring is locked or unavailable; Home Assistant and Discord secrets are kept and load once it is unlocked',
             SERVICE
           )
         }
@@ -115,6 +117,15 @@ export class ConfigService extends EventEmitter {
       loggerService.error('Failed to save config', SERVICE)
       throw new Error('Config persistence failed')
     }
+  }
+
+  /** True when the keyring could not decrypt some stored secrets at load. */
+  public hasUnavailableSecrets(): boolean {
+    return this.persistence?.hasUnavailableSecrets() ?? false
+  }
+
+  public getSecretStorageBackend(): string {
+    return this.secretStorageBackend
   }
 
   public getConfig(): AppSettings {

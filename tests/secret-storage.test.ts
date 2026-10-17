@@ -115,6 +115,16 @@ test('treats unavailable or failing safeStorage backends as insecure', () => {
   expect(new ElectronSafeStorageSecretCodec(failing).usesSecureBackend()).toBe(false)
 })
 
+test('reports the selected storage backend, or unknown when it cannot be read', () => {
+  expect(new ElectronSafeStorageSecretCodec(safeStorage()).storageBackend()).toBe('gnome_libsecret')
+
+  const failing = safeStorage()
+  failing.getSelectedStorageBackend = () => {
+    throw new Error('app not ready')
+  }
+  expect(new ElectronSafeStorageSecretCodec(failing).storageBackend()).toBe('unknown')
+})
+
 test('rejects non-string secret values when saving', () => {
   const path = join(mkdtempSync(join(tmpdir(), 'settings-')), 'config.json')
   const persistence = new SettingsPersistence(

@@ -42,6 +42,11 @@ export interface UpdateCapability {
   openRelease(): Promise<void>
 }
 
+export interface KeyringCapability {
+  /** Calls `onUnlocked` once the keyring behind a safeStorage backend is unlocked. */
+  watchUnlock(backend: string, onUnlocked: () => void): (() => void) | undefined
+}
+
 export interface PlatformRuntime {
   audio: {
     available: boolean
@@ -51,6 +56,8 @@ export interface PlatformRuntime {
     levelMeter?: AudioLevelMeterCapability
   }
   hardwarePermissions: HardwarePermissionsCapability
+  /** Keyring unlock detection, on platforms whose keyring can be locked at login. */
+  keyring?: KeyringCapability
   updater: UpdateCapability
   setAutostart(enabled: boolean): Promise<void>
   shutdown(): Promise<void>
