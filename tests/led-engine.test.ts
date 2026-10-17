@@ -4,6 +4,7 @@ import {
   LedEngine,
   applyPressEffect,
   conditionIntensity,
+  interpolateColor,
   pressEffectDuration
 } from '@main/services/led-engine'
 
@@ -141,10 +142,16 @@ test('spreads a ripple outward from the pressed key', () => {
   expect(applyPressEffect(base, effect, presses, 4, 100, duration)).toEqual(base)
 })
 
-test('blinks or pulses an active condition color', () => {
+test('blinks or pulses an active condition color over the normal color', () => {
   expect(conditionIntensity(undefined, 250)).toBe(1)
   expect(conditionIntensity('blink', 250)).toBe(1)
   expect(conditionIntensity('blink', 750)).toBe(0)
   expect(conditionIntensity('pulse', 0)).toBeCloseTo(1)
-  expect(conditionIntensity('pulse', 750)).toBeCloseTo(0.15)
+  expect(conditionIntensity('pulse', 750)).toBeCloseTo(0)
+  expect(conditionIntensity('pulse', 375)).toBeCloseTo(0.5)
+  const normal = { r: 0, g: 100, b: 200 }
+  const condition = { r: 200, g: 0, b: 0 }
+  expect(interpolateColor(normal, condition, 1)).toEqual(condition)
+  expect(interpolateColor(normal, condition, 0)).toEqual(normal)
+  expect(interpolateColor(normal, condition, 0.5)).toEqual({ r: 100, g: 50, b: 100 })
 })
