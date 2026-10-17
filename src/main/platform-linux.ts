@@ -8,10 +8,14 @@ import { audioMeterService } from './services/audio-meter.service'
 import { hardwarePermissionsService } from './services/hardware-permissions.service'
 import { watchKeyringUnlock } from './services/keyring-unlock'
 import { setLinuxAutostart } from './services/linux-autostart'
-import { linuxUpdateService } from './services/linux-update.service'
+import { linuxUpdateMode, linuxUpdateService } from './services/linux-update.service'
+import { loggerService } from './services/logger.service'
 import { micService } from './services/mic.service'
+import { watchPacmanUpgrade } from './services/package-upgrade'
 import { sessionsService } from './services/sessions.service'
 
+const PACMAN_DB_PATH = '/var/lib/pacman'
+const PACMAN_PACKAGE = 'streamdeck-deej'
 const AUTOSTART_FILE = join(homedir(), '.config', 'autostart', 'streamdeck-deej.desktop')
 
 function withLinuxPlatform<T extends object>(diagnostic: T): T & { platform: 'linux' } {
@@ -66,6 +70,20 @@ export function createLinuxPlatformRuntime(): PlatformRuntime {
     keyring: {
       watchUnlock: (backend, onUnlocked) =>
         watchKeyringUnlock({ backend, runner: commandRunner, onUnlocked })
+    },
+    packageUpgrade: {
+      async watch(onUpgraded) {
+        if (linuxUpdateMode() !== 'package-manager') {
+          return undefined
+        }
+        return watchPacmanUpgrade({
+          dbPath: PACMAN_DB_PATH,
+          packageName: PACMAN_PACKAGE,
+          onUpgraded,
+          onWatchError: (error) =>
+            loggerService.warn(`Cannot watch pacman upgrades: ${error}`, 'PackageUpgrade')
+        })
+      }
     },
     updater: linuxUpdateService,
     async setAutostart(enabled) {

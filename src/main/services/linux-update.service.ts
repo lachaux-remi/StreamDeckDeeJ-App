@@ -8,7 +8,7 @@ import { formatReleaseNotes } from './release-notes'
 import { UpdateController, detectLinuxUpdateMode } from './update-controller'
 import { OFFICIAL_GITHUB_RELEASE_API, OFFICIAL_GITHUB_RELEASE_PAGE } from './update-policy'
 import { requireSignedAppImage } from './signed-update'
-import type { UpdateReleaseInfo, UpdateState } from '@main/types/update.types'
+import type { UpdateMode, UpdateReleaseInfo, UpdateState } from '@main/types/update.types'
 
 const MAX_RELEASE_NOTES_LENGTH = 20_000
 const PACMAN_REPOSITORY = 'streamdeck-deej'
@@ -75,6 +75,16 @@ async function checkOfficialRelease(): Promise<UpdateReleaseInfo> {
   }
 }
 
+export function linuxUpdateMode(): UpdateMode {
+  return detectLinuxUpdateMode({
+    packaged: app.isPackaged,
+    platform: process.platform,
+    appImage: process.env['APPIMAGE'],
+    packageType: packageType(),
+    unpacked: basename(dirname(process.resourcesPath)) === 'linux-unpacked'
+  })
+}
+
 class LinuxUpdateService {
   private controller: UpdateController | undefined
 
@@ -82,13 +92,7 @@ class LinuxUpdateService {
     if (this.controller) {
       return
     }
-    const mode = detectLinuxUpdateMode({
-      packaged: app.isPackaged,
-      platform: process.platform,
-      appImage: process.env['APPIMAGE'],
-      packageType: packageType(),
-      unpacked: basename(dirname(process.resourcesPath)) === 'linux-unpacked'
-    })
+    const mode = linuxUpdateMode()
     this.controller = new UpdateController({
       mode,
       currentVersion: app.getVersion(),

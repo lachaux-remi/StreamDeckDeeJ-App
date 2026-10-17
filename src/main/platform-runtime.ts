@@ -47,6 +47,15 @@ export interface KeyringCapability {
   watchUnlock(backend: string, onUnlocked: () => void): (() => void) | undefined
 }
 
+export interface PackageUpgradeCapability {
+  /**
+   * Calls `onUpgraded` once the package manager installed another version of
+   * the running app. Resolves to a function that stops watching, or undefined
+   * when the app was not installed by a watched package manager.
+   */
+  watch(onUpgraded: (version: string) => void): Promise<(() => void) | undefined>
+}
+
 export interface PlatformRuntime {
   audio: {
     available: boolean
@@ -58,6 +67,8 @@ export interface PlatformRuntime {
   hardwarePermissions: HardwarePermissionsCapability
   /** Keyring unlock detection, on platforms whose keyring can be locked at login. */
   keyring?: KeyringCapability
+  /** Package manager upgrade detection, on platforms that upgrade the app in place. */
+  packageUpgrade?: PackageUpgradeCapability
   updater: UpdateCapability
   setAutostart(enabled: boolean): Promise<void>
   shutdown(): Promise<void>
