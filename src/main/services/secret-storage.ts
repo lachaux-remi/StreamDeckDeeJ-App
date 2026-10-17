@@ -70,6 +70,14 @@ export class ElectronSafeStorageSecretCodec implements SecretCodec {
     return this.hasSecureBackend()
   }
 
+  public storageBackend(): string {
+    try {
+      return this.safeStorage.getSelectedStorageBackend()
+    } catch {
+      return 'unknown'
+    }
+  }
+
   public decode(value: unknown): string {
     if (typeof value === 'string') {
       return value

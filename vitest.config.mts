@@ -37,6 +37,7 @@ export default defineConfig({
         'src/main/services/electron-update-adapter.ts',
         'src/main/services/hardware-permissions-core.ts',
         'src/main/services/home-assistant-state-sync.ts',
+        'src/main/services/keyring-unlock.ts',
         'src/main/services/linux-autostart.ts',
         'src/main/services/update-controller.ts',
         'src/main/services/update-policy.ts',
@@ -266,6 +267,12 @@ export default defineConfig({
           statements: 72.09
         },
         'src/main/services/update-policy.ts': {
+          branches: 100,
+          functions: 100,
+          lines: 100,
+          statements: 100
+        },
+        'src/main/services/keyring-unlock.ts': {
           branches: 100,
           functions: 100,
           lines: 100,
