@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.6.0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.5.2...v4.6.0) (2026-10-17)
+
+
+### Fonctionnalités
+
+* **led:** add LED effects, press feedback and a live preview ([#105](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/105)) ([d71ebd0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/d71ebd04ed8a92f3793c3974c76583eb64c316f1))
+
 ## [4.5.2](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.5.1...v4.5.2) (2026-10-17)
 
 
