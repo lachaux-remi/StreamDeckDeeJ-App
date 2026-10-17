@@ -25,6 +25,8 @@ const VID = 0x5239
 const PID = 0x0001
 const PACKET_SIZE = 64
 const LED_COUNT = 16
+// Unchanged frames are skipped, but resent this often in case the device dropped one.
+const FORCED_RESEND_MS = 1000
 
 const DEFAULT_PROFILE: LedProfile = {
   mode: 'rainbow',
@@ -50,6 +52,9 @@ class LedService {
   private presses: LedPress[] = []
   private previewActive = false
   private frameListener: ((colors: LedColor[]) => void) | null = null
+  private lastPacket: number[] | null = null
+  private lastWriteAt = 0
+  private lastPreviewKey: string | null = null
 
   async init(microphone: MicrophoneCapability): Promise<void> {
     const config = configService.getConfig()
@@ -69,6 +74,7 @@ class LedService {
       this.gridCols = newConfig.gridCols ?? 4
       this.loadOverrides(newConfig.streamdeck)
       this.buttonConfigs = newConfig.streamdeck
+      this.invalidateFrames()
     })
   }
 
@@ -88,6 +94,7 @@ class LedService {
   /** The preview keeps the animation running without a device, e.g. while the window is visible. */
   setPreviewActive(active: boolean): void {
     this.previewActive = active
+    this.lastPreviewKey = null
     this.syncAnimation()
   }
 
@@ -112,10 +119,18 @@ class LedService {
 
   updateProfile(profile: LedProfile): void {
     this.profile = profile
+    this.invalidateFrames()
   }
 
   updateOverrides(streamdeck: StreamdeckConfig): void {
     this.loadOverrides(streamdeck)
+    this.invalidateFrames()
+  }
+
+  /** Makes the next flush write and emit even if the frame looks unchanged. */
+  private invalidateFrames(): void {
+    this.lastPacket = null
+    this.lastPreviewKey = null
   }
 
   async flush(): Promise<void> {
@@ -165,14 +180,29 @@ class LedService {
       }
 
       if (this.previewActive) {
-        this.frameListener?.(base)
+        const key = base.map(({ r, g, b }) => `${r},${g},${b}`).join(';')
+        if (key !== this.lastPreviewKey) {
+          this.lastPreviewKey = key
+          this.frameListener?.(base)
+        }
       }
       if (this.device) {
-        await this.device.write(this.buildPacket(base))
+        const packet = this.buildPacket(base)
+        if (
+          !this.lastPacket ||
+          now - this.lastWriteAt >= FORCED_RESEND_MS ||
+          packet.some((byte, i) => byte !== this.lastPacket?.[i])
+        ) {
+          // Recorded before the write so concurrent flushes do not send it twice.
+          this.lastPacket = packet
+          this.lastWriteAt = now
+          await this.device.write(packet)
+        }
       }
     } catch (err) {
       loggerService.warn(`LED flush error: ${err}`, SERVICE)
       this.device = null
+      this.lastPacket = null
       this.syncAnimation()
       if (this.reconnectTimer || this.isShuttingDown) {
         return
@@ -255,6 +285,7 @@ class LedService {
       }
 
       this.device = await HID.HIDAsync.open(deviceInfo.path)
+      this.lastPacket = null
       loggerService.info(`Stream Deck RGB initialisé : ${deviceInfo.path}`, SERVICE)
     } catch (err) {
       loggerService.warn(`Stream Deck RGB : erreur HID : ${err}`, SERVICE)
