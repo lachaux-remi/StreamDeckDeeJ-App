@@ -185,7 +185,62 @@ test('draws press feedback and condition effects over the frame', async () => {
   expect(keyColor(5)).toEqual([0, 0, 0])
   now = 2_500
   await ledService.flush()
-  expect(keyColor(1)).toEqual([0, 0, 0])
+  expect(keyColor(1)).toEqual([100, 100, 100])
+  await ledService.shutdown()
+  vi.restoreAllMocks()
+})
+
+test('blinks and pulses between the condition color and the key normal color', async () => {
+  let now = 2_000
+  vi.spyOn(performance, 'now').mockImplementation(() => now)
+  const { ledService } = await import('@main/services/led.service')
+  await ledService.init(fakes.mic as never)
+  const keyColor = (index: number): number[] => {
+    const packet = fakes.device.write.mock.calls.at(-1)?.[0] as number[]
+    return packet.slice(2 + index * 3, 5 + index * 3)
+  }
+  const ledConditions = [{ type: 'mic-mute', color: { r: 200, g: 0, b: 0 } }]
+  fakes.configListener?.({
+    gridCols: 4,
+    // Key 1 has a fixed color, key 2 shows the global effect.
+    streamdeck: {
+      '1': { color: { r: 100, g: 100, b: 100 }, ledConditions },
+      '2': { ledConditions }
+    },
+    ledProfile: {
+      mode: 'static',
+      speed: 50,
+      brightness: 100,
+      startColor: { r: 0, g: 0, b: 40 },
+      endColor: { r: 0, g: 0, b: 0 },
+      direction: 'horizontal'
+    }
+  })
+  const flushAt = async (time: number): Promise<void> => {
+    now = time
+    const writes = fakes.device.write.mock.calls.length
+    await ledService.flush()
+    // Every phase change reaches the device despite the duplicate-frame skip.
+    expect(fakes.device.write.mock.calls.length).toBe(writes + 1)
+  }
+
+  fakes.resolve.mockReturnValue({ ...ledConditions[0], effect: 'blink' })
+  await flushAt(2_000)
+  expect(keyColor(1)).toEqual([200, 0, 0])
+  expect(keyColor(2)).toEqual([200, 0, 0])
+  await flushAt(2_500)
+  expect(keyColor(1)).toEqual([100, 100, 100])
+  expect(keyColor(2)).toEqual([0, 0, 40])
+  await flushAt(3_000)
+  expect(keyColor(2)).toEqual([200, 0, 0])
+
+  fakes.resolve.mockReturnValue({ ...ledConditions[0], effect: 'pulse' })
+  await flushAt(2_250)
+  expect(keyColor(1)).toEqual([100, 100, 100])
+  expect(keyColor(2)).toEqual([0, 0, 40])
+  await flushAt(2_625)
+  expect(keyColor(1)).toEqual([150, 50, 50])
+  expect(keyColor(2)).toEqual([100, 0, 20])
   await ledService.shutdown()
   vi.restoreAllMocks()
 })
@@ -257,7 +312,7 @@ test('forces a tested condition over real conditions until it expires or is clea
   expect(keyColor(1)).toEqual([0, 250, 0])
   now += 500
   await ledService.flush()
-  expect(keyColor(1)).toEqual([0, 0, 0])
+  expect(keyColor(1)).toEqual([100, 100, 100])
   expect(keyColor(0)).toEqual([20, 40, 60])
 
   // It ends on its own after five seconds.

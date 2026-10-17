@@ -40,7 +40,7 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * Math.max(0, Math.min(1, t))
 }
 
-function interpolateColor(c1: LedColor, c2: LedColor, t: number): LedColor {
+export function interpolateColor(c1: LedColor, c2: LedColor, t: number): LedColor {
   return {
     r: Math.round(lerp(c1.r, c2.r, t)),
     g: Math.round(lerp(c1.g, c2.g, t)),
@@ -149,14 +149,13 @@ export function applyPressEffect(
   })
 }
 
-/** Intensity 0-1 of an active condition color at time t. */
+/** Weight 0-1 of an active condition color over the key's normal color at time t. */
 export function conditionIntensity(effect: LedConditionEffect | undefined, t: number): number {
   if (effect === 'blink') {
     return Math.floor(t / BLINK_MS) % 2 === 0 ? 1 : 0
   }
   if (effect === 'pulse') {
-    // Never fully dark, so the key stays readable between beats.
-    return 0.15 + 0.85 * ((Math.cos((2 * Math.PI * t) / CONDITION_PULSE_MS) + 1) / 2)
+    return (Math.cos((2 * Math.PI * t) / CONDITION_PULSE_MS) + 1) / 2
   }
   return 1
 }

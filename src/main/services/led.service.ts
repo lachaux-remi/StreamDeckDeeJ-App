@@ -17,8 +17,8 @@ import {
   applyBrightness,
   applyPressEffect,
   conditionIntensity,
+  interpolateColor,
   pressEffectDuration,
-  scaleColor,
   type LedPress
 } from './led-engine'
 
@@ -178,32 +178,32 @@ class LedService {
       const forced = this.forcedCondition
 
       for (let i = 0; i < LED_COUNT; i++) {
-        if (forced?.index === i) {
-          // Timed from the start of the test, so a blink or pulse starts lit.
-          base[i] = applyBrightness(
-            scaleColor(forced.color, conditionIntensity(forced.effect, now - forced.since)),
-            this.profile.brightness
-          )
-          continue
-        }
-        const btnCfg = this.buttonConfigs[String(i)]
-        if (btnCfg?.ledConditions?.length) {
-          const haState = this.haButtonStates[String(i)]
-          const condition = conditionService.resolve(
-            btnCfg.ledConditions,
-            haState,
-            this.haButtonAttributes[String(i)]
-          )
-          if (condition) {
-            base[i] = applyBrightness(
-              scaleColor(condition.color, conditionIntensity(condition.effect, now)),
-              this.profile.brightness
-            )
-            continue
-          }
-        }
+        // What the key shows without a condition, which blink and pulse return to.
         if (this.overrides[i]) {
           base[i] = applyBrightness(this.overrides[i], this.profile.brightness)
+        }
+        let condition: { color: LedColor; effect?: LedConditionEffect } | undefined
+        let t = now
+        if (forced?.index === i) {
+          condition = forced
+          // Timed from the start of the test, so a blink or pulse starts lit.
+          t = now - forced.since
+        } else {
+          const btnCfg = this.buttonConfigs[String(i)]
+          if (btnCfg?.ledConditions?.length) {
+            condition = conditionService.resolve(
+              btnCfg.ledConditions,
+              this.haButtonStates[String(i)],
+              this.haButtonAttributes[String(i)]
+            )
+          }
+        }
+        if (condition) {
+          base[i] = interpolateColor(
+            base[i],
+            applyBrightness(condition.color, this.profile.brightness),
+            conditionIntensity(condition.effect, t)
+          )
         }
       }
 
