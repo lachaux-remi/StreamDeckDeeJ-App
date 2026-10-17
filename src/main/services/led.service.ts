@@ -2,9 +2,11 @@ import HID from 'node-hid'
 import type {
   AppSettings,
   LedColor,
+  LedConditionEffect,
   LedProfile,
   StreamdeckConfig
 } from '@main/types/settings.types'
+import { LED_CONDITION_TEST_MS } from '../../shared/led-condition-test'
 import type { MicrophoneCapability } from '@main/platform-runtime'
 import { configService } from './config.service'
 import { loggerService } from './logger.service'
@@ -27,6 +29,13 @@ const PACKET_SIZE = 64
 const LED_COUNT = 16
 // Unchanged frames are skipped, but resent this often in case the device dropped one.
 const FORCED_RESEND_MS = 1000
+
+interface ForcedCondition {
+  index: number
+  color: LedColor
+  effect?: LedConditionEffect
+  since: number
+}
 
 const DEFAULT_PROFILE: LedProfile = {
   mode: 'rainbow',
@@ -51,6 +60,7 @@ class LedService {
   private haButtonAttributes: Record<string, Record<string, unknown>> = {}
   private presses: LedPress[] = []
   private previewActive = false
+  private forcedCondition: ForcedCondition | null = null
   private frameListener: ((colors: LedColor[]) => void) | null = null
   private lastPacket: number[] | null = null
   private lastWriteAt = 0
@@ -107,6 +117,26 @@ class LedService {
     void this.flush()
   }
 
+  /**
+   * Shows a condition's color and effect on one key for a few seconds, over its
+   * real conditions, so it can be tuned without waiting for the condition.
+   */
+  testCondition(index: number, color: LedColor, effect?: LedConditionEffect): void {
+    if (!Number.isInteger(index) || index < 0 || index >= LED_COUNT) {
+      return
+    }
+    this.forcedCondition = { index, color, effect, since: performance.now() }
+    void this.flush()
+  }
+
+  clearConditionTest(): void {
+    if (!this.forcedCondition) {
+      return
+    }
+    this.forcedCondition = null
+    void this.flush()
+  }
+
   private loadOverrides(streamdeck: StreamdeckConfig): void {
     this.overrides = {}
     for (const [key, config] of Object.entries(streamdeck)) {
@@ -140,8 +170,20 @@ class LedService {
     try {
       const now = performance.now()
       let base = this.engine.compute(this.profile, LED_COUNT, this.gridCols, now)
+      if (this.forcedCondition && now - this.forcedCondition.since >= LED_CONDITION_TEST_MS) {
+        this.forcedCondition = null
+      }
+      const forced = this.forcedCondition
 
       for (let i = 0; i < LED_COUNT; i++) {
+        if (forced?.index === i) {
+          // Timed from the start of the test, so a blink or pulse starts lit.
+          base[i] = applyBrightness(
+            scaleColor(forced.color, conditionIntensity(forced.effect, now - forced.since)),
+            this.profile.brightness
+          )
+          continue
+        }
         const btnCfg = this.buttonConfigs[String(i)]
         if (btnCfg?.ledConditions?.length) {
           const haState = this.haButtonStates[String(i)]

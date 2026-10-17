@@ -5,6 +5,8 @@ const mocks = vi.hoisted(() => ({
   getKeyInfo: vi.fn(),
   updateOverrides: vi.fn(),
   updateProfile: vi.fn(),
+  testCondition: vi.fn(),
+  clearConditionTest: vi.fn(),
   flush: vi.fn(async () => undefined)
 }))
 
@@ -24,6 +26,8 @@ vi.mock('@main/services/led.service', () => ({
   ledService: {
     updateOverrides: mocks.updateOverrides,
     updateProfile: mocks.updateProfile,
+    testCondition: mocks.testCondition,
+    clearConditionTest: mocks.clearConditionTest,
     flush: mocks.flush
   }
 }))
@@ -103,7 +107,13 @@ test('rejects malformed IPC arity, indices, colors, profiles, and config cardina
         direction: 'horizontal'
       }
     ],
-    ['led:setProfile', {}, 'extra']
+    ['led:setProfile', {}, 'extra'],
+    ['led:testCondition', '0', { r: 1, g: 2, b: 3 }],
+    ['led:testCondition', '-1', { r: 1, g: 2, b: 3 }, 'solid'],
+    ['led:testCondition', 0, { r: 1, g: 2, b: 3 }, 'solid'],
+    ['led:testCondition', '0', { r: 1, g: 2, b: 300 }, 'solid'],
+    ['led:testCondition', '0', { r: 1, g: 2, b: 3 }, 'strobe'],
+    ['led:clearConditionTest', 'extra']
   ]
 
   for (const [channel, ...args] of invalidCalls) {
@@ -115,7 +125,21 @@ test('rejects malformed IPC arity, indices, colors, profiles, and config cardina
   expect(mocks.getKeyInfo).not.toHaveBeenCalled()
   expect(mocks.updateOverrides).not.toHaveBeenCalled()
   expect(mocks.updateProfile).not.toHaveBeenCalled()
+  expect(mocks.testCondition).not.toHaveBeenCalled()
+  expect(mocks.clearConditionTest).not.toHaveBeenCalled()
   expect(mocks.flush).not.toHaveBeenCalled()
+})
+
+test('forces a tested LED condition on a key and clears it', () => {
+  expect(invoke('led:testCondition', '3', { r: 1, g: 2, b: 3 }, 'blink')).toEqual({
+    success: true
+  })
+  invoke('led:testCondition', '4', { r: 4, g: 5, b: 6 }, 'solid')
+  invoke('led:clearConditionTest')
+
+  expect(mocks.testCondition).toHaveBeenNthCalledWith(1, 3, { r: 1, g: 2, b: 3 }, 'blink')
+  expect(mocks.testCondition).toHaveBeenNthCalledWith(2, 4, { r: 4, g: 5, b: 6 }, undefined)
+  expect(mocks.clearConditionTest).toHaveBeenCalledOnce()
 })
 
 test('does not echo rejected payload contents in IPC validation errors', async () => {

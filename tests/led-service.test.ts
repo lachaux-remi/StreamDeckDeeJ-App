@@ -224,6 +224,58 @@ test('keeps the preview running when the device write fails', async () => {
   expect(vi.getTimerCount()).toBe(0)
 })
 
+test('forces a tested condition over real conditions until it expires or is cleared', async () => {
+  let now = 10_000
+  vi.spyOn(performance, 'now').mockImplementation(() => now)
+  const { ledService } = await import('@main/services/led.service')
+  await ledService.init(fakes.mic as never)
+  const keyColor = (index: number): number[] => {
+    const packet = fakes.device.write.mock.calls.at(-1)?.[0] as number[]
+    return packet.slice(2 + index * 3, 5 + index * 3)
+  }
+  ledService.updateProfile({
+    mode: 'static',
+    speed: 50,
+    brightness: 100,
+    startColor: { r: 0, g: 0, b: 0 },
+    endColor: { r: 0, g: 0, b: 0 },
+    direction: 'horizontal'
+  })
+
+  // Out-of-range keys are ignored.
+  ledService.testCondition(16, { r: 9, g: 9, b: 9 })
+  ledService.testCondition(1.5, { r: 9, g: 9, b: 9 })
+  await ledService.flush()
+  expect(keyColor(1)).toEqual([200, 0, 0])
+
+  // The test starts lit and replaces the key's active condition.
+  ledService.testCondition(1, { r: 0, g: 250, b: 0 }, 'blink')
+  await Promise.resolve()
+  expect(keyColor(1)).toEqual([0, 250, 0])
+  now += 500
+  await ledService.flush()
+  expect(keyColor(1)).toEqual([0, 0, 0])
+  expect(keyColor(0)).toEqual([20, 40, 60])
+
+  // It ends on its own after five seconds.
+  now = 15_000
+  await ledService.flush()
+  expect(keyColor(1)).toEqual([200, 0, 0])
+
+  ledService.testCondition(0, { r: 0, g: 0, b: 250 })
+  await Promise.resolve()
+  expect(keyColor(0)).toEqual([0, 0, 250])
+  ledService.clearConditionTest()
+  await Promise.resolve()
+  expect(keyColor(0)).toEqual([20, 40, 60])
+
+  fakes.device.write.mockClear()
+  ledService.clearConditionTest()
+  expect(fakes.device.write).not.toHaveBeenCalled()
+  await ledService.shutdown()
+  vi.restoreAllMocks()
+})
+
 test('skips unchanged packets but resends them every second and after updates', async () => {
   let now = 1_000
   vi.spyOn(performance, 'now').mockImplementation(() => now)
@@ -308,6 +360,46 @@ test('emits preview frames only when the colors change', async () => {
   await vi.advanceTimersByTimeAsync(100)
   expect(frames).toHaveBeenCalledTimes(3)
   expect(frames.mock.calls.at(-1)?.[0][3]).toEqual({ r: 4, g: 4, b: 4 })
+  await ledService.shutdown()
+  vi.restoreAllMocks()
+})
+
+test('writes the first frame of a condition test and the frame that ends it at once', async () => {
+  vi.spyOn(performance, 'now').mockReturnValue(1_000)
+  const { ledService } = await import('@main/services/led.service')
+  const frames = vi.fn()
+  ledService.onFrame(frames)
+  await ledService.init(fakes.mic as never)
+  ledService.setPreviewActive(true)
+  await ledService.flush()
+  fakes.device.write.mockClear()
+  frames.mockClear()
+  const keyColor = (index: number): number[] => {
+    const packet = fakes.device.write.mock.calls.at(-1)?.[0] as number[]
+    return packet.slice(2 + index * 3, 5 + index * 3)
+  }
+
+  // The unchanged frame is skipped before and while the test runs.
+  await ledService.flush()
+  expect(fakes.device.write).not.toHaveBeenCalled()
+  expect(frames).not.toHaveBeenCalled()
+
+  ledService.testCondition(0, { r: 0, g: 250, b: 0 })
+  await Promise.resolve()
+  expect(fakes.device.write).toHaveBeenCalledTimes(1)
+  expect(keyColor(0)).toEqual([0, 125, 0])
+  expect(frames).toHaveBeenCalledTimes(1)
+  expect(frames.mock.calls.at(-1)?.[0][0]).toEqual({ r: 0, g: 125, b: 0 })
+  await ledService.flush()
+  expect(fakes.device.write).toHaveBeenCalledTimes(1)
+  expect(frames).toHaveBeenCalledTimes(1)
+
+  ledService.clearConditionTest()
+  await Promise.resolve()
+  expect(fakes.device.write).toHaveBeenCalledTimes(2)
+  expect(keyColor(0)).toEqual([10, 20, 30])
+  expect(frames).toHaveBeenCalledTimes(2)
+  expect(frames.mock.calls.at(-1)?.[0][0]).toEqual({ r: 10, g: 20, b: 30 })
   await ledService.shutdown()
   vi.restoreAllMocks()
 })

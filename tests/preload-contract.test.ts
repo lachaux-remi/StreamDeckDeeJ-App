@@ -60,6 +60,14 @@ test('exposes request methods on their exact main-process channels', async () =>
       { r: 1, g: 2, b: 3 }
     ],
     [
+      () => api.streamdeck.testLedCondition('3', { r: 1, g: 2, b: 3 }, 'pulse'),
+      'led:testCondition',
+      '3',
+      { r: 1, g: 2, b: 3 },
+      'pulse'
+    ],
+    [() => api.streamdeck.clearLedConditionTest(), 'led:clearConditionTest'],
+    [
       () => api.streamdeck.setLedProfile({ mode: 'rainbow' }),
       'led:setProfile',
       { mode: 'rainbow' }
