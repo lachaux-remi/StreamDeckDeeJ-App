@@ -26,7 +26,8 @@ const SERVICE = 'LedService'
 const VID = 0x5239
 const PID = 0x0001
 const PACKET_SIZE = 64
-const LED_COUNT = 16
+// A packet holds a 2-byte header and 3 bytes per LED.
+const MAX_DEVICE_LEDS = Math.floor((PACKET_SIZE - 2) / 3)
 // Unchanged frames are skipped, but resent this often in case the device dropped one.
 const FORCED_RESEND_MS = 1000
 
@@ -55,6 +56,7 @@ class LedService {
   private overrides: Record<number, LedColor> = {}
   private buttonConfigs: StreamdeckConfig = {}
   private gridCols = 4
+  private gridRows = 4
   private isShuttingDown = false
   private haButtonStates: Record<string, string> = {}
   private haButtonAttributes: Record<string, Record<string, unknown>> = {}
@@ -70,6 +72,7 @@ class LedService {
     const config = configService.getConfig()
     this.profile = config.ledProfile ?? { ...DEFAULT_PROFILE }
     this.gridCols = config.gridCols ?? 4
+    this.gridRows = config.gridRows ?? 4
     this.loadOverrides(config.streamdeck)
     this.buttonConfigs = config.streamdeck
 
@@ -82,10 +85,16 @@ class LedService {
     configService.onUpdated((newConfig: AppSettings) => {
       this.profile = newConfig.ledProfile ?? { ...DEFAULT_PROFILE }
       this.gridCols = newConfig.gridCols ?? 4
+      this.gridRows = newConfig.gridRows ?? 4
       this.loadOverrides(newConfig.streamdeck)
       this.buttonConfigs = newConfig.streamdeck
       this.invalidateFrames()
     })
+  }
+
+  /** One LED per key of the configured grid; the device receives the first ones. */
+  private get ledCount(): number {
+    return this.gridCols * this.gridRows
   }
 
   setHAButtonState(buttonKey: string, state: string, attributes?: Record<string, unknown>): void {
@@ -110,7 +119,12 @@ class LedService {
 
   /** Starts the press effect, if any, from the key at this LED index. */
   notifyPress(index: number): void {
-    if (!this.profile.pressEffect || !Number.isInteger(index) || index < 0 || index >= LED_COUNT) {
+    if (
+      !this.profile.pressEffect ||
+      !Number.isInteger(index) ||
+      index < 0 ||
+      index >= this.ledCount
+    ) {
       return
     }
     this.presses.push({ index, at: performance.now() })
@@ -122,7 +136,7 @@ class LedService {
    * real conditions, so it can be tuned without waiting for the condition.
    */
   testCondition(index: number, color: LedColor, effect?: LedConditionEffect): void {
-    if (!Number.isInteger(index) || index < 0 || index >= LED_COUNT) {
+    if (!Number.isInteger(index) || index < 0 || index >= this.ledCount) {
       return
     }
     this.forcedCondition = { index, color, effect, since: performance.now() }
@@ -141,7 +155,7 @@ class LedService {
     this.overrides = {}
     for (const [key, config] of Object.entries(streamdeck)) {
       const idx = Number(key)
-      if (Number.isInteger(idx) && idx >= 0 && idx < LED_COUNT && config.color) {
+      if (Number.isInteger(idx) && idx >= 0 && idx < this.ledCount && config.color) {
         this.overrides[idx] = config.color
       }
     }
@@ -171,13 +185,13 @@ class LedService {
     }
     try {
       const now = performance.now()
-      let base = this.engine.compute(this.profile, LED_COUNT, this.gridCols, now)
+      let base = this.engine.compute(this.profile, this.ledCount, this.gridCols, now)
       if (this.forcedCondition && now - this.forcedCondition.since >= LED_CONDITION_TEST_MS) {
         this.forcedCondition = null
       }
       const forced = this.forcedCondition
 
-      for (let i = 0; i < LED_COUNT; i++) {
+      for (let i = 0; i < this.ledCount; i++) {
         if (forced?.index === i) {
           // Timed from the start of the test, so a blink or pulse starts lit.
           base[i] = applyBrightness(
@@ -209,7 +223,7 @@ class LedService {
 
       const pressEffect = this.profile.pressEffect
       if (pressEffect) {
-        const duration = pressEffectDuration(pressEffect, LED_COUNT, this.gridCols)
+        const duration = pressEffectDuration(pressEffect, this.ledCount, this.gridCols)
         this.presses = this.presses.filter((press) => now - press.at < duration)
         base = applyPressEffect(
           base,
@@ -273,9 +287,7 @@ class LedService {
       return
     }
     try {
-      const blackPacket = this.buildPacket(
-        Array.from({ length: LED_COUNT }, () => ({ r: 0, g: 0, b: 0 }))
-      )
+      const blackPacket = this.buildPacket([])
       await this.device.write(blackPacket)
       await this.device.close()
     } catch {
@@ -290,7 +302,7 @@ class LedService {
     packet[0] = 0x02
     packet[1] = 0xaa
 
-    for (let i = 0; i < LED_COUNT && i < colors.length; i++) {
+    for (let i = 0; i < MAX_DEVICE_LEDS && i < colors.length; i++) {
       const offset = 2 + i * 3
       packet[offset] = colors[i].r
       packet[offset + 1] = colors[i].g
