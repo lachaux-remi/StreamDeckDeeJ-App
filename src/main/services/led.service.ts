@@ -152,8 +152,10 @@ class LedService {
     this.invalidateFrames()
   }
 
+  /** Applies key colors and conditions, saved or previewed from the key dialog. */
   updateOverrides(streamdeck: StreamdeckConfig): void {
     this.loadOverrides(streamdeck)
+    this.buttonConfigs = streamdeck
     this.invalidateFrames()
   }
 

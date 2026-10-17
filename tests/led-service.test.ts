@@ -111,7 +111,10 @@ test('applies runtime profile, override, Home Assistant, and config updates', as
     endColor: { r: 0, g: 0, b: 0 },
     direction: 'horizontal'
   })
-  ledService.updateOverrides({ '2': { color: { r: 4, g: 5, b: 6 } } })
+  ledService.updateOverrides({
+    '1': { ledConditions: [{ type: 'ha-on', color: { r: 7, g: 7, b: 7 } }] },
+    '2': { color: { r: 4, g: 5, b: 6 } }
+  })
   ledService.setHAButtonState('1', 'on', { brightness: 120 })
   await Promise.resolve()
 
@@ -323,7 +326,13 @@ test('writes the unchanged frame again after reconnecting', async () => {
   fakes.device.write.mockClear()
   fakes.device.write.mockRejectedValueOnce(new Error('device removed'))
 
-  ledService.updateOverrides({ '0': { color: { r: 20, g: 40, b: 60 } } })
+  ledService.updateOverrides({
+    '0': { color: { r: 20, g: 40, b: 60 } },
+    '1': {
+      color: { r: 100, g: 100, b: 100 },
+      ledConditions: [{ type: 'mic-mute', color: { r: 200, g: 0, b: 0 } }]
+    }
+  })
   await ledService.flush()
   expect(fakes.device.write).toHaveBeenCalledTimes(1)
 
@@ -402,4 +411,18 @@ test('writes the first frame of a condition test and the frame that ends it at o
   expect(frames.mock.calls.at(-1)?.[0][0]).toEqual({ r: 10, g: 20, b: 30 })
   await ledService.shutdown()
   vi.restoreAllMocks()
+})
+
+test('evaluates the conditions previewed from the key dialog before they are saved', async () => {
+  const { ledService } = await import('@main/services/led.service')
+  await ledService.init(fakes.mic as never)
+  const previewed = [{ type: 'mic-mute' as const, color: { r: 9, g: 9, b: 9 } }]
+
+  fakes.resolve.mockClear()
+  ledService.updateOverrides({ '4': { ledConditions: previewed } })
+  await ledService.flush()
+
+  expect(fakes.resolve).toHaveBeenCalledTimes(1)
+  expect(fakes.resolve).toHaveBeenCalledWith(previewed, undefined, undefined)
+  await ledService.shutdown()
 })
