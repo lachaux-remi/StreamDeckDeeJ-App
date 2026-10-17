@@ -5,7 +5,9 @@ import {
   EyeOff,
   GripVertical,
   ImagePlus,
+  Play,
   Plus,
+  Square,
   Trash2,
   WifiOff,
   X
@@ -22,6 +24,7 @@ import {
   loadHomeAssistantServices
 } from '@renderer/lib/home-assistant-catalog'
 import ColorPicker from '@renderer/components/ui/ColorPicker'
+import { LED_CONDITION_TEST_MS } from '../../../../shared/led-condition-test'
 import type {
   ConditionsState,
   LedColor,
@@ -201,6 +204,8 @@ export default function StreamdeckConfigDialog({
   const hasTabSwitched = useRef(false)
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false)
+  // Condition row whose color and effect are forced on the key for a few seconds.
+  const [testingIndex, setTestingIndex] = useState<number | null>(null)
 
   useEffect(() => {
     if (buttonIndex !== null) {
@@ -213,6 +218,7 @@ export default function StreamdeckConfigDialog({
       setLedConditions(config?.ledConditions ?? [])
       setActiveTab('pressed')
       setShowDiscardPrompt(false)
+      setTestingIndex(null)
       hasTabSwitched.current = false
 
       void window.api.conditions.getState().then(setConditionsState)
@@ -227,6 +233,36 @@ export default function StreamdeckConfigDialog({
       setConditionsState((prev) => ({ ...prev, ...partial }))
     })
   }, [buttonIndex])
+
+  // Ends the test when it is stopped, replaced, or the dialog closes.
+  useEffect(() => {
+    if (buttonIndex === null || testingIndex === null) {
+      return
+    }
+    return () => {
+      void window.api.streamdeck.clearLedConditionTest()
+      setTestingIndex((prev) => (prev === testingIndex ? null : prev))
+    }
+  }, [buttonIndex, testingIndex])
+
+  // Editing the tested row sends it again, which restarts the test.
+  const testedCondition = testingIndex === null ? undefined : ledConditions[testingIndex]
+  useEffect(() => {
+    if (buttonIndex === null || testingIndex === null) {
+      return
+    }
+    if (!testedCondition) {
+      setTestingIndex(null)
+      return
+    }
+    void window.api.streamdeck.testLedCondition(
+      buttonIndex,
+      testedCondition.color,
+      testedCondition.effect ?? 'solid'
+    )
+    const timer = setTimeout(() => setTestingIndex(null), LED_CONDITION_TEST_MS)
+    return () => clearTimeout(timer)
+  }, [buttonIndex, testingIndex, testedCondition])
 
   const hasChanges = useMemo(() => {
     if (buttonIndex === null) {
@@ -592,6 +628,28 @@ export default function StreamdeckConfigDialog({
                             compact
                           />
                         </div>
+
+                        <button
+                          onClick={() => setTestingIndex((prev) => (prev === idx ? null : idx))}
+                          title={
+                            testingIndex === idx
+                              ? 'Arrêter le test'
+                              : 'Tester cette condition sur la touche pendant 5 secondes'
+                          }
+                          className={cn(
+                            'flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium transition-colors',
+                            testingIndex === idx
+                              ? 'bg-neon-pink/15 text-neon-pink'
+                              : 'text-muted-foreground/50 hover:bg-neon-pink/10 hover:text-neon-pink'
+                          )}
+                        >
+                          {testingIndex === idx ? (
+                            <Square className="h-3 w-3" />
+                          ) : (
+                            <Play className="h-3 w-3" />
+                          )}
+                          Tester
+                        </button>
 
                         <button
                           onClick={() =>

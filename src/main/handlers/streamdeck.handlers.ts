@@ -2,7 +2,10 @@ import type { WebContents } from 'electron'
 import { deckService } from '@main/services/deck.service'
 import { ledService } from '@main/services/led.service'
 import { isDeckKey, isLedColor, isLedProfile, isStreamdeckConfig } from '@main/types/settings.types'
+import type { LedColor } from '@main/types/settings.types'
 import { handleIpc } from './trusted-ipc'
+
+const CONDITION_TEST_EFFECTS = ['solid', 'blink', 'pulse'] as const
 
 function invalidPayload(): never {
   throw new TypeError('Invalid IPC payload')
@@ -35,6 +38,28 @@ export function registerStreamdeckHandlers(trustedSender: WebContents): void {
     }
     ledService.updateOverrides(overrides)
     await ledService.flush()
+    return { success: true }
+  })
+
+  handleIpc(trustedSender, 'led:testCondition', (...args: unknown[]) => {
+    if (
+      args.length !== 3 ||
+      !isDeckKey(args[0]) ||
+      !isLedColor(args[1]) ||
+      !CONDITION_TEST_EFFECTS.includes(args[2] as (typeof CONDITION_TEST_EFFECTS)[number])
+    ) {
+      invalidPayload()
+    }
+    const [key, color, effect] = args as [string, LedColor, (typeof CONDITION_TEST_EFFECTS)[number]]
+    ledService.testCondition(Number(key), color, effect === 'solid' ? undefined : effect)
+    return { success: true }
+  })
+
+  handleIpc(trustedSender, 'led:clearConditionTest', (...args: unknown[]) => {
+    if (args.length !== 0) {
+      invalidPayload()
+    }
+    ledService.clearConditionTest()
     return { success: true }
   })
 

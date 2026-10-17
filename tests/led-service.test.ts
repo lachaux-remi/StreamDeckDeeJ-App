@@ -222,3 +222,55 @@ test('keeps the preview running when the device write fails', async () => {
   await ledService.shutdown()
   expect(vi.getTimerCount()).toBe(0)
 })
+
+test('forces a tested condition over real conditions until it expires or is cleared', async () => {
+  let now = 10_000
+  vi.spyOn(performance, 'now').mockImplementation(() => now)
+  const { ledService } = await import('@main/services/led.service')
+  await ledService.init(fakes.mic as never)
+  const keyColor = (index: number): number[] => {
+    const packet = fakes.device.write.mock.calls.at(-1)?.[0] as number[]
+    return packet.slice(2 + index * 3, 5 + index * 3)
+  }
+  ledService.updateProfile({
+    mode: 'static',
+    speed: 50,
+    brightness: 100,
+    startColor: { r: 0, g: 0, b: 0 },
+    endColor: { r: 0, g: 0, b: 0 },
+    direction: 'horizontal'
+  })
+
+  // Out-of-range keys are ignored.
+  ledService.testCondition(16, { r: 9, g: 9, b: 9 })
+  ledService.testCondition(1.5, { r: 9, g: 9, b: 9 })
+  await ledService.flush()
+  expect(keyColor(1)).toEqual([200, 0, 0])
+
+  // The test starts lit and replaces the key's active condition.
+  ledService.testCondition(1, { r: 0, g: 250, b: 0 }, 'blink')
+  await Promise.resolve()
+  expect(keyColor(1)).toEqual([0, 250, 0])
+  now += 500
+  await ledService.flush()
+  expect(keyColor(1)).toEqual([0, 0, 0])
+  expect(keyColor(0)).toEqual([20, 40, 60])
+
+  // It ends on its own after five seconds.
+  now = 15_000
+  await ledService.flush()
+  expect(keyColor(1)).toEqual([200, 0, 0])
+
+  ledService.testCondition(0, { r: 0, g: 0, b: 250 })
+  await Promise.resolve()
+  expect(keyColor(0)).toEqual([0, 0, 250])
+  ledService.clearConditionTest()
+  await Promise.resolve()
+  expect(keyColor(0)).toEqual([20, 40, 60])
+
+  fakes.device.write.mockClear()
+  ledService.clearConditionTest()
+  expect(fakes.device.write).not.toHaveBeenCalled()
+  await ledService.shutdown()
+  vi.restoreAllMocks()
+})

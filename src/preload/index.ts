@@ -30,6 +30,13 @@ const api = {
       previewColor: { r: number; g: number; b: number } | null
     ): Promise<{ success: boolean }> =>
       ipcRenderer.invoke('streamdeck:setLedOverride', streamdeck, previewKey, previewColor),
+    testLedCondition: (
+      key: string,
+      color: { r: number; g: number; b: number },
+      effect: 'solid' | 'blink' | 'pulse'
+    ): Promise<{ success: boolean }> => ipcRenderer.invoke('led:testCondition', key, color, effect),
+    clearLedConditionTest: (): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke('led:clearConditionTest'),
     setLedProfile: (profile: unknown): Promise<{ success: boolean }> =>
       ipcRenderer.invoke('led:setProfile', profile)
   },
