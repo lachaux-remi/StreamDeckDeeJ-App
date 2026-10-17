@@ -168,20 +168,82 @@ test('leaves corrupt and undecryptable config files unchanged', () => {
   if (process.platform !== 'win32') {
     expect(statSync(malformedPath).mode & 0o777).toBe(0o600)
   }
+})
 
-  const unavailablePath = join(directory, 'unavailable.json')
-  const unavailable = JSON.stringify({
-    homeAssistant: {
-      token: { type: 'electron-safe-storage', data: 'fixture-ciphertext' }
-    }
-  })
-  writeFileSync(unavailablePath, unavailable, { mode: 0o600 })
+function lockedKeyring(): FakeSafeStorage {
   const adapter = safeStorage()
   adapter.decryptString = () => {
     throw new Error(fixtureSecret)
   }
-  expect(() =>
-    new SettingsPersistence(unavailablePath, new ElectronSafeStorageSecretCodec(adapter)).load()
-  ).toThrow()
-  expect(readFileSync(unavailablePath, 'utf8')).toBe(unavailable)
+  return adapter
+}
+
+const lockedCiphertext = { type: 'electron-safe-storage', data: 'fixture-ciphertext' }
+
+test('loads the rest of the config when the keyring cannot decrypt secrets', () => {
+  const path = join(mkdtempSync(join(tmpdir(), 'settings-')), 'config.json')
+  const stored = JSON.stringify({
+    retained: 1,
+    homeAssistant: { url: 'https://example.invalid', token: lockedCiphertext },
+    discord: { clientId: 'fixture-client', clientSecret: lockedCiphertext }
+  })
+  writeFileSync(path, stored, { mode: 0o600 })
+  const persistence = new SettingsPersistence(
+    path,
+    new ElectronSafeStorageSecretCodec(lockedKeyring())
+  )
+
+  expect(persistence.load()).toEqual({
+    retained: 1,
+    homeAssistant: { url: 'https://example.invalid', token: '' },
+    discord: { clientId: 'fixture-client', clientSecret: '' }
+  })
+  expect(persistence.hasUnavailableSecrets()).toBe(true)
+  expect(readFileSync(path, 'utf8')).toBe(stored)
+})
+
+test('keeps undecryptable secrets on save until a new value replaces them', () => {
+  const path = join(mkdtempSync(join(tmpdir(), 'settings-')), 'config.json')
+  writeFileSync(
+    path,
+    JSON.stringify({
+      homeAssistant: { url: 'https://example.invalid', token: lockedCiphertext },
+      discord: {
+        clientId: 'fixture-client',
+        clientSecret: lockedCiphertext,
+        accessToken: lockedCiphertext
+      }
+    }),
+    { mode: 0o600 }
+  )
+  const persistence = new SettingsPersistence(
+    path,
+    new ElectronSafeStorageSecretCodec(lockedKeyring())
+  )
+  persistence.load()
+
+  persistence.save({
+    homeAssistant: { url: 'https://changed.invalid', token: '' },
+    discord: undefined
+  })
+  expect(JSON.parse(readFileSync(path, 'utf8'))).toEqual({
+    homeAssistant: { url: 'https://changed.invalid', token: lockedCiphertext },
+    discord: { clientSecret: lockedCiphertext, accessToken: lockedCiphertext }
+  })
+
+  persistence.save({
+    homeAssistant: { url: 'https://changed.invalid', token: fixtureSecret },
+    discord: { clientId: 'fixture-client', clientSecret: '', accessToken: undefined }
+  })
+  const replaced = JSON.parse(readFileSync(path, 'utf8'))
+  expect(replaced.homeAssistant.token).toEqual({
+    type: 'electron-safe-storage',
+    data: Buffer.from(`protected:${fixtureSecret}`).toString('base64')
+  })
+  expect(replaced.discord).toEqual({
+    clientId: 'fixture-client',
+    clientSecret: lockedCiphertext,
+    accessToken: lockedCiphertext
+  })
+  expect(persistence.hasUnavailableSecrets()).toBe(true)
 })
