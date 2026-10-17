@@ -24,6 +24,7 @@ import ColorPicker from '@renderer/components/ui/ColorPicker'
 import {
   isRendererSettings,
   type LedMode,
+  type LedProfile,
   type LedPressEffectType,
   type SecretChange
 } from '@renderer/types/settings.types'
@@ -83,6 +84,7 @@ const PRESS_EFFECTS: { value: LedPressEffectType | 'none'; label: string; descri
   ]
 
 const DEFAULT_PRESS_COLOR = { r: 255, g: 255, b: 255 }
+const DEFAULT_CONDITION_SPEED = 50
 
 type Tab = 'hardware' | 'integrations' | 'rgb'
 type HardwarePermissionsDiagnostic = Awaited<
@@ -1161,6 +1163,34 @@ export default function SettingsSheet({
                         </div>
                       </div>
                     )}
+
+                    <div>
+                      <label className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground/70">
+                        <span>Vitesse des conditions</span>
+                        <span className="tabular-nums text-muted-foreground">
+                          {localSettings.ledProfile.conditionSpeed ?? DEFAULT_CONDITION_SPEED}%
+                        </span>
+                      </label>
+                      <Slider
+                        value={localSettings.ledProfile.conditionSpeed ?? DEFAULT_CONDITION_SPEED}
+                        min={1}
+                        max={100}
+                        onChange={(v) => {
+                          // The default is left out so the setting stays readable by older versions.
+                          const ledProfile: LedProfile = {
+                            ...localSettings.ledProfile,
+                            conditionSpeed: v
+                          }
+                          if (v === DEFAULT_CONDITION_SPEED) {
+                            delete ledProfile.conditionSpeed
+                          }
+                          setLocalSettings({ ...localSettings, ledProfile })
+                        }}
+                      />
+                      <p className="mt-1 text-[11px] text-muted-foreground/40">
+                        Rythme des conditions qui clignotent ou pulsent
+                      </p>
+                    </div>
 
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">

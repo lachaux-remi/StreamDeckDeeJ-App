@@ -52,6 +52,8 @@ export interface LedProfile {
   endColor: LedColor
   direction: 'horizontal' | 'vertical' | 'diagonal'
   pressEffect?: LedPressEffect
+  /** 1-100 rhythm of blinking and pulsing conditions; absent means 50. */
+  conditionSpeed?: number
 }
 
 export interface StreamdeckInputKey {
@@ -358,7 +360,8 @@ export function isLedProfile(value: unknown): value is LedProfile {
       'startColor',
       'endColor',
       'direction',
-      'pressEffect'
+      'pressEffect',
+      'conditionSpeed'
     ]) &&
     ledModes.includes(value.mode as LedMode) &&
     isIntegerBetween(value.speed, 0, 100) &&
@@ -366,7 +369,8 @@ export function isLedProfile(value: unknown): value is LedProfile {
     isLedColor(value.startColor) &&
     isLedColor(value.endColor) &&
     ['horizontal', 'vertical', 'diagonal'].includes(value.direction as string) &&
-    (value.pressEffect === undefined || isLedPressEffect(value.pressEffect))
+    (value.pressEffect === undefined || isLedPressEffect(value.pressEffect)) &&
+    (value.conditionSpeed === undefined || isIntegerBetween(value.conditionSpeed, 1, 100))
   )
 }
 

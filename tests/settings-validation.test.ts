@@ -181,6 +181,21 @@ test('validates attribute LED conditions and the automation module in both schem
   }
 })
 
+test('validates the condition speed in both schemas', () => {
+  for (const [conditionSpeed, valid] of [
+    [1, true],
+    [100, true],
+    [0, false],
+    [101, false],
+    [50.5, false]
+  ] as const) {
+    const update = rendererUpdate()
+    update.settings.ledProfile = { ...update.settings.ledProfile, conditionSpeed }
+    expect(isRendererSettingsUpdate(update)).toBe(valid)
+    expect(isRendererSettings(update.settings)).toBe(valid)
+  }
+})
+
 test('validates the new LED modes and press effects in both schemas', () => {
   for (const mode of ['twinkle', 'fire', 'gradient', 'rainbow-wave']) {
     const update = rendererUpdate()
