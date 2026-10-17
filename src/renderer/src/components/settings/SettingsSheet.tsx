@@ -21,7 +21,12 @@ import { useSettingsStore } from '@renderer/stores/settings.store'
 import { useSerialStore } from '@renderer/stores/serial.store'
 import CustomSelect from '@renderer/components/ui/CustomSelect'
 import ColorPicker from '@renderer/components/ui/ColorPicker'
-import { isRendererSettings, type LedMode, type SecretChange } from '@renderer/types/settings.types'
+import {
+  isRendererSettings,
+  type LedMode,
+  type LedPressEffectType,
+  type SecretChange
+} from '@renderer/types/settings.types'
 
 const LED_MODES: { value: LedMode; label: string; description: string }[] = [
   { value: 'static', label: 'Statique', description: 'Couleur fixe uniforme' },
@@ -35,11 +40,28 @@ const LED_MODES: { value: LedMode; label: string; description: string }[] = [
     label: 'Séquentiel',
     description: 'Allumage progressif bouton par bouton'
   },
-  { value: 'spinner', label: 'Spinner', description: 'Bouton lumineux tournant' }
+  { value: 'spinner', label: 'Spinner', description: 'Bouton lumineux tournant' },
+  { value: 'twinkle', label: 'Scintillement', description: 'Touches qui s’allument au hasard' },
+  { value: 'fire', label: 'Feu', description: 'Flammes qui montent du bas' },
+  { value: 'gradient', label: 'Dégradé', description: 'Dégradé fixe entre deux couleurs' },
+  {
+    value: 'rainbow-wave',
+    label: 'Vague arc-en-ciel',
+    description: 'Arc-en-ciel qui défile dans une direction'
+  }
 ]
 
-const MODES_WITH_END_COLOR: LedMode[] = ['wave', 'colorshift', 'visor']
-const MODES_WITH_DIRECTION: LedMode[] = ['wave', 'visor']
+const MODES_WITH_END_COLOR: LedMode[] = [
+  'wave',
+  'colorshift',
+  'visor',
+  'sequential',
+  'twinkle',
+  'fire',
+  'gradient'
+]
+const MODES_WITH_DIRECTION: LedMode[] = ['wave', 'visor', 'gradient', 'rainbow-wave']
+const MODES_WITHOUT_START_COLOR: LedMode[] = ['rainbow', 'rainbow-wave']
 const MODES_WITH_SPEED: LedMode[] = [
   'rainbow',
   'wave',
@@ -47,8 +69,20 @@ const MODES_WITH_SPEED: LedMode[] = [
   'colorshift',
   'visor',
   'sequential',
-  'spinner'
+  'spinner',
+  'twinkle',
+  'fire',
+  'rainbow-wave'
 ]
+
+const PRESS_EFFECTS: { value: LedPressEffectType | 'none'; label: string; description: string }[] =
+  [
+    { value: 'none', label: 'Aucun', description: 'Pas de retour visuel' },
+    { value: 'flash', label: 'Flash', description: 'La touche appuyée s’illumine' },
+    { value: 'ripple', label: 'Onde', description: 'Un anneau part de la touche appuyée' }
+  ]
+
+const DEFAULT_PRESS_COLOR = { r: 255, g: 255, b: 255 }
 
 type Tab = 'hardware' | 'integrations' | 'rgb'
 type HardwarePermissionsDiagnostic = Awaited<
@@ -1052,45 +1086,47 @@ export default function SettingsSheet({
                       </div>
                     )}
 
-                    <div
-                      className={cn(
-                        'grid gap-3',
-                        MODES_WITH_END_COLOR.includes(localSettings.ledProfile.mode)
-                          ? 'grid-cols-2'
-                          : 'grid-cols-1'
-                      )}
-                    >
-                      <div>
-                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                          Couleur principale
-                        </label>
-                        <ColorPicker
-                          value={localSettings.ledProfile.startColor}
-                          onChange={(c) =>
-                            setLocalSettings({
-                              ...localSettings,
-                              ledProfile: { ...localSettings.ledProfile, startColor: c }
-                            })
-                          }
-                        />
-                      </div>
-                      {MODES_WITH_END_COLOR.includes(localSettings.ledProfile.mode) && (
+                    {!MODES_WITHOUT_START_COLOR.includes(localSettings.ledProfile.mode) && (
+                      <div
+                        className={cn(
+                          'grid gap-3',
+                          MODES_WITH_END_COLOR.includes(localSettings.ledProfile.mode)
+                            ? 'grid-cols-2'
+                            : 'grid-cols-1'
+                        )}
+                      >
                         <div>
                           <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
-                            Couleur secondaire
+                            Couleur principale
                           </label>
                           <ColorPicker
-                            value={localSettings.ledProfile.endColor}
+                            value={localSettings.ledProfile.startColor}
                             onChange={(c) =>
                               setLocalSettings({
                                 ...localSettings,
-                                ledProfile: { ...localSettings.ledProfile, endColor: c }
+                                ledProfile: { ...localSettings.ledProfile, startColor: c }
                               })
                             }
                           />
                         </div>
-                      )}
-                    </div>
+                        {MODES_WITH_END_COLOR.includes(localSettings.ledProfile.mode) && (
+                          <div>
+                            <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                              Couleur secondaire
+                            </label>
+                            <ColorPicker
+                              value={localSettings.ledProfile.endColor}
+                              onChange={(c) =>
+                                setLocalSettings({
+                                  ...localSettings,
+                                  ledProfile: { ...localSettings.ledProfile, endColor: c }
+                                })
+                              }
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {MODES_WITH_DIRECTION.includes(localSettings.ledProfile.mode) && (
                       <div>
@@ -1123,6 +1159,49 @@ export default function SettingsSheet({
                             </button>
                           ))}
                         </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                        Effet à l&apos;appui
+                      </label>
+                      <CustomSelect
+                        value={localSettings.ledProfile.pressEffect?.type ?? 'none'}
+                        onChange={(val) => {
+                          const ledProfile = { ...localSettings.ledProfile }
+                          if (val === 'none') {
+                            delete ledProfile.pressEffect
+                          } else {
+                            ledProfile.pressEffect = {
+                              type: val as LedPressEffectType,
+                              color: ledProfile.pressEffect?.color ?? DEFAULT_PRESS_COLOR
+                            }
+                          }
+                          setLocalSettings({ ...localSettings, ledProfile })
+                        }}
+                        options={PRESS_EFFECTS}
+                        accent="pink"
+                      />
+                    </div>
+
+                    {localSettings.ledProfile.pressEffect && (
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground/70">
+                          Couleur de l&apos;effet
+                        </label>
+                        <ColorPicker
+                          value={localSettings.ledProfile.pressEffect.color}
+                          onChange={(color) =>
+                            setLocalSettings({
+                              ...localSettings,
+                              ledProfile: {
+                                ...localSettings.ledProfile,
+                                pressEffect: { ...localSettings.ledProfile.pressEffect!, color }
+                              }
+                            })
+                          }
+                        />
                       </div>
                     )}
                   </div>

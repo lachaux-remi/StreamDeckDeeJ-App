@@ -245,6 +245,16 @@ app.whenReady().then(async () => {
   loggerService.on('log', (log) => webContents.send('electron:log', log))
   platformRuntime.updater.onStateChanged((state) => webContents.send('update:state', state))
 
+  // The dashboard mirrors the LED colors, computed only while it can be seen.
+  ledService.onFrame((colors) => webContents.send('led:frame', colors))
+  const syncLedPreview = (): void =>
+    ledService.setPreviewActive(window.isVisible() && !window.isMinimized())
+  window.on('show', syncLedPreview)
+  window.on('hide', syncLedPreview)
+  window.on('minimize', syncLedPreview)
+  window.on('restore', syncLedPreview)
+  syncLedPreview()
+
   if (levelMeter) {
     levelMeter.on('levels', (levels) => webContents.send('deej:levels', levels))
     // Capture processes only run while the meters can be seen.

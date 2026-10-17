@@ -10,7 +10,15 @@ import { configService } from './config.service'
 import { loggerService } from './logger.service'
 import { conditionService } from './condition.service'
 import { discordService } from './discord.service'
-import { LedEngine, applyBrightness } from './led-engine'
+import {
+  LedEngine,
+  applyBrightness,
+  applyPressEffect,
+  conditionIntensity,
+  pressEffectDuration,
+  scaleColor,
+  type LedPress
+} from './led-engine'
 
 const SERVICE = 'LedService'
 const VID = 0x5239
@@ -39,6 +47,9 @@ class LedService {
   private isShuttingDown = false
   private haButtonStates: Record<string, string> = {}
   private haButtonAttributes: Record<string, Record<string, unknown>> = {}
+  private presses: LedPress[] = []
+  private previewActive = false
+  private frameListener: ((colors: LedColor[]) => void) | null = null
 
   async init(microphone: MicrophoneCapability): Promise<void> {
     const config = configService.getConfig()
@@ -48,10 +59,7 @@ class LedService {
     this.buttonConfigs = config.streamdeck
 
     await this.connect()
-
-    if (this.device) {
-      this.startAnimation()
-    }
+    this.syncAnimation()
 
     microphone.on('change', () => void this.flush())
     discordService.on('change', () => void this.flush())
@@ -69,6 +77,26 @@ class LedService {
     if (attributes) {
       this.haButtonAttributes[buttonKey] = attributes
     }
+    void this.flush()
+  }
+
+  /** Receives every frame while the preview is active, with or without a device. */
+  onFrame(listener: (colors: LedColor[]) => void): void {
+    this.frameListener = listener
+  }
+
+  /** The preview keeps the animation running without a device, e.g. while the window is visible. */
+  setPreviewActive(active: boolean): void {
+    this.previewActive = active
+    this.syncAnimation()
+  }
+
+  /** Starts the press effect, if any, from the key at this LED index. */
+  notifyPress(index: number): void {
+    if (!this.profile.pressEffect || !Number.isInteger(index) || index < 0 || index >= LED_COUNT) {
+      return
+    }
+    this.presses.push({ index, at: performance.now() })
     void this.flush()
   }
 
@@ -91,23 +119,27 @@ class LedService {
   }
 
   async flush(): Promise<void> {
-    if (!this.device || this.isShuttingDown) {
+    if (this.isShuttingDown || (!this.device && !this.previewActive)) {
       return
     }
     try {
-      const base = this.engine.compute(this.profile, LED_COUNT, this.gridCols, performance.now())
+      const now = performance.now()
+      let base = this.engine.compute(this.profile, LED_COUNT, this.gridCols, now)
 
       for (let i = 0; i < LED_COUNT; i++) {
         const btnCfg = this.buttonConfigs[String(i)]
         if (btnCfg?.ledConditions?.length) {
           const haState = this.haButtonStates[String(i)]
-          const condColor = conditionService.resolveColor(
+          const condition = conditionService.resolve(
             btnCfg.ledConditions,
             haState,
             this.haButtonAttributes[String(i)]
           )
-          if (condColor) {
-            base[i] = applyBrightness(condColor, this.profile.brightness)
+          if (condition) {
+            base[i] = applyBrightness(
+              scaleColor(condition.color, conditionIntensity(condition.effect, now)),
+              this.profile.brightness
+            )
             continue
           }
         }
@@ -116,12 +148,32 @@ class LedService {
         }
       }
 
-      const packet = this.buildPacket(base)
-      await this.device.write(packet)
+      const pressEffect = this.profile.pressEffect
+      if (pressEffect) {
+        const duration = pressEffectDuration(pressEffect, LED_COUNT, this.gridCols)
+        this.presses = this.presses.filter((press) => now - press.at < duration)
+        base = applyPressEffect(
+          base,
+          pressEffect,
+          this.presses,
+          this.gridCols,
+          this.profile.brightness,
+          now
+        )
+      } else {
+        this.presses = []
+      }
+
+      if (this.previewActive) {
+        this.frameListener?.(base)
+      }
+      if (this.device) {
+        await this.device.write(this.buildPacket(base))
+      }
     } catch (err) {
       loggerService.warn(`LED flush error: ${err}`, SERVICE)
       this.device = null
-      this.stopAnimation()
+      this.syncAnimation()
       if (this.reconnectTimer || this.isShuttingDown) {
         return
       }
@@ -130,11 +182,7 @@ class LedService {
         if (this.isShuttingDown) {
           return
         }
-        void this.connect().then(() => {
-          if (this.device && !this.isShuttingDown) {
-            this.startAnimation()
-          }
-        })
+        void this.connect().then(() => this.syncAnimation())
       }, 5000)
     }
   }
@@ -178,10 +226,15 @@ class LedService {
     return packet
   }
 
-  private startAnimation(): void {
-    this.stopAnimation()
-    this.animTimer = setInterval(() => void this.flush(), 33)
-    void this.flush()
+  // Animates while there is a device to drive or a preview to show.
+  private syncAnimation(): void {
+    const shouldRun = !this.isShuttingDown && (this.device !== null || this.previewActive)
+    if (shouldRun && !this.animTimer) {
+      this.animTimer = setInterval(() => void this.flush(), 33)
+      void this.flush()
+    } else if (!shouldRun) {
+      this.stopAnimation()
+    }
   }
 
   private stopAnimation(): void {

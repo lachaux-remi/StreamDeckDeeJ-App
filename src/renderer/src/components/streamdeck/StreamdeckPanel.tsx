@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Gamepad2 } from 'lucide-react'
 import { useSettingsStore } from '@renderer/stores/settings.store'
+import { isLedFrame, type LedColor } from '@renderer/types/settings.types'
 import StreamdeckButton from './StreamdeckButton'
 
 interface StreamdeckPanelProps {
@@ -19,6 +20,17 @@ export default function StreamdeckPanel({
   const [dragSourceIndex, setDragSourceIndex] = useState<string | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<string | null>(null)
   const didDrag = useRef(false)
+  const [ledFrame, setLedFrame] = useState<LedColor[]>([])
+
+  useEffect(
+    () =>
+      window.api.on.ledFrame((colors) => {
+        if (isLedFrame(colors)) {
+          setLedFrame(colors)
+        }
+      }),
+    []
+  )
 
   const totalButtons = gridCols * gridRows
   const buttons = Array.from({ length: totalButtons }, (_, i) => i.toString())
@@ -110,6 +122,7 @@ export default function StreamdeckPanel({
                 key={index}
                 index={index}
                 config={streamdeck[index]}
+                ledColor={ledFrame[i]}
                 cellSize={cellSize}
                 onClick={() => {
                   if (!didDrag.current) {

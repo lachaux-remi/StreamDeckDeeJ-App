@@ -114,17 +114,21 @@ class ConditionService {
     }
   }
 
+  /** First active condition, which decides the key's color and effect. */
+  resolve(
+    conditions: LedCondition[],
+    haState?: string,
+    haAttributes?: Record<string, unknown>
+  ): LedCondition | undefined {
+    return conditions.find((cond) => this.evaluate(cond, haState, haAttributes))
+  }
+
   resolveColor(
     conditions: LedCondition[],
     haState?: string,
     haAttributes?: Record<string, unknown>
   ): LedColor | undefined {
-    for (const cond of conditions) {
-      if (this.evaluate(cond, haState, haAttributes)) {
-        return cond.color
-      }
-    }
-    return undefined
+    return this.resolve(conditions, haState, haAttributes)?.color
   }
 }
 

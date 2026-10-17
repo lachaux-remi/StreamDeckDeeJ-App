@@ -103,6 +103,7 @@ test('subscriptions forward payloads and dispose the exact registered listener',
     [() => api.conditions.onChange(vi.fn()), 'conditions:change', [{ micMuted: true }]],
     [() => api.on.slidersUpdate(vi.fn()), 'deej:sliders', [{ '0': 0.5 }]],
     [() => api.on.levelsUpdate(vi.fn()), 'deej:levels', [{ '0': 0.25 }]],
+    [() => api.on.ledFrame(vi.fn()), 'led:frame', [[{ r: 1, g: 2, b: 3 }]]],
     [() => api.on.streamdeckUpdate(vi.fn()), 'streamdeck:update', ['3', { pressed: true }]],
     [() => api.on.serialStatus(vi.fn()), 'serial:status', [{ connected: true, port: 'tty0' }]],
     [() => api.on.log(vi.fn()), 'electron:log', [{ level: 'info' }]]

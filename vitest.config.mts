@@ -44,6 +44,7 @@ export default defineConfig({
         'src/main/services/update-policy.ts',
         'src/main/services/windows-update.service.ts',
         'src/main/services/linux-update.service.ts',
+        'src/main/services/led-engine.ts',
         'src/main/services/led.service.ts',
         'src/main/services/renderer-settings.ts',
         'src/main/services/secret-storage.ts',
@@ -126,6 +127,12 @@ export default defineConfig({
           functions: 80,
           lines: 73.59,
           statements: 69.58
+        },
+        'src/main/services/led-engine.ts': {
+          branches: 100,
+          functions: 100,
+          lines: 100,
+          statements: 100
         },
         'src/main/services/led.service.ts': {
           branches: 68.75,

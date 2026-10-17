@@ -10,7 +10,7 @@ const fakes = vi.hoisted(() => ({
   configListener: undefined as ((config: Record<string, unknown>) => void) | undefined,
   mic: { on: vi.fn() },
   discord: { on: vi.fn() },
-  resolveColor: vi.fn()
+  resolve: vi.fn()
 }))
 
 vi.mock('node-hid', () => ({
@@ -53,7 +53,7 @@ vi.mock('@main/services/logger.service', () => ({
 vi.mock('@main/services/mic.service', () => ({ micService: fakes.mic }))
 vi.mock('@main/services/discord.service', () => ({ discordService: fakes.discord }))
 vi.mock('@main/services/condition.service', () => ({
-  conditionService: { resolveColor: fakes.resolveColor }
+  conditionService: { resolve: fakes.resolve }
 }))
 
 beforeEach(() => {
@@ -65,7 +65,7 @@ beforeEach(() => {
   fakes.open.mockResolvedValue(fakes.device)
   fakes.device.write.mockResolvedValue(undefined)
   fakes.device.close.mockResolvedValue(undefined)
-  fakes.resolveColor.mockReturnValue({ r: 200, g: 0, b: 0 })
+  fakes.resolve.mockReturnValue({ type: 'mic-mute', color: { r: 200, g: 0, b: 0 } })
 })
 
 test('writes a bounded 64-byte HID packet with condition and override precedence', async () => {
@@ -115,7 +115,7 @@ test('applies runtime profile, override, Home Assistant, and config updates', as
   ledService.setHAButtonState('1', 'on', { brightness: 120 })
   await Promise.resolve()
 
-  expect(fakes.resolveColor).toHaveBeenCalledWith(expect.any(Array), 'on', { brightness: 120 })
+  expect(fakes.resolve).toHaveBeenCalledWith(expect.any(Array), 'on', { brightness: 120 })
   fakes.configListener?.({ streamdeck: {}, ledProfile: undefined, gridCols: undefined })
   await ledService.shutdown()
 })
@@ -134,4 +134,91 @@ test('handles missing and failing HID devices without starting animation work', 
   await second.ledService.init(fakes.mic as never)
   expect(vi.getTimerCount()).toBe(0)
   await second.ledService.shutdown()
+})
+
+test('draws press feedback and condition effects over the frame', async () => {
+  let now = 1_000
+  vi.spyOn(performance, 'now').mockImplementation(() => now)
+  const { ledService } = await import('@main/services/led.service')
+  await ledService.init(fakes.mic as never)
+  const keyColor = (index: number): number[] => {
+    const packet = fakes.device.write.mock.calls.at(-1)?.[0] as number[]
+    return packet.slice(2 + index * 3, 5 + index * 3)
+  }
+  const profile = {
+    mode: 'static' as const,
+    speed: 50,
+    brightness: 100,
+    startColor: { r: 0, g: 0, b: 0 },
+    endColor: { r: 0, g: 0, b: 0 },
+    direction: 'horizontal' as const
+  }
+
+  // Without a press effect, presses are ignored.
+  ledService.notifyPress(5)
+  ledService.updateProfile({
+    ...profile,
+    pressEffect: { type: 'flash', color: { r: 0, g: 0, b: 250 } }
+  })
+  ledService.notifyPress(99)
+  ledService.notifyPress(5)
+  await Promise.resolve()
+  expect(keyColor(5)).toEqual([0, 0, 250])
+
+  now += 1_000
+  await ledService.flush()
+  expect(keyColor(5)).toEqual([0, 0, 0])
+
+  fakes.resolve.mockReturnValue({
+    type: 'mic-mute',
+    color: { r: 200, g: 0, b: 0 },
+    effect: 'blink'
+  })
+  ledService.updateProfile(profile)
+  ledService.notifyPress(5)
+  now = 2_000
+  await ledService.flush()
+  expect(keyColor(1)).toEqual([200, 0, 0])
+  expect(keyColor(5)).toEqual([0, 0, 0])
+  now = 2_500
+  await ledService.flush()
+  expect(keyColor(1)).toEqual([0, 0, 0])
+  await ledService.shutdown()
+  vi.restoreAllMocks()
+})
+
+test('streams preview frames without a device only while the preview is active', async () => {
+  fakes.devices.mockReturnValue([])
+  const { ledService } = await import('@main/services/led.service')
+  const frames = vi.fn()
+  ledService.onFrame(frames)
+  await ledService.init(fakes.mic as never)
+  expect(vi.getTimerCount()).toBe(0)
+
+  ledService.setPreviewActive(true)
+  ledService.setPreviewActive(true)
+  await vi.advanceTimersByTimeAsync(100)
+  expect(vi.getTimerCount()).toBe(1)
+  expect(frames.mock.calls.at(-1)?.[0]).toHaveLength(16)
+  expect(fakes.device.write).not.toHaveBeenCalled()
+
+  ledService.setPreviewActive(false)
+  frames.mockClear()
+  await ledService.flush()
+  expect(frames).not.toHaveBeenCalled()
+  expect(vi.getTimerCount()).toBe(0)
+  await ledService.shutdown()
+})
+
+test('keeps the preview running when the device write fails', async () => {
+  const { ledService } = await import('@main/services/led.service')
+  await ledService.init(fakes.mic as never)
+  ledService.setPreviewActive(true)
+  fakes.device.write.mockRejectedValueOnce(new Error('device removed'))
+
+  await ledService.flush()
+  // Animation plus the reconnect timer.
+  expect(vi.getTimerCount()).toBe(2)
+  await ledService.shutdown()
+  expect(vi.getTimerCount()).toBe(0)
 })
