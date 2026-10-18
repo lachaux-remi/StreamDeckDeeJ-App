@@ -428,7 +428,7 @@ export default function StreamdeckConfigDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={handleClose} />
-      <div className="relative flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-x-clip rounded-2xl border border-border/50 bg-surface-1 p-6 shadow-2xl animate-slide-up">
+      <div className="relative flex max-h-[min(calc(100vh-2rem),760px)] w-full max-w-2xl flex-col overflow-x-clip rounded-2xl border border-border/50 bg-surface-1 p-6 shadow-2xl animate-slide-up">
         {/* Header */}
         <div className="mb-5 flex shrink-0 items-center justify-between">
           <h3 className="font-display text-lg font-bold">
