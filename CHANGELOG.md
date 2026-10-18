@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.8.0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.7.0...v4.8.0) (2026-10-18)
+
+
+### Fonctionnalités
+
+* **ui:** show the LED preview as a light bar on top of each key ([#115](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/115)) ([8331774](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/83317746bdbc9fe470890c4b80362298f3f077b3))
+
+
+### Corrections de bugs
+
+* **ui:** lay out LED condition rows on several lines ([#114](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/114)) ([a592369](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/a5923696717f4f37d12d6d45de01845c11775d98))
+
 ## [4.7.0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.6.0...v4.7.0) (2026-10-17)
 
 
