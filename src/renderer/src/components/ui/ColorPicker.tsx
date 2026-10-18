@@ -87,6 +87,9 @@ interface ColorPickerProps {
   compact?: boolean
 }
 
+const PANEL_W = 228
+const PANEL_H = 252
+
 export default function ColorPicker({
   value,
   onChange,
@@ -100,8 +103,6 @@ export default function ColorPicker({
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
-  const PANEL_W = 228
-  const PANEL_H = 252
   const { r, g, b } = value
 
   useEffect(() => {
@@ -109,6 +110,19 @@ export default function ColorPicker({
     setHsv(rgbToHsv(nextValue))
     setHexInput(toHex(nextValue).slice(1))
   }, [r, g, b])
+
+  // The panel is fixed in a portal, so it follows the trigger whenever the
+  // window is resized or a container scrolls.
+  const updatePosition = useCallback((): void => {
+    if (!triggerRef.current) {
+      return
+    }
+    const rect = triggerRef.current.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const top = spaceBelow > PANEL_H + 8 ? rect.bottom + 6 : rect.top - PANEL_H - 6
+    const left = Math.min(rect.left, window.innerWidth - PANEL_W - 8)
+    setPanelPos({ top, left })
+  }, [])
 
   useEffect(() => {
     if (!isOpen) {
@@ -122,20 +136,27 @@ export default function ColorPicker({
         setIsOpen(false)
       }
     }
+    const handleScroll = (e: Event): void => {
+      if (!panelRef.current?.contains(e.target as Node)) {
+        updatePosition()
+      }
+    }
     document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [isOpen])
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', handleScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', handleScroll, true)
+    }
+  }, [isOpen, updatePosition])
 
   const handleToggle = useCallback(() => {
-    if (!isOpen && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect()
-      const spaceBelow = window.innerHeight - rect.bottom
-      const top = spaceBelow > PANEL_H + 8 ? rect.bottom + 6 : rect.top - PANEL_H - 6
-      const left = Math.min(rect.left, window.innerWidth - PANEL_W - 8)
-      setPanelPos({ top, left })
+    if (!isOpen) {
+      updatePosition()
     }
     setIsOpen((v) => !v)
-  }, [isOpen])
+  }, [isOpen, updatePosition])
 
   const [h, s, v] = hsv
   const hueRgb = hsvToRgb(h, 100, 100)
