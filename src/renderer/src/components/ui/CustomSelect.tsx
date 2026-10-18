@@ -17,6 +17,10 @@ interface DropdownPosition {
   maxHeight: number
 }
 
+// Narrow triggers still open a readable list, kept inside the window.
+const MIN_PANEL_WIDTH = 180
+const VIEWPORT_MARGIN = 8
+
 interface CustomSelectProps {
   value: string
   options: SelectOption[]
@@ -58,10 +62,18 @@ export default function CustomSelect({
     // Open upward only when the list does not fit below and there is more room above;
     // past the available room the panel scrolls.
     const openAbove = spaceBelow < estimatedH && spaceAbove > spaceBelow
+    const width = Math.min(
+      Math.max(rect.width, MIN_PANEL_WIDTH),
+      window.innerWidth - 2 * VIEWPORT_MARGIN
+    )
+    const left = Math.max(
+      VIEWPORT_MARGIN,
+      Math.min(rect.left, window.innerWidth - VIEWPORT_MARGIN - width)
+    )
     setDropdownPos({
       ...(openAbove ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }),
-      left: rect.left,
-      width: rect.width,
+      left,
+      width,
       maxHeight: Math.max(0, openAbove ? spaceAbove : spaceBelow)
     })
   }, [options.length])
@@ -130,12 +142,17 @@ export default function CustomSelect({
             : 'border-border/40 hover:border-border'
         )}
       >
-        <span className={selected ? 'text-foreground' : 'text-muted-foreground/40'}>
+        <span
+          className={cn(
+            'min-w-0 truncate',
+            selected ? 'text-foreground' : 'text-muted-foreground/40'
+          )}
+        >
           {selected?.label || placeholder}
         </span>
         <ChevronDown
           className={cn(
-            'h-4 w-4 text-muted-foreground/50 transition-transform duration-200',
+            'h-4 w-4 shrink-0 text-muted-foreground/50 transition-transform duration-200',
             isOpen && 'rotate-180'
           )}
         />

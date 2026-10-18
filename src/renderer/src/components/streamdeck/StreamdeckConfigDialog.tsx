@@ -608,7 +608,18 @@ export default function StreamdeckConfigDialog({
                           />
                         </div>
 
-                        <div className="w-24 shrink-0">
+                        <button
+                          onClick={() =>
+                            updateLedConditions((prev) => prev.filter((_, i) => i !== idx))
+                          }
+                          className="shrink-0 rounded p-1 text-muted-foreground/30 hover:text-neon-red transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2 pl-5">
+                        <div className="min-w-0 flex-1">
                           <CustomSelect
                             value={cond.effect ?? 'solid'}
                             onChange={(val) => {
@@ -665,15 +676,6 @@ export default function StreamdeckConfigDialog({
                             <Play className="h-3 w-3" />
                           )}
                           Tester
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            updateLedConditions((prev) => prev.filter((_, i) => i !== idx))
-                          }
-                          className="shrink-0 rounded p-1 text-muted-foreground/30 hover:text-neon-red transition-colors"
-                        >
-                          <X className="h-3 w-3" />
                         </button>
                       </div>
 
