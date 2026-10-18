@@ -428,9 +428,9 @@ export default function StreamdeckConfigDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={handleClose} />
-      <div className="relative w-full max-w-2xl overflow-x-clip rounded-2xl border border-border/50 bg-surface-1 p-6 shadow-2xl animate-slide-up">
+      <div className="relative flex max-h-[min(calc(100vh-2rem),760px)] w-full max-w-2xl flex-col overflow-x-clip rounded-2xl border border-border/50 bg-surface-1 p-6 shadow-2xl animate-slide-up">
         {/* Header */}
-        <div className="mb-5 flex items-center justify-between">
+        <div className="mb-5 flex shrink-0 items-center justify-between">
           <h3 className="font-display text-lg font-bold">
             Bouton <span className="text-neon-purple">{parseInt(buttonIndex) + 1}</span>
           </h3>
@@ -442,572 +442,583 @@ export default function StreamdeckConfigDialog({
           </button>
         </div>
 
-        {/* Two-column body */}
-        <div className="grid grid-cols-2 items-start divide-x divide-border/20">
-          {/* Left column : LED */}
-          <div className="space-y-5 pr-6">
-            {/* Main icon */}
-            <div>
-              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-                Icône principale
-              </label>
-              <IconUpload
-                icon={mainIcon}
-                onUpload={handleMainIconUpload}
-                onRemove={() => setMainIcon(undefined)}
-                size="md"
-              />
-            </div>
-
-            {/* LED override */}
-            <div>
-              <label className="group flex cursor-pointer items-center justify-between gap-3 text-muted-foreground hover:text-foreground transition-colors">
-                <div>
-                  <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 group-hover:text-muted-foreground/80 transition-colors">
-                    Couleur LED
-                  </span>
-                  {!ledOverrideEnabled && (
-                    <p className="text-[11px] text-muted-foreground/30">
-                      Suit l{"'"}animation globale
-                    </p>
-                  )}
-                </div>
-                <div className="relative flex-shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={ledOverrideEnabled}
-                    onChange={(e) => {
-                      const enabled = e.target.checked
-                      setLedOverrideEnabled(enabled)
-                      sendLedPreview(enabled ? ledColor : null, ledConditions)
-                    }}
-                    className="peer sr-only"
-                  />
-                  <div className="h-6 w-11 rounded-full border border-border/50 bg-surface-3 transition-all duration-300 peer-checked:border-neon-pink/40 peer-checked:bg-neon-pink/20 peer-checked:shadow-[0_0_8px_#f472b64d]" />
-                  <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-muted-foreground/40 shadow-sm transition-all duration-300 peer-checked:left-[22px] peer-checked:bg-neon-pink peer-checked:shadow-[0_0_6px_#f472b680]" />
-                </div>
-              </label>
-
-              {ledOverrideEnabled && (
-                <div className="mt-3 animate-fade-in">
-                  <ColorPicker
-                    value={ledColor}
-                    onChange={(c) => {
-                      setLedColor(c)
-                      sendLedPreview(c, ledConditions)
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* LED conditions */}
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-                  Conditions LED
-                </span>
-                <button
-                  onClick={() =>
-                    updateLedConditions((prev) => [
-                      ...prev,
-                      { type: 'mic-mute', color: { r: 255, g: 0, b: 0 } }
-                    ])
-                  }
-                  className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground/50 hover:text-neon-pink hover:bg-neon-pink/10 transition-colors"
-                >
-                  <Plus className="h-3 w-3" />
-                  Ajouter
-                </button>
-              </div>
-
-              {ledConditions.some((c) => c.type.startsWith('discord')) &&
-                !conditionsState.discordConnected && (
-                  <div className="mb-2 flex items-center gap-2 rounded-lg border border-neon-orange/20 bg-neon-orange/5 px-3 py-2">
-                    <WifiOff className="h-3 w-3 shrink-0 text-neon-orange/70" />
-                    <span className="text-[11px] text-neon-orange/70">Discord non connecté</span>
-                  </div>
-                )}
-
-              {ledConditions.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground/30">Aucune condition configurée</p>
-              ) : (
-                <div className="space-y-2">
-                  {ledConditions.map((cond, idx) => (
-                    <div
-                      key={idx}
-                      draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer.effectAllowed = 'move'
-                        setDragIndex(idx)
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault()
-                        e.dataTransfer.dropEffect = 'move'
-                        if (dragOverIndex !== idx) {
-                          setDragOverIndex(idx)
-                        }
-                      }}
-                      onDragLeave={() => setDragOverIndex(null)}
-                      onDrop={(e) => {
-                        e.preventDefault()
-                        if (dragIndex !== null && dragIndex !== idx) {
-                          updateLedConditions((prev) => {
-                            const next = [...prev]
-                            const [item] = next.splice(dragIndex, 1)
-                            next.splice(idx, 0, item)
-                            return next
-                          })
-                        }
-                        setDragIndex(null)
-                        setDragOverIndex(null)
-                      }}
-                      onDragEnd={() => {
-                        setDragIndex(null)
-                        setDragOverIndex(null)
-                      }}
-                      className={cn(
-                        'space-y-2 rounded-lg border bg-surface-2/50 px-2 py-2 transition-colors',
-                        dragOverIndex === idx
-                          ? 'border-neon-pink/50 bg-neon-pink/5'
-                          : dragIndex === idx
-                            ? 'border-border/30 opacity-40'
-                            : 'border-border/30'
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/20 active:cursor-grabbing" />
-
-                        <div className="flex-1 min-w-0">
-                          <CustomSelect
-                            value={cond.type}
-                            onChange={(val) => {
-                              updateLedConditions((prev) =>
-                                prev.map((c, i) =>
-                                  i !== idx
-                                    ? c
-                                    : val === 'ha-attr'
-                                      ? {
-                                          type: 'ha-attr',
-                                          color: c.color,
-                                          ...(c.effect && { effect: c.effect }),
-                                          haAttribute: c.haAttribute ?? '',
-                                          haOperator: c.haOperator ?? 'eq',
-                                          haValue: c.haValue ?? ''
-                                        }
-                                      : {
-                                          type: val as LedConditionType,
-                                          color: c.color,
-                                          ...(c.effect && { effect: c.effect })
-                                        }
-                                )
-                              )
-                            }}
-                            options={CONDITION_OPTIONS}
-                            accent="pink"
-                          />
-                        </div>
-
-                        <div className="w-24 shrink-0">
-                          <CustomSelect
-                            value={cond.effect ?? 'solid'}
-                            onChange={(val) => {
-                              updateLedConditions((prev) =>
-                                prev.map((item, i) => {
-                                  if (i !== idx) {
-                                    return item
-                                  }
-                                  const next: LedCondition = {
-                                    ...item,
-                                    effect: val as LedConditionEffect
-                                  }
-                                  if (val === 'solid') {
-                                    delete next.effect
-                                  }
-                                  return next
-                                })
-                              )
-                            }}
-                            options={EFFECT_OPTIONS}
-                            accent="pink"
-                          />
-                        </div>
-
-                        <div className="shrink-0 flex items-center">
-                          <ColorPicker
-                            value={cond.color}
-                            onChange={(c) => {
-                              updateLedConditions((prev) =>
-                                prev.map((item, i) => (i === idx ? { ...item, color: c } : item))
-                              )
-                            }}
-                            compact
-                          />
-                        </div>
-
-                        <button
-                          onClick={() => setTestingIndex((prev) => (prev === idx ? null : idx))}
-                          title={
-                            testingIndex === idx
-                              ? 'Arrêter le test'
-                              : 'Tester cette condition sur la touche pendant 5 secondes'
-                          }
-                          className={cn(
-                            'flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium transition-colors',
-                            testingIndex === idx
-                              ? 'bg-neon-pink/15 text-neon-pink'
-                              : 'text-muted-foreground/50 hover:bg-neon-pink/10 hover:text-neon-pink'
-                          )}
-                        >
-                          {testingIndex === idx ? (
-                            <Square className="h-3 w-3" />
-                          ) : (
-                            <Play className="h-3 w-3" />
-                          )}
-                          Tester
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            updateLedConditions((prev) => prev.filter((_, i) => i !== idx))
-                          }
-                          className="shrink-0 rounded p-1 text-muted-foreground/30 hover:text-neon-red transition-colors"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-
-                      {cond.type === 'ha-attr' && (
-                        <div className="space-y-1.5 pl-5">
-                          <div>
-                            <AutocompleteInput
-                              value={cond.haAttribute ?? ''}
-                              onChange={(next) =>
-                                updateLedConditions((prev) =>
-                                  prev.map((item, i) =>
-                                    i === idx ? { ...item, haAttribute: next.trim() } : item
-                                  )
-                                )
-                              }
-                              loadSuggestions={() =>
-                                loadHomeAssistantAttributes(conditionEntityId).then((attributes) =>
-                                  attributes.map((attribute) => ({
-                                    value: attribute.name,
-                                    detail: attribute.preview
-                                  }))
-                                )
-                              }
-                              placeholder="attribut"
-                              className={conditionInputClass}
-                              emptyText={
-                                conditionEntityId
-                                  ? 'Aucun attribut pour cette entité'
-                                  : "Choisissez d'abord une entité Home Assistant"
-                              }
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <CustomSelect
-                              value={cond.haOperator ?? 'eq'}
-                              onChange={(val) =>
-                                updateLedConditions((prev) =>
-                                  prev.map((item, i) =>
-                                    i === idx
-                                      ? { ...item, haOperator: val as LedConditionOperator }
-                                      : item
-                                  )
-                                )
-                              }
-                              options={OPERATOR_OPTIONS}
-                              accent="pink"
-                              className="w-24 shrink-0"
-                            />
-                            <input
-                              type="text"
-                              value={cond.haValue ?? ''}
-                              onChange={(e) =>
-                                updateLedConditions((prev) =>
-                                  prev.map((item, i) =>
-                                    i === idx ? { ...item, haValue: e.target.value } : item
-                                  )
-                                )
-                              }
-                              placeholder="valeur"
-                              maxLength={256}
-                              className={cn(conditionInputClass, 'min-w-0 flex-1')}
-                            />
-                          </div>
-                          {!isConditionComplete(cond) && (
-                            <p className="text-[11px] text-neon-orange/80">
-                              Indiquez l'attribut à comparer (ex : brightness, temperature).
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right column : Actions */}
-          <div className="space-y-4 overflow-hidden pl-6">
-            {/* Tabs */}
-            <div className="flex gap-1 rounded-lg bg-surface-2 p-1">
-              {(['pressed', 'hold'] as const).map((tab) => {
-                const tabAction = tab === 'pressed' ? pressed : hold
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => {
-                      hasTabSwitched.current = true
-                      setTabDirection(tab === 'hold' ? 'right' : 'left')
-                      setActiveTab(tab)
-                    }}
-                    className={cn(
-                      'flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-all duration-200',
-                      activeTab === tab
-                        ? tab === 'pressed'
-                          ? 'bg-neon-purple/20 text-neon-purple border border-neon-purple/20'
-                          : 'bg-neon-blue/20 text-neon-blue border border-neon-blue/20'
-                        : 'text-muted-foreground/50 border border-transparent hover:text-muted-foreground'
-                    )}
-                  >
-                    {tabAction?.icon && (
-                      <div
-                        className="h-4 w-4 bg-current"
-                        style={{
-                          maskImage: `url(${tabAction.icon})`,
-                          maskSize: 'contain',
-                          maskRepeat: 'no-repeat',
-                          maskPosition: 'center',
-                          WebkitMaskImage: `url(${tabAction.icon})`,
-                          WebkitMaskSize: 'contain',
-                          WebkitMaskRepeat: 'no-repeat',
-                          WebkitMaskPosition: 'center'
-                        }}
-                      />
-                    )}
-                    {tab === 'pressed' ? 'Appui' : 'Maintien'}
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Action config */}
-            <div
-              key={activeTab}
-              className={cn(
-                'space-y-3',
-                hasTabSwitched.current &&
-                  (tabDirection === 'right' ? 'animate-slide-tab-right' : 'animate-slide-tab-left')
-              )}
-            >
-              {/* Action icon */}
+        {/* Two-column body, scrolled between the fixed header and footer */}
+        <div className="-mx-6 min-h-0 flex-1 overflow-y-auto overscroll-contain px-6">
+          <div className="grid grid-cols-2 items-start divide-x divide-border/20">
+            {/* Left column : LED */}
+            <div className="space-y-5 pr-6">
+              {/* Main icon */}
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-                  Icône d{"'"}action
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                  Icône principale
                 </label>
                 <IconUpload
-                  icon={currentAction?.icon}
-                  onUpload={handleActionIconUpload}
-                  onRemove={() =>
-                    setCurrentAction((prev) => (prev ? { ...prev, icon: undefined } : undefined))
-                  }
-                  size="sm"
+                  icon={mainIcon}
+                  onUpload={handleMainIconUpload}
+                  onRemove={() => setMainIcon(undefined)}
+                  size="md"
                 />
               </div>
 
-              {/* Module */}
+              {/* LED override */}
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-                  Module
+                <label className="group flex cursor-pointer items-center justify-between gap-3 text-muted-foreground hover:text-foreground transition-colors">
+                  <div>
+                    <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 group-hover:text-muted-foreground/80 transition-colors">
+                      Couleur LED
+                    </span>
+                    {!ledOverrideEnabled && (
+                      <p className="text-[11px] text-muted-foreground/30">
+                        Suit l{"'"}animation globale
+                      </p>
+                    )}
+                  </div>
+                  <div className="relative flex-shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={ledOverrideEnabled}
+                      onChange={(e) => {
+                        const enabled = e.target.checked
+                        setLedOverrideEnabled(enabled)
+                        sendLedPreview(enabled ? ledColor : null, ledConditions)
+                      }}
+                      className="peer sr-only"
+                    />
+                    <div className="h-6 w-11 rounded-full border border-border/50 bg-surface-3 transition-all duration-300 peer-checked:border-neon-pink/40 peer-checked:bg-neon-pink/20 peer-checked:shadow-[0_0_8px_#f472b64d]" />
+                    <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-muted-foreground/40 shadow-sm transition-all duration-300 peer-checked:left-[22px] peer-checked:bg-neon-pink peer-checked:shadow-[0_0_6px_#f472b680]" />
+                  </div>
                 </label>
-                <CustomSelect
-                  value={currentAction?.module || ''}
-                  onChange={(mod) => {
-                    const paramDefs = MODULE_PARAMS[mod]
-                    setCurrentAction((prev) =>
-                      mod
-                        ? {
-                            module: mod,
-                            // Parameters only make sense for the module they were written for.
-                            params: paramDefs
-                              ? paramDefs.map(
-                                  (def, i) =>
-                                    (prev?.module === mod ? prev.params?.[i] : undefined) ||
-                                    def.options?.[0]?.value ||
-                                    ''
-                                )
-                              : [''],
-                            icon: prev?.icon
-                          }
-                        : prev?.icon
-                          ? { module: '', params: [''], icon: prev.icon }
-                          : undefined
-                    )
-                  }}
-                  options={[
-                    { value: '', label: 'Aucun' },
-                    ...MODULES.map((m) => ({ value: m.value, label: m.label }))
-                  ]}
-                  placeholder="Aucun"
-                  accent={activeTab === 'hold' ? 'blue' : 'purple'}
-                />
+
+                {ledOverrideEnabled && (
+                  <div className="mt-3 animate-fade-in">
+                    <ColorPicker
+                      value={ledColor}
+                      onChange={(c) => {
+                        setLedColor(c)
+                        sendLedPreview(c, ledConditions)
+                      }}
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Parameters */}
-              {currentAction?.module && MODULE_PARAMS[currentAction.module] && (
-                <div className="space-y-2">
-                  {MODULE_PARAMS[currentAction.module].map((paramDef, i) => {
-                    const inputClass = cn(
-                      'w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/30 outline-none transition-colors',
-                      activeTab === 'hold'
-                        ? 'focus:border-neon-blue/50'
-                        : 'focus:border-neon-purple/50'
-                    )
-                    const value = currentAction.params?.[i] || ''
-                    const onChange = (
-                      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-                    ): void => {
-                      const params = [...(currentAction.params || [])]
-                      params[i] = e.target.value
-                      setCurrentAction((prev) => (prev ? { ...prev, params } : prev))
+              {/* LED conditions */}
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                    Conditions LED
+                  </span>
+                  <button
+                    onClick={() =>
+                      updateLedConditions((prev) => [
+                        ...prev,
+                        { type: 'mic-mute', color: { r: 255, g: 0, b: 0 } }
+                      ])
                     }
+                    className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground/50 hover:text-neon-pink hover:bg-neon-pink/10 transition-colors"
+                  >
+                    <Plus className="h-3 w-3" />
+                    Ajouter
+                  </button>
+                </div>
 
-                    return (
-                      <div key={paramDef.label}>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-                          {paramDef.label}
-                        </label>
-                        {paramDef.type === 'select' ? (
-                          <CustomSelect
-                            value={value}
-                            onChange={(next) => {
-                              const params = [...(currentAction.params || [])]
-                              params[i] = next
-                              setCurrentAction((prev) => (prev ? { ...prev, params } : prev))
-                            }}
-                            options={paramDef.options ?? []}
-                            placeholder={paramDef.placeholder}
-                            accent={activeTab === 'hold' ? 'blue' : 'purple'}
-                          />
-                        ) : paramDef.type === 'textarea' ? (
-                          <textarea
-                            value={value}
-                            onChange={onChange}
-                            placeholder={paramDef.placeholder}
-                            rows={3}
-                            className={cn(inputClass, 'resize-none')}
-                          />
-                        ) : paramDef.type === 'password' ? (
-                          <div className="relative">
-                            <input
-                              type={showPasswords[paramDef.label] ? 'text' : 'password'}
+                {ledConditions.some((c) => c.type.startsWith('discord')) &&
+                  !conditionsState.discordConnected && (
+                    <div className="mb-2 flex items-center gap-2 rounded-lg border border-neon-orange/20 bg-neon-orange/5 px-3 py-2">
+                      <WifiOff className="h-3 w-3 shrink-0 text-neon-orange/70" />
+                      <span className="text-[11px] text-neon-orange/70">Discord non connecté</span>
+                    </div>
+                  )}
+
+                {ledConditions.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground/30">
+                    Aucune condition configurée
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {ledConditions.map((cond, idx) => (
+                      <div
+                        key={idx}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = 'move'
+                          setDragIndex(idx)
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault()
+                          e.dataTransfer.dropEffect = 'move'
+                          if (dragOverIndex !== idx) {
+                            setDragOverIndex(idx)
+                          }
+                        }}
+                        onDragLeave={() => setDragOverIndex(null)}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          if (dragIndex !== null && dragIndex !== idx) {
+                            updateLedConditions((prev) => {
+                              const next = [...prev]
+                              const [item] = next.splice(dragIndex, 1)
+                              next.splice(idx, 0, item)
+                              return next
+                            })
+                          }
+                          setDragIndex(null)
+                          setDragOverIndex(null)
+                        }}
+                        onDragEnd={() => {
+                          setDragIndex(null)
+                          setDragOverIndex(null)
+                        }}
+                        className={cn(
+                          'space-y-2 rounded-lg border bg-surface-2/50 px-2 py-2 transition-colors',
+                          dragOverIndex === idx
+                            ? 'border-neon-pink/50 bg-neon-pink/5'
+                            : dragIndex === idx
+                              ? 'border-border/30 opacity-40'
+                              : 'border-border/30'
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/20 active:cursor-grabbing" />
+
+                          <div className="flex-1 min-w-0">
+                            <CustomSelect
+                              value={cond.type}
+                              onChange={(val) => {
+                                updateLedConditions((prev) =>
+                                  prev.map((c, i) =>
+                                    i !== idx
+                                      ? c
+                                      : val === 'ha-attr'
+                                        ? {
+                                            type: 'ha-attr',
+                                            color: c.color,
+                                            ...(c.effect && { effect: c.effect }),
+                                            haAttribute: c.haAttribute ?? '',
+                                            haOperator: c.haOperator ?? 'eq',
+                                            haValue: c.haValue ?? ''
+                                          }
+                                        : {
+                                            type: val as LedConditionType,
+                                            color: c.color,
+                                            ...(c.effect && { effect: c.effect })
+                                          }
+                                  )
+                                )
+                              }}
+                              options={CONDITION_OPTIONS}
+                              accent="pink"
+                            />
+                          </div>
+
+                          <button
+                            onClick={() =>
+                              updateLedConditions((prev) => prev.filter((_, i) => i !== idx))
+                            }
+                            className="shrink-0 rounded p-1 text-muted-foreground/30 hover:text-neon-red transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-2 pl-5">
+                          <div className="min-w-0 flex-1">
+                            <CustomSelect
+                              value={cond.effect ?? 'solid'}
+                              onChange={(val) => {
+                                updateLedConditions((prev) =>
+                                  prev.map((item, i) => {
+                                    if (i !== idx) {
+                                      return item
+                                    }
+                                    const next: LedCondition = {
+                                      ...item,
+                                      effect: val as LedConditionEffect
+                                    }
+                                    if (val === 'solid') {
+                                      delete next.effect
+                                    }
+                                    return next
+                                  })
+                                )
+                              }}
+                              options={EFFECT_OPTIONS}
+                              accent="pink"
+                            />
+                          </div>
+
+                          <div className="shrink-0 flex items-center">
+                            <ColorPicker
+                              value={cond.color}
+                              onChange={(c) => {
+                                updateLedConditions((prev) =>
+                                  prev.map((item, i) => (i === idx ? { ...item, color: c } : item))
+                                )
+                              }}
+                              compact
+                            />
+                          </div>
+
+                          <button
+                            onClick={() => setTestingIndex((prev) => (prev === idx ? null : idx))}
+                            title={
+                              testingIndex === idx
+                                ? 'Arrêter le test'
+                                : 'Tester cette condition sur la touche pendant 5 secondes'
+                            }
+                            className={cn(
+                              'flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium transition-colors',
+                              testingIndex === idx
+                                ? 'bg-neon-pink/15 text-neon-pink'
+                                : 'text-muted-foreground/50 hover:bg-neon-pink/10 hover:text-neon-pink'
+                            )}
+                          >
+                            {testingIndex === idx ? (
+                              <Square className="h-3 w-3" />
+                            ) : (
+                              <Play className="h-3 w-3" />
+                            )}
+                            Tester
+                          </button>
+                        </div>
+
+                        {cond.type === 'ha-attr' && (
+                          <div className="space-y-1.5 pl-5">
+                            <div>
+                              <AutocompleteInput
+                                value={cond.haAttribute ?? ''}
+                                onChange={(next) =>
+                                  updateLedConditions((prev) =>
+                                    prev.map((item, i) =>
+                                      i === idx ? { ...item, haAttribute: next.trim() } : item
+                                    )
+                                  )
+                                }
+                                loadSuggestions={() =>
+                                  loadHomeAssistantAttributes(conditionEntityId).then(
+                                    (attributes) =>
+                                      attributes.map((attribute) => ({
+                                        value: attribute.name,
+                                        detail: attribute.preview
+                                      }))
+                                  )
+                                }
+                                placeholder="attribut"
+                                className={conditionInputClass}
+                                emptyText={
+                                  conditionEntityId
+                                    ? 'Aucun attribut pour cette entité'
+                                    : "Choisissez d'abord une entité Home Assistant"
+                                }
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <CustomSelect
+                                value={cond.haOperator ?? 'eq'}
+                                onChange={(val) =>
+                                  updateLedConditions((prev) =>
+                                    prev.map((item, i) =>
+                                      i === idx
+                                        ? { ...item, haOperator: val as LedConditionOperator }
+                                        : item
+                                    )
+                                  )
+                                }
+                                options={OPERATOR_OPTIONS}
+                                accent="pink"
+                                className="w-24 shrink-0"
+                              />
+                              <input
+                                type="text"
+                                value={cond.haValue ?? ''}
+                                onChange={(e) =>
+                                  updateLedConditions((prev) =>
+                                    prev.map((item, i) =>
+                                      i === idx ? { ...item, haValue: e.target.value } : item
+                                    )
+                                  )
+                                }
+                                placeholder="valeur"
+                                maxLength={256}
+                                className={cn(conditionInputClass, 'min-w-0 flex-1')}
+                              />
+                            </div>
+                            {!isConditionComplete(cond) && (
+                              <p className="text-[11px] text-neon-orange/80">
+                                Indiquez l'attribut à comparer (ex : brightness, temperature).
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right column : Actions */}
+            <div className="space-y-4 overflow-hidden pl-6">
+              {/* Tabs */}
+              <div className="flex gap-1 rounded-lg bg-surface-2 p-1">
+                {(['pressed', 'hold'] as const).map((tab) => {
+                  const tabAction = tab === 'pressed' ? pressed : hold
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => {
+                        hasTabSwitched.current = true
+                        setTabDirection(tab === 'hold' ? 'right' : 'left')
+                        setActiveTab(tab)
+                      }}
+                      className={cn(
+                        'flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-all duration-200',
+                        activeTab === tab
+                          ? tab === 'pressed'
+                            ? 'bg-neon-purple/20 text-neon-purple border border-neon-purple/20'
+                            : 'bg-neon-blue/20 text-neon-blue border border-neon-blue/20'
+                          : 'text-muted-foreground/50 border border-transparent hover:text-muted-foreground'
+                      )}
+                    >
+                      {tabAction?.icon && (
+                        <div
+                          className="h-4 w-4 bg-current"
+                          style={{
+                            maskImage: `url(${tabAction.icon})`,
+                            maskSize: 'contain',
+                            maskRepeat: 'no-repeat',
+                            maskPosition: 'center',
+                            WebkitMaskImage: `url(${tabAction.icon})`,
+                            WebkitMaskSize: 'contain',
+                            WebkitMaskRepeat: 'no-repeat',
+                            WebkitMaskPosition: 'center'
+                          }}
+                        />
+                      )}
+                      {tab === 'pressed' ? 'Appui' : 'Maintien'}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Action config */}
+              <div
+                key={activeTab}
+                className={cn(
+                  'space-y-3',
+                  hasTabSwitched.current &&
+                    (tabDirection === 'right'
+                      ? 'animate-slide-tab-right'
+                      : 'animate-slide-tab-left')
+                )}
+              >
+                {/* Action icon */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                    Icône d{"'"}action
+                  </label>
+                  <IconUpload
+                    icon={currentAction?.icon}
+                    onUpload={handleActionIconUpload}
+                    onRemove={() =>
+                      setCurrentAction((prev) => (prev ? { ...prev, icon: undefined } : undefined))
+                    }
+                    size="sm"
+                  />
+                </div>
+
+                {/* Module */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                    Module
+                  </label>
+                  <CustomSelect
+                    value={currentAction?.module || ''}
+                    onChange={(mod) => {
+                      const paramDefs = MODULE_PARAMS[mod]
+                      setCurrentAction((prev) =>
+                        mod
+                          ? {
+                              module: mod,
+                              // Parameters only make sense for the module they were written for.
+                              params: paramDefs
+                                ? paramDefs.map(
+                                    (def, i) =>
+                                      (prev?.module === mod ? prev.params?.[i] : undefined) ||
+                                      def.options?.[0]?.value ||
+                                      ''
+                                  )
+                                : [''],
+                              icon: prev?.icon
+                            }
+                          : prev?.icon
+                            ? { module: '', params: [''], icon: prev.icon }
+                            : undefined
+                      )
+                    }}
+                    options={[
+                      { value: '', label: 'Aucun' },
+                      ...MODULES.map((m) => ({ value: m.value, label: m.label }))
+                    ]}
+                    placeholder="Aucun"
+                    accent={activeTab === 'hold' ? 'blue' : 'purple'}
+                  />
+                </div>
+
+                {/* Parameters */}
+                {currentAction?.module && MODULE_PARAMS[currentAction.module] && (
+                  <div className="space-y-2">
+                    {MODULE_PARAMS[currentAction.module].map((paramDef, i) => {
+                      const inputClass = cn(
+                        'w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/30 outline-none transition-colors',
+                        activeTab === 'hold'
+                          ? 'focus:border-neon-blue/50'
+                          : 'focus:border-neon-purple/50'
+                      )
+                      const value = currentAction.params?.[i] || ''
+                      const onChange = (
+                        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+                      ): void => {
+                        const params = [...(currentAction.params || [])]
+                        params[i] = e.target.value
+                        setCurrentAction((prev) => (prev ? { ...prev, params } : prev))
+                      }
+
+                      return (
+                        <div key={paramDef.label}>
+                          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                            {paramDef.label}
+                          </label>
+                          {paramDef.type === 'select' ? (
+                            <CustomSelect
+                              value={value}
+                              onChange={(next) => {
+                                const params = [...(currentAction.params || [])]
+                                params[i] = next
+                                setCurrentAction((prev) => (prev ? { ...prev, params } : prev))
+                              }}
+                              options={paramDef.options ?? []}
+                              placeholder={paramDef.placeholder}
+                              accent={activeTab === 'hold' ? 'blue' : 'purple'}
+                            />
+                          ) : paramDef.type === 'textarea' ? (
+                            <textarea
                               value={value}
                               onChange={onChange}
                               placeholder={paramDef.placeholder}
-                              className={cn(inputClass, 'pr-10')}
+                              rows={3}
+                              className={cn(inputClass, 'resize-none')}
                             />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setShowPasswords((prev) => ({
-                                  ...prev,
-                                  [paramDef.label]: !prev[paramDef.label]
-                                }))
-                              }
-                              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground/40 hover:text-foreground transition-colors"
-                            >
-                              {showPasswords[paramDef.label] ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </button>
-                          </div>
-                        ) : currentAction.module === 'automation' ? (
-                          <AutocompleteInput
-                            value={value}
-                            onChange={(next) => {
-                              const params = [...(currentAction.params || [])]
-                              params[i] = next
-                              setCurrentAction((prev) => (prev ? { ...prev, params } : prev))
-                            }}
-                            loadSuggestions={() =>
-                              loadHomeAssistantEntities().then((entities) =>
-                                entities
-                                  .filter((entity) => domainOf(entity.entityId) === 'automation')
-                                  .map((entity) => ({
-                                    value: entity.entityId,
-                                    label: entity.name,
-                                    detail: entity.state === 'on' ? 'activée' : 'désactivée'
+                          ) : paramDef.type === 'password' ? (
+                            <div className="relative">
+                              <input
+                                type={showPasswords[paramDef.label] ? 'text' : 'password'}
+                                value={value}
+                                onChange={onChange}
+                                placeholder={paramDef.placeholder}
+                                className={cn(inputClass, 'pr-10')}
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setShowPasswords((prev) => ({
+                                    ...prev,
+                                    [paramDef.label]: !prev[paramDef.label]
                                   }))
-                              )
-                            }
-                            placeholder={paramDef.placeholder}
-                            className={inputClass}
-                            accent={activeTab === 'hold' ? 'blue' : 'purple'}
-                            emptyText="Aucune automatisation trouvée dans Home Assistant"
-                          />
-                        ) : currentAction.module === 'home-assistant' && i < 2 ? (
-                          <AutocompleteInput
-                            value={value}
-                            onChange={(next) => {
-                              const params = [...(currentAction.params || [])]
-                              params[i] = next
-                              setCurrentAction((prev) => (prev ? { ...prev, params } : prev))
-                            }}
-                            // Entities of the service's domain come first, and vice versa.
-                            loadSuggestions={() => {
-                              const otherDomain = domainOf(currentAction.params?.[i === 0 ? 1 : 0])
-                              return i === 0
-                                ? loadHomeAssistantServices().then((services) =>
-                                    services.map((service) => ({
-                                      value: service,
-                                      priority: domainOf(service) === otherDomain ? 0 : 1
-                                    }))
-                                  )
-                                : loadHomeAssistantEntities().then((entities) =>
-                                    entities.map((entity) => ({
+                                }
+                                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground/40 hover:text-foreground transition-colors"
+                              >
+                                {showPasswords[paramDef.label] ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </button>
+                            </div>
+                          ) : currentAction.module === 'automation' ? (
+                            <AutocompleteInput
+                              value={value}
+                              onChange={(next) => {
+                                const params = [...(currentAction.params || [])]
+                                params[i] = next
+                                setCurrentAction((prev) => (prev ? { ...prev, params } : prev))
+                              }}
+                              loadSuggestions={() =>
+                                loadHomeAssistantEntities().then((entities) =>
+                                  entities
+                                    .filter((entity) => domainOf(entity.entityId) === 'automation')
+                                    .map((entity) => ({
                                       value: entity.entityId,
                                       label: entity.name,
-                                      detail: entity.state,
-                                      priority: domainOf(entity.entityId) === otherDomain ? 0 : 1
+                                      detail: entity.state === 'on' ? 'activée' : 'désactivée'
                                     }))
-                                  )
-                            }}
-                            placeholder={paramDef.placeholder}
-                            className={inputClass}
-                            accent={activeTab === 'hold' ? 'blue' : 'purple'}
-                            emptyText={
-                              i === 0
-                                ? 'Aucun service trouvé dans Home Assistant'
-                                : 'Aucune entité trouvée dans Home Assistant'
-                            }
-                          />
-                        ) : (
-                          <input
-                            type="text"
-                            value={value}
-                            onChange={onChange}
-                            placeholder={paramDef.placeholder}
-                            className={inputClass}
-                          />
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+                                )
+                              }
+                              placeholder={paramDef.placeholder}
+                              className={inputClass}
+                              accent={activeTab === 'hold' ? 'blue' : 'purple'}
+                              emptyText="Aucune automatisation trouvée dans Home Assistant"
+                            />
+                          ) : currentAction.module === 'home-assistant' && i < 2 ? (
+                            <AutocompleteInput
+                              value={value}
+                              onChange={(next) => {
+                                const params = [...(currentAction.params || [])]
+                                params[i] = next
+                                setCurrentAction((prev) => (prev ? { ...prev, params } : prev))
+                              }}
+                              // Entities of the service's domain come first, and vice versa.
+                              loadSuggestions={() => {
+                                const otherDomain = domainOf(
+                                  currentAction.params?.[i === 0 ? 1 : 0]
+                                )
+                                return i === 0
+                                  ? loadHomeAssistantServices().then((services) =>
+                                      services.map((service) => ({
+                                        value: service,
+                                        priority: domainOf(service) === otherDomain ? 0 : 1
+                                      }))
+                                    )
+                                  : loadHomeAssistantEntities().then((entities) =>
+                                      entities.map((entity) => ({
+                                        value: entity.entityId,
+                                        label: entity.name,
+                                        detail: entity.state,
+                                        priority: domainOf(entity.entityId) === otherDomain ? 0 : 1
+                                      }))
+                                    )
+                              }}
+                              placeholder={paramDef.placeholder}
+                              className={inputClass}
+                              accent={activeTab === 'hold' ? 'blue' : 'purple'}
+                              emptyText={
+                                i === 0
+                                  ? 'Aucun service trouvé dans Home Assistant'
+                                  : 'Aucune entité trouvée dans Home Assistant'
+                              }
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              value={value}
+                              onChange={onChange}
+                              placeholder={paramDef.placeholder}
+                              className={inputClass}
+                            />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Discard confirmation */}
         {showDiscardPrompt && (
-          <div className="mt-4 rounded-lg border border-neon-orange/20 bg-neon-orange/5 px-4 py-3 animate-slide-up">
+          <div className="mt-4 shrink-0 rounded-lg border border-neon-orange/20 bg-neon-orange/5 px-4 py-3 animate-slide-up">
             <div className="flex items-center gap-2 mb-2.5">
               <AlertTriangle className="h-3.5 w-3.5 text-neon-orange" />
               <span className="text-xs font-semibold text-neon-orange">
@@ -1032,7 +1043,7 @@ export default function StreamdeckConfigDialog({
         )}
 
         {/* Footer */}
-        <div className="mt-6 flex items-center justify-between border-t border-border/30 pt-4">
+        <div className="mt-6 flex shrink-0 items-center justify-between border-t border-border/30 pt-4">
           <button
             onClick={handleDelete}
             className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs text-neon-red/60 hover:text-neon-red hover:bg-neon-red/10 transition-colors"
