@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.8.1](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.8.0...v4.8.1) (2026-10-27)
+
+
+### Corrections de bugs
+
+* **deps:** resolve new security advisories reported by pnpm audit ([#124](https://github.com/lachaux-remi/StreamDeckDeeJ-App/issues/124)) ([9fa4694](https://github.com/lachaux-remi/StreamDeckDeeJ-App/commit/9fa46947a63e1ff94b392528c3611dc03692da45))
+
 ## [4.8.0](https://github.com/lachaux-remi/StreamDeckDeeJ-App/compare/v4.7.0...v4.8.0) (2026-10-18)
 
 
