@@ -42,15 +42,15 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "electron-updater": "6.8.11",
-    "lucide-react": "^1.61.0",
+    "lucide-react": "^1.70.0",
     "node-hid": "^3.4.0",
     "pino": "^10.4.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "semver": "7.8.5",
+    "semver": "7.8.6",
     "serialport": "^13.0.0",
     "tailwind-merge": "^3.7.0",
-    "zustand": "^5.0.16"
+    "zustand": "^5.1.0"
   },
   "optionalDependencies": {
     "@streamdeck-deej/windows-audio-native": "workspace:*"
